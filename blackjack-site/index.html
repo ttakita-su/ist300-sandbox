@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blackjack 101 — Home</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Blackjack 101</h1>
+    <p class="tagline">A beginner's guide to the game of 21</p>
+  </header>
+
+  <nav>
+    <a href="index.html" class="active">Home</a>
+    <a href="rules.html">Rules</a>
+    <a href="strategy.html">Basic Strategy</a>
+    <a href="glossary.html">Glossary</a>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div class="cards">
+        <span class="card black">A&spades;</span>
+        <span class="card red">K&hearts;</span>
+      </div>
+      <h2>Beat the dealer, not the table</h2>
+      <p>
+        Blackjack is a card game played between you and the dealer. The goal is
+        simple: get a hand total closer to 21 than the dealer, without going over.
+        Other players at the table are irrelevant — you are only ever playing the
+        dealer's hand.
+      </p>
+    </section>
+
+    <section>
+      <h2>The Short Version</h2>
+      <ol>
+        <li>You are dealt two cards face up. The dealer gets one up, one down.</li>
+        <li>Number cards are worth their value, face cards are worth 10, and an ace is 1 or 11.</li>
+        <li>You choose to <strong>hit</strong> (take a card) or <strong>stand</strong> (keep your total).</li>
+        <li>Go over 21 and you <strong>bust</strong> — you lose immediately.</li>
+        <li>The dealer then plays, and must hit until reaching 17 or more.</li>
+        <li>Closest to 21 without busting wins.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Card Values</h2>
+      <table>
+        <thead>
+          <tr><th>Card</th><th>Value</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>2 through 10</td><td>Face value (2&ndash;10)</td></tr>
+          <tr><td>Jack, Queen, King</td><td>10</td></tr>
+          <tr><td>Ace</td><td>1 or 11, whichever helps you</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="callout">
+      <h2>What is a "blackjack"?</h2>
+      <p>
+        An ace plus any 10-value card on your first two cards. It is the best hand
+        in the game and typically pays 3:2 instead of even money. A dealer blackjack
+        beats every hand except your own blackjack, which is a push (a tie).
+      </p>
+    </section>
+
+    <section>
+      <h2>Where to Next</h2>
+      <p>
+        Read the <a href="rules.html">full rules</a> to learn about doubling down,
+        splitting, and insurance. Then check the
+        <a href="strategy.html">basic strategy</a> page for the mathematically
+        correct play in every situation.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <p>Built as a practice project. For educational use only — not gambling advice.</p>
+  </footer>
+</body>
+</html>

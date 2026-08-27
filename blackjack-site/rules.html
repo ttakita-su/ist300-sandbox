@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blackjack 101 — Rules</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Blackjack 101</h1>
+    <p class="tagline">A beginner's guide to the game of 21</p>
+  </header>
+
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="rules.html" class="active">Rules</a>
+    <a href="strategy.html">Basic Strategy</a>
+    <a href="glossary.html">Glossary</a>
+  </nav>
+
+  <main>
+    <h2>How a Hand Is Played</h2>
+    <p>
+      Every player places a bet before any cards are dealt. The dealer then deals
+      two cards to each player and two to themselves &mdash; one face up (the
+      <em>upcard</em>) and one face down (the <em>hole card</em>).
+    </p>
+
+    <section>
+      <h3>Your Options</h3>
+      <dl>
+        <dt>Hit</dt>
+        <dd>Take another card. You can hit as many times as you like until you stand or bust.</dd>
+
+        <dt>Stand</dt>
+        <dd>Take no more cards and lock in your current total.</dd>
+
+        <dt>Double Down</dt>
+        <dd>
+          Double your original bet and take exactly one more card, then you are forced
+          to stand. Most useful on totals of 9, 10, or 11.
+        </dd>
+
+        <dt>Split</dt>
+        <dd>
+          If your first two cards have the same value, separate them into two hands
+          and place a second bet equal to the first. Each hand is then played normally.
+        </dd>
+
+        <dt>Surrender</dt>
+        <dd>
+          Offered at some tables. Give up the hand immediately and get half your bet back.
+          Only available as your first decision.
+        </dd>
+
+        <dt>Insurance</dt>
+        <dd>
+          Offered when the dealer's upcard is an ace. It is a side bet paying 2:1 that the
+          dealer has blackjack. It is a losing bet long-term &mdash; skip it.
+        </dd>
+      </dl>
+    </section>
+
+    <section>
+      <h3>Dealer Rules</h3>
+      <p>
+        The dealer has no choices. They follow a fixed procedure:
+      </p>
+      <ul>
+        <li>Hit on any total of 16 or less.</li>
+        <li>Stand on any hard total of 17 or more.</li>
+        <li>
+          On a <em>soft 17</em> (an ace counted as 11, plus 6), the dealer either hits or
+          stands depending on the house rules. "Stands on soft 17" is slightly better for you.
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h3>Payouts</h3>
+      <table>
+        <thead>
+          <tr><th>Outcome</th><th>Pays</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Blackjack (ace + 10-value)</td><td>3:2 (or 6:5 at worse tables)</td></tr>
+          <tr><td>Regular win</td><td>1:1</td></tr>
+          <tr><td>Insurance win</td><td>2:1</td></tr>
+          <tr><td>Push (tie)</td><td>Bet returned</td></tr>
+          <tr><td>Loss or bust</td><td>Bet lost</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="callout">
+      <h3>Hard vs. Soft Hands</h3>
+      <p>
+        A <strong>soft</strong> hand contains an ace being counted as 11, so it cannot bust
+        with one more card &mdash; the ace simply drops to 1. A&nbsp;7 is a soft 18. A
+        <strong>hard</strong> hand has no ace, or has an ace that must count as 1.
+        10&nbsp;+&nbsp;8 is a hard 18. The distinction matters a lot for strategy.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <p>Built as a practice project. For educational use only — not gambling advice.</p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blackjack 101 — Basic Strategy</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Blackjack 101</h1>
+    <p class="tagline">A beginner's guide to the game of 21</p>
+  </header>
+
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="rules.html">Rules</a>
+    <a href="strategy.html" class="active">Basic Strategy</a>
+    <a href="glossary.html">Glossary</a>
+  </nav>
+
+  <main>
+    <h2>Basic Strategy</h2>
+    <p>
+      Basic strategy is the mathematically optimal play for every combination of your
+      hand and the dealer's upcard. It does not make blackjack a winning game, but it
+      cuts the house edge to roughly half a percent &mdash; far better than playing on
+      instinct.
+    </p>
+
+    <section>
+      <h3>Hard Totals</h3>
+      <p class="legend"><strong>H</strong> = hit &nbsp; <strong>S</strong> = stand &nbsp; <strong>D</strong> = double if allowed, otherwise hit</p>
+      <div class="table-scroll">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>Your Hand</th>
+              <th>2</th><th>3</th><th>4</th><th>5</th><th>6</th>
+              <th>7</th><th>8</th><th>9</th><th>10</th><th>A</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th>8 or less</th><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td></tr>
+            <tr><th>9</th><td class="h">H</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td></tr>
+            <tr><th>10</th><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="h">H</td><td class="h">H</td></tr>
+            <tr><th>11</th><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="h">H</td></tr>
+            <tr><th>12</th><td class="h">H</td><td class="h">H</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td></tr>
+            <tr><th>13</th><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td></tr>
+            <tr><th>14</th><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td></tr>
+            <tr><th>15</th><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td></tr>
+            <tr><th>16</th><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td></tr>
+            <tr><th>17+</th><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h3>Soft Totals (hands with an ace counted as 11)</h3>
+      <div class="table-scroll">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>Your Hand</th>
+              <th>2</th><th>3</th><th>4</th><th>5</th><th>6</th>
+              <th>7</th><th>8</th><th>9</th><th>10</th><th>A</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th>A,2 &ndash; A,3</th><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="d">D</td><td class="d">D</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td></tr>
+            <tr><th>A,4 &ndash; A,5</th><td class="h">H</td><td class="h">H</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td></tr>
+            <tr><th>A,6</th><td class="h">H</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td><td class="h">H</td></tr>
+            <tr><th>A,7 (soft 18)</th><td class="s">S</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="d">D</td><td class="s">S</td><td class="s">S</td><td class="h">H</td><td class="h">H</td><td class="h">H</td></tr>
+            <tr><th>A,8 &ndash; A,9</th><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td><td class="s">S</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h3>Pairs</h3>
+      <p class="legend"><strong>Y</strong> = split &nbsp; <strong>N</strong> = do not split</p>
+      <div class="table-scroll">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>Your Pair</th>
+              <th>2</th><th>3</th><th>4</th><th>5</th><th>6</th>
+              <th>7</th><th>8</th><th>9</th><th>10</th><th>A</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th>A,A</th><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td></tr>
+            <tr><th>10,10</th><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td></tr>
+            <tr><th>9,9</th><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="n">N</td><td class="y">Y</td><td class="y">Y</td><td class="n">N</td><td class="n">N</td></tr>
+            <tr><th>8,8</th><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td></tr>
+            <tr><th>7,7</th><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td></tr>
+            <tr><th>6,6</th><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td></tr>
+            <tr><th>5,5</th><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td></tr>
+            <tr><th>4,4</th><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="y">Y</td><td class="y">Y</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td></tr>
+            <tr><th>3,3 &amp; 2,2</th><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="y">Y</td><td class="n">N</td><td class="n">N</td><td class="n">N</td><td class="n">N</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="callout">
+      <h3>Four Rules Worth Memorizing First</h3>
+      <ul>
+        <li>Always split aces and eights. Never split tens or fives.</li>
+        <li>Double on 11 against anything except an ace.</li>
+        <li>Stand on 12&ndash;16 when the dealer shows 2&ndash;6; hit when they show 7 or higher.</li>
+        <li>Never take insurance.</li>
+      </ul>
+    </section>
+
+    <p class="note">
+      These charts assume a common multi-deck game where the dealer stands on soft 17
+      and doubling after a split is allowed. Exact house rules shift a few cells.
+    </p>
+  </main>
+
+  <footer>
+    <p>Built as a practice project. For educational use only — not gambling advice.</p>
+  </footer>
+</body>
+</html>
