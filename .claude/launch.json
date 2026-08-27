@@ -4,7 +4,7 @@
     {
       "name": "blackjack-site",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8123", "--directory", "blackjack-site"],
+      "runtimeArgs": ["-m", "http.server", "8123"],
       "port": 8123
     }
   ]
