@@ -1,0 +1,264 @@
+/* Why Syracuse — shared stylesheet */
+
+:root {
+  --orange: #f76900;
+  --orange-dark: #c85400;
+  --navy: #000e54;
+  --navy-deep: #00072b;
+  --ink: #1b1b1f;
+  --paper: #fbf8f4;
+  --border: #e2dcd3;
+  --snow: #eef3fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.65;
+}
+
+/* --- Header --- */
+
+header {
+  background: var(--navy);
+  background-image: linear-gradient(155deg, var(--navy), var(--navy-deep));
+  color: #fff;
+  padding: 3rem 1.5rem 2.25rem;
+  text-align: center;
+  border-bottom: 5px solid var(--orange);
+}
+
+header h1 {
+  margin: 0;
+  font-size: 2.7rem;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+header h1 .accent {
+  color: var(--orange);
+}
+
+.tagline {
+  margin: 0.6rem 0 0;
+  color: #c9d0e8;
+  font-size: 1.05rem;
+}
+
+/* --- Navigation --- */
+
+nav {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  background: var(--navy-deep);
+  padding: 0.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+nav a {
+  color: #dfe3f0;
+  text-decoration: none;
+  padding: 0.5rem 1.1rem;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+nav a:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+nav a.active {
+  background: var(--orange);
+  color: #fff;
+  font-weight: bold;
+}
+
+/* --- Layout --- */
+
+main {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 3rem;
+}
+
+section {
+  margin-bottom: 2.75rem;
+}
+
+h2 {
+  border-bottom: 3px solid var(--orange);
+  display: inline-block;
+  padding-bottom: 0.2rem;
+  margin-top: 0;
+  font-size: 1.6rem;
+}
+
+h3 {
+  margin-bottom: 0.3rem;
+  color: var(--navy);
+}
+
+a {
+  color: var(--orange-dark);
+}
+
+.lead {
+  font-size: 1.15rem;
+  color: #3a3a42;
+}
+
+/* --- Stat strip --- */
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.stat {
+  flex: 1 1 150px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--orange);
+  border-radius: 6px;
+  padding: 1.1rem 1rem;
+  text-align: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.stat .num {
+  display: block;
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--navy);
+  line-height: 1.1;
+}
+
+.stat .label {
+  font-size: 0.85rem;
+  color: #5a5a63;
+}
+
+/* --- Reason cards --- */
+
+.reasons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.1rem;
+}
+
+.reason {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.reason h3 {
+  margin-top: 0;
+}
+
+.reason .rank {
+  display: inline-block;
+  background: var(--orange);
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.8rem;
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+/* --- Callout --- */
+
+.callout {
+  background: #fff;
+  border-left: 5px solid var(--orange);
+  padding: 1.1rem 1.35rem;
+  border-radius: 0 6px 6px 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.callout h2,
+.callout h3 {
+  margin-top: 0;
+  border-bottom: none;
+}
+
+.snow {
+  background: var(--snow);
+  border-left-color: var(--navy);
+}
+
+.note {
+  font-size: 0.9rem;
+  color: #5a5a63;
+  font-style: italic;
+}
+
+/* --- Tables --- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  margin-top: 0.75rem;
+}
+
+th, td {
+  border: 1px solid var(--border);
+  padding: 0.55rem 0.75rem;
+  text-align: left;
+}
+
+thead th {
+  background: var(--navy);
+  color: #fff;
+}
+
+/* --- Definition lists --- */
+
+dl dt {
+  font-weight: bold;
+  margin-top: 1rem;
+  color: var(--navy);
+}
+
+dl dd {
+  margin: 0.2rem 0 0 1.25rem;
+}
+
+/* --- Footer --- */
+
+footer {
+  background: var(--navy-deep);
+  color: #b9c0d6;
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.85rem;
+}
+
+footer a {
+  color: var(--orange);
+}
+
+/* --- Small screens --- */
+
+@media (max-width: 600px) {
+  header h1 { font-size: 2rem; }
+  main { padding: 1.75rem 1rem 2rem; }
+  .stat .num { font-size: 1.6rem; }
+}
