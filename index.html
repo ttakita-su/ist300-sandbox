@@ -3,85 +3,206 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blackjack 101 — Home</title>
-  <link rel="stylesheet" href="style.css">
+  <title>IST300 Sandbox — Tomoyoshi Takita</title>
+  <style>
+    :root {
+      --felt: #0b5d3b;
+      --felt-dark: #073c26;
+      --gold: #e8c56a;
+      --ink: #1c1c1c;
+      --muted: #5a5a5a;
+      --paper: #f7f5ef;
+      --border: #d8d3c4;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.6;
+    }
+
+    header {
+      background: linear-gradient(160deg, var(--felt), var(--felt-dark));
+      color: #fff;
+      padding: 3rem 1.5rem 2.5rem;
+      text-align: center;
+      border-bottom: 4px solid var(--gold);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2.5rem;
+      letter-spacing: 0.04em;
+    }
+
+    .tagline {
+      margin: 0.5rem 0 0;
+      color: var(--gold);
+      font-style: italic;
+    }
+
+    main {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 3rem;
+    }
+
+    .intro {
+      margin: 0 0 2.5rem;
+      font-size: 1.05rem;
+    }
+
+    h2 {
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.3rem;
+      margin-top: 0;
+    }
+
+    .sites {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 3rem;
+      padding: 0;
+      list-style: none;
+    }
+
+    .site {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-top: 4px solid var(--gold);
+      border-radius: 0 0 6px 6px;
+      padding: 1.25rem 1.35rem 1.4rem;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .site h3 {
+      margin: 0 0 0.4rem;
+      font-size: 1.2rem;
+    }
+
+    .site h3 a {
+      color: var(--felt-dark);
+      text-decoration: none;
+    }
+
+    .site h3 a:hover { text-decoration: underline; }
+
+    .site p {
+      margin: 0 0 0.9rem;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .pages {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      font-size: 0.9rem;
+    }
+
+    .pages li {
+      display: inline;
+    }
+
+    .pages li:not(:last-child)::after {
+      content: " · ";
+      color: var(--border);
+    }
+
+    a { color: var(--felt); }
+
+    .docs {
+      background: #fff;
+      border-left: 5px solid var(--gold);
+      padding: 1rem 1.25rem;
+      border-radius: 0 6px 6px 0;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .docs h2 {
+      margin-top: 0;
+      border-bottom: none;
+    }
+
+    .docs p:last-child { margin-bottom: 0; }
+
+    footer {
+      background: var(--felt-dark);
+      color: #cfcfcf;
+      text-align: center;
+      padding: 1.25rem;
+      font-size: 0.85rem;
+    }
+
+    footer a { color: var(--gold); }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.9rem; }
+      main { padding: 1.75rem 1rem 2rem; }
+    }
+  </style>
 </head>
 <body>
   <header>
-    <h1>Blackjack 101</h1>
-    <p class="tagline">A beginner's guide to the game of 21</p>
+    <h1>IST300 Sandbox</h1>
+    <p class="tagline">Prompts to Products &mdash; Syracuse University</p>
   </header>
 
-  <nav>
-    <a href="index.html" class="active">Home</a>
-    <a href="rules.html">Rules</a>
-    <a href="strategy.html">Basic Strategy</a>
-    <a href="glossary.html">Glossary</a>
-  </nav>
-
   <main>
-    <section class="hero">
-      <div class="cards">
-        <span class="card black">A&spades;</span>
-        <span class="card red">K&hearts;</span>
-      </div>
-      <h2>Beat the dealer, not the table</h2>
+    <p class="intro">
+      A sandbox repository of static sites and lab work built for IST300. Everything
+      here is hand-written HTML and CSS with no build step, served straight from
+      GitHub Pages.
+    </p>
+
+    <h2>Sites</h2>
+    <ul class="sites">
+      <li class="site">
+        <h3><a href="blackjack/">Blackjack 101</a></h3>
+        <p>A beginner's guide to the game of 21 &mdash; rules, basic strategy, and terminology.</p>
+        <ul class="pages">
+          <li><a href="blackjack/rules.html">Rules</a></li>
+          <li><a href="blackjack/strategy.html">Strategy</a></li>
+          <li><a href="blackjack/glossary.html">Glossary</a></li>
+        </ul>
+      </li>
+
+      <li class="site">
+        <h3><a href="campus-life/">Why Syracuse</a></h3>
+        <p>The case that Syracuse has the best campus life in America, traditions included.</p>
+        <ul class="pages">
+          <li><a href="campus-life/traditions.html">Traditions</a></li>
+          <li><a href="campus-life/get-involved.html">Get Involved</a></li>
+        </ul>
+      </li>
+
+      <li class="site">
+        <h3><a href="dinosaurs/">Dinosaurs</a></h3>
+        <p>A test page covering the three Mesozoic eras, used for trying out page structure and deploys.</p>
+      </li>
+    </ul>
+
+    <section class="docs">
+      <h2>Coursework</h2>
       <p>
-        Blackjack is a card game played between you and the dealer. The goal is
-        simple: get a hand total closer to 21 than the dealer, without going over.
-        Other players at the table are irrelevant — you are only ever playing the
-        dealer's hand.
-      </p>
-    </section>
-
-    <section>
-      <h2>The Short Version</h2>
-      <ol>
-        <li>You are dealt two cards face up. The dealer gets one up, one down.</li>
-        <li>Number cards are worth their value, face cards are worth 10, and an ace is 1 or 11.</li>
-        <li>You choose to <strong>hit</strong> (take a card) or <strong>stand</strong> (keep your total).</li>
-        <li>Go over 21 and you <strong>bust</strong> — you lose immediately.</li>
-        <li>The dealer then plays, and must hit until reaching 17 or more.</li>
-        <li>Closest to 21 without busting wins.</li>
-      </ol>
-    </section>
-
-    <section>
-      <h2>Card Values</h2>
-      <table>
-        <thead>
-          <tr><th>Card</th><th>Value</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>2 through 10</td><td>Face value (2&ndash;10)</td></tr>
-          <tr><td>Jack, Queen, King</td><td>10</td></tr>
-          <tr><td>Ace</td><td>1 or 11, whichever helps you</td></tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section class="callout">
-      <h2>What is a "blackjack"?</h2>
-      <p>
-        An ace plus any 10-value card on your first two cards. It is the best hand
-        in the game and typically pays 3:2 instead of even money. A dealer blackjack
-        beats every hand except your own blackjack, which is a push (a tie).
-      </p>
-    </section>
-
-    <section>
-      <h2>Where to Next</h2>
-      <p>
-        Read the <a href="rules.html">full rules</a> to learn about doubling down,
-        splitting, and insurance. Then check the
-        <a href="strategy.html">basic strategy</a> page for the mathematically
-        correct play in every situation.
+        Lab write-ups live in the repository rather than on this site. The current one is the
+        <a href="https://github.com/ttakita-su/ist300-sandbox/blob/main/docs/lab3-backlog.md">Lab 3 backlog</a>
+        for a Free Bet Blackjack strategy trainer &mdash; eleven user stories with acceptance
+        criteria and interview evidence.
       </p>
     </section>
   </main>
 
   <footer>
-    <p>Built as a practice project. For educational use only — not gambling advice.</p>
+    <p>
+      Built for IST300 &middot;
+      <a href="https://github.com/ttakita-su/ist300-sandbox">Source on GitHub</a>
+    </p>
   </footer>
 </body>
 </html>

@@ -9,54 +9,64 @@ Everything is plain HTML and CSS — no build step, no frameworks, no dependenci
 GitHub Pages serves the `main` branch from the repository root, so anything pushed to
 `main` is live within about a minute.
 
-## What's in here
+## Layout
 
-### Blackjack 101 (repository root)
+```
+.
+├── index.html       landing page linking to every site
+├── blackjack/       Blackjack 101 — four pages
+├── campus-life/     Why Syracuse — three pages
+├── dinosaurs/       test page
+├── docs/            lab write-ups
+└── archive/         old scratch files
+```
 
-A four-page static site explaining how to play blackjack.
+One folder per site, each with its own `index.html` so the live URL is a clean folder path,
+and its own `style.css` where the pages share styling.
+
+## Sites
+
+### Blackjack 101 ([`blackjack/`](blackjack/))
+
+A four-page guide to the game of 21.
 
 | Page | File | Live |
 | --- | --- | --- |
-| Home | [`index.html`](index.html) | [/](https://ttakita-su.github.io/ist300-sandbox/) |
-| Rules | [`rules.html`](rules.html) | [/rules.html](https://ttakita-su.github.io/ist300-sandbox/rules.html) |
-| Basic Strategy | [`strategy.html`](strategy.html) | [/strategy.html](https://ttakita-su.github.io/ist300-sandbox/strategy.html) |
-| Glossary | [`glossary.html`](glossary.html) | [/glossary.html](https://ttakita-su.github.io/ist300-sandbox/glossary.html) |
+| Home | [`blackjack/index.html`](blackjack/index.html) | [/blackjack/](https://ttakita-su.github.io/ist300-sandbox/blackjack/) |
+| Rules | [`blackjack/rules.html`](blackjack/rules.html) | [/blackjack/rules.html](https://ttakita-su.github.io/ist300-sandbox/blackjack/rules.html) |
+| Basic Strategy | [`blackjack/strategy.html`](blackjack/strategy.html) | [/blackjack/strategy.html](https://ttakita-su.github.io/ist300-sandbox/blackjack/strategy.html) |
+| Glossary | [`blackjack/glossary.html`](blackjack/glossary.html) | [/blackjack/glossary.html](https://ttakita-su.github.io/ist300-sandbox/blackjack/glossary.html) |
 
-All four share [`style.css`](style.css).
+All four share [`blackjack/style.css`](blackjack/style.css).
 
-### Why Syracuse — campus life ([`campus-life/`](campus-life/))
+### Why Syracuse ([`campus-life/`](campus-life/))
 
-A three-page site arguing that Syracuse has the best campus life in America, with its own
-stylesheet: [index](campus-life/index.html), [traditions](campus-life/traditions.html),
-and [get involved](campus-life/get-involved.html).
+A three-page site arguing that Syracuse has the best campus life in America:
+[index](campus-life/index.html), [traditions](campus-life/traditions.html), and
+[get involved](campus-life/get-involved.html), sharing
+[`campus-life/style.css`](campus-life/style.css).
 Live at [/campus-life/](https://ttakita-su.github.io/ist300-sandbox/campus-life/).
 
-### Dinosaurs — test page ([`testing.html/`](testing.html/))
+### Dinosaurs ([`dinosaurs/`](dinosaurs/))
 
-A scratch page used to test page structure, tables, and deploys. Covers the three Mesozoic
-eras, a species table, and quick facts.
-Live at [/testing.html/testing.html](https://ttakita-su.github.io/ist300-sandbox/testing.html/testing.html).
+A scratch page used to test page structure, tables, and deploys — the three Mesozoic eras,
+a species table, and quick facts. Self-contained, with its styles inline.
+Live at [/dinosaurs/](https://ttakita-su.github.io/ist300-sandbox/dinosaurs/).
 
-> Note: the file sits inside a folder that is itself named `testing.html`, which is why the
-> URL has a doubled path. Moving the file up one level would shorten it to `/testing.html`.
+## Coursework ([`docs/`](docs/))
 
-### Coursework ([`docs/`](docs/))
-
-- [`docs/backlog.md`](docs/backlog.md) — Lab 3 user-story backlog for the **Free Bet
+- [`docs/lab3-backlog.md`](docs/lab3-backlog.md) — Lab 3 user-story backlog for the **Free Bet
   Blackjack Strategy Trainer**: 11 stories sorted MUST / SHOULD / COULD / WON'T, each with
   Given–When–Then acceptance criteria and a quote from user interviews as evidence. The MVP
   slice is rules-to-graded-drill; live table assist was cut to Won't based on interview
   evidence.
 
-### Miscellaneous
-
-- [`hello.md`](hello.md) — the original scratch file, kept as a record of the first
-  successful push to this repository.
+Lab files are named by lab number so they sort in order.
 
 ## Running it locally
 
-Open any `.html` file directly in a browser, or serve the folder so that relative links
-behave exactly as they do on GitHub Pages:
+Serve the folder rather than opening files directly, so relative links behave exactly as they
+do on GitHub Pages:
 
 ```bash
 git clone https://github.com/ttakita-su/ist300-sandbox.git
@@ -79,8 +89,16 @@ GitHub Pages rebuilds automatically from `main`. Build status is visible under t
 
 ## Conventions
 
-- One folder per site; shared styling lives in a `style.css` next to the pages that use it.
-- Semantic HTML first — headings in order, tables for tabular data, no layout hacks.
+- One folder per site, named for the site — the folder name becomes the URL.
+- Each site's main page is `index.html`, so links can stay short.
+- Shared styling lives in a `style.css` next to the pages that use it; single self-contained
+  pages keep their styles inline.
+- Internal links are relative to the current folder, which keeps each site movable.
 - Commit messages say what changed and why in one line.
 - [`.gitignore`](.gitignore) excludes `.claude/settings.local.json` (machine-specific) and
   `.DS_Store`.
+
+## Archive
+
+- [`archive/hello.md`](archive/hello.md) — the original scratch file, kept as a record of the
+  first successful push to this repository.
