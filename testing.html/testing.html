@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dinosaurs — A Test Site</title>
+<style>
+  :root {
+    --bone: #f4efe6;
+    --ink: #22201c;
+    --muted: #6b6459;
+    --fern: #2f6b4f;
+    --fern-soft: #e3efe7;
+    --amber: #c2712a;
+    --rule: #ddd4c6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bone);
+    color: var(--ink);
+    font: 16px/1.65 "Iowan Old Style", Georgia, "Times New Roman", serif;
+  }
+  header {
+    background: var(--fern);
+    color: var(--bone);
+    padding: 3.5rem 1.5rem 3rem;
+    text-align: center;
+  }
+  header h1 {
+    margin: 0 0 .5rem;
+    font-size: clamp(2rem, 6vw, 3.25rem);
+    letter-spacing: .01em;
+  }
+  header p {
+    margin: 0 auto;
+    max-width: 34rem;
+    opacity: .9;
+  }
+  main {
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+  }
+  section { margin-bottom: 3rem; }
+  h2 {
+    font-size: 1.5rem;
+    margin: 0 0 1rem;
+    padding-bottom: .4rem;
+    border-bottom: 2px solid var(--rule);
+  }
+  .era-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 1rem;
+  }
+  .era {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 1.1rem 1.2rem;
+  }
+  .era h3 { margin: 0 0 .2rem; font-size: 1.1rem; }
+  .era .span {
+    display: block;
+    font-size: .8rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: .6rem;
+  }
+  .era p { margin: 0; color: var(--muted); font-size: .95rem; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .95rem;
+  }
+  th, td {
+    text-align: left;
+    padding: .6rem .7rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  th {
+    font-size: .78rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  tbody tr:nth-child(odd) { background: var(--fern-soft); }
+  .table-wrap { overflow-x: auto; }
+  .facts { padding-left: 1.2rem; }
+  .facts li { margin-bottom: .55rem; }
+  footer {
+    border-top: 1px solid var(--rule);
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: .85rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🦕 Dinosaurs</h1>
+  <p>A small test site about the animals that ran the planet for roughly 165 million years — and the birds that still do.</p>
+</header>
+
+<main>
+
+  <section>
+    <h2>The Mesozoic in three acts</h2>
+    <div class="era-grid">
+      <div class="era">
+        <h3>Triassic</h3>
+        <span class="span">252 – 201 mya</span>
+        <p>Dinosaurs show up small and unremarkable, sharing a hot, dry supercontinent with crocodile relatives that mostly outclassed them.</p>
+      </div>
+      <div class="era">
+        <h3>Jurassic</h3>
+        <span class="span">201 – 145 mya</span>
+        <p>Pangaea breaks apart, forests spread, and sauropods grow into the largest land animals that have ever lived.</p>
+      </div>
+      <div class="era">
+        <h3>Cretaceous</h3>
+        <span class="span">145 – 66 mya</span>
+        <p>Flowering plants, horned and armored dinosaurs, and tyrannosaurs — until an asteroid strike at Chicxulub ends the act.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>A few of the residents</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Period</th><th>Length</th><th>Ate</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><em>Tyrannosaurus rex</em></td><td>Late Cretaceous</td><td>~12 m</td><td>Meat</td></tr>
+          <tr><td><em>Triceratops</em></td><td>Late Cretaceous</td><td>~9 m</td><td>Plants</td></tr>
+          <tr><td><em>Stegosaurus</em></td><td>Late Jurassic</td><td>~9 m</td><td>Plants</td></tr>
+          <tr><td><em>Velociraptor</em></td><td>Late Cretaceous</td><td>~2 m</td><td>Meat</td></tr>
+          <tr><td><em>Brachiosaurus</em></td><td>Late Jurassic</td><td>~22 m</td><td>Plants</td></tr>
+          <tr><td><em>Ankylosaurus</em></td><td>Late Cretaceous</td><td>~7 m</td><td>Plants</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Six things worth knowing</h2>
+    <ul class="facts">
+      <li><strong>Birds are dinosaurs.</strong> Not descendants-of — they sit inside the theropod family tree, which makes the pigeon outside your window a living dinosaur.</li>
+      <li><strong>Feathers came before flight.</strong> Many theropods had them for insulation or display long before anything used them to get airborne.</li>
+      <li><strong><em>Velociraptor</em> was turkey-sized.</strong> The film versions are closer in scale to <em>Deinonychus</em>.</li>
+      <li><strong>More time separates us from <em>T. rex</em> than separated <em>T. rex</em> from <em>Stegosaurus</em>.</strong> Roughly 66 million years versus about 83 million.</li>
+      <li><strong>The biggest sauropods likely topped 60 tonnes</strong>, with hollow, air-filled bones keeping the frame manageable.</li>
+      <li><strong>The extinction was not total.</strong> Around three quarters of species died out; the survivors included the ancestors of every bird alive today.</li>
+    </ul>
+  </section>
+
+</main>
+
+<footer>
+  Test page built in the <code>ist300-sandbox</code> repo · served by GitHub Pages
+</footer>
+
+</body>
+</html>
