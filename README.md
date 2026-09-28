@@ -17,6 +17,7 @@ GitHub Pages serves the `main` branch from the repository root, so anything push
 ├── blackjack/       Blackjack 101 — four pages
 ├── campus-life/     Why Syracuse — three pages
 ├── dinosaurs/       test page
+├── prd/             Free Bet trainer PRD as a web page
 ├── docs/            lab write-ups
 └── archive/         old scratch files
 ```
@@ -59,6 +60,9 @@ Live at [/dinosaurs/](https://ttakita-su.github.io/ist300-sandbox/dinosaurs/).
 
 ## Coursework ([`docs/`](docs/))
 
+- [`02-prd.md`](02-prd.md) — Product requirements document for the **Free Bet Blackjack Strategy
+  Trainer**, also published as a web page at
+  [/prd/](https://ttakita-su.github.io/ist300-sandbox/prd/) ([`prd/index.html`](prd/index.html)).
 - [`docs/lab3-backlog.md`](docs/lab3-backlog.md) — Lab 3 user-story backlog for the **Free Bet
   Blackjack Strategy Trainer**: 11 stories sorted MUST / SHOULD / COULD / WON'T, each with
   Given–When–Then acceptance criteria and a quote from user interviews as evidence. The MVP

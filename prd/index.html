@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRD — Free Bet Blackjack Strategy Trainer</title>
+  <style>
+    :root {
+      --felt: #0b5d3b;
+      --felt-dark: #073c26;
+      --gold: #e8c56a;
+      --ink: #1c1c1c;
+      --muted: #5a5a5a;
+      --paper: #f7f5ef;
+      --border: #d8d3c4;
+      --tint: #eef4ef;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.6;
+    }
+
+    header {
+      background: linear-gradient(160deg, var(--felt), var(--felt-dark));
+      color: #fff;
+      padding: 2.5rem 1.5rem 2.25rem;
+      text-align: center;
+      border-bottom: 4px solid var(--gold);
+    }
+
+    .eyebrow {
+      margin: 0 0 0.4rem;
+      color: var(--gold);
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2.3rem;
+      letter-spacing: 0.02em;
+      line-height: 1.2;
+    }
+
+    .back {
+      display: inline-block;
+      margin-top: 1rem;
+      color: var(--gold);
+      font-size: 0.9rem;
+    }
+
+    .layout {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 3rem;
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 2.5rem;
+    }
+
+    nav.toc {
+      position: sticky;
+      top: 1rem;
+      align-self: start;
+      font-size: 0.9rem;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-top: 4px solid var(--gold);
+      border-radius: 0 0 6px 6px;
+      padding: 1rem 1.1rem;
+    }
+
+    nav.toc h2 {
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 0 0.5rem;
+      border: none;
+      padding: 0;
+    }
+
+    nav.toc ol {
+      margin: 0;
+      padding-left: 1.3rem;
+    }
+
+    nav.toc li { margin: 0.2rem 0; }
+
+    nav.toc a {
+      color: var(--felt-dark);
+      text-decoration: none;
+    }
+
+    nav.toc a:hover { text-decoration: underline; }
+
+    main { min-width: 0; }
+
+    section { margin-bottom: 2.75rem; scroll-margin-top: 1rem; }
+
+    h2 {
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.3rem;
+      margin: 0 0 1rem;
+      color: var(--felt-dark);
+    }
+
+    h3 {
+      margin: 1.75rem 0 0.6rem;
+      font-size: 1.15rem;
+    }
+
+    h4 {
+      margin: 1rem 0 0.4rem;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    a { color: var(--felt); }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 0 0 1.25rem;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+    }
+
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 0.6rem 0.8rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--felt-dark);
+      color: #fff;
+      font-weight: normal;
+      letter-spacing: 0.02em;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tr.highlight td { background: #fdf6e1; font-weight: bold; }
+
+    .meta th {
+      background: var(--tint);
+      color: var(--ink);
+      font-weight: bold;
+      width: 38%;
+    }
+
+    .meta { max-width: 520px; }
+
+    .callout {
+      background: #fff;
+      border-left: 5px solid var(--gold);
+      padding: 0.85rem 1.1rem;
+      border-radius: 0 6px 6px 0;
+      margin: 0 0 1.25rem;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .callout p { margin: 0; }
+
+    .features {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .feature {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem 1.25rem 1.1rem;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .feature h3 {
+      margin: 0 0 0.35rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .feature > p:first-of-type { margin-top: 0; }
+
+    .feature ul { margin: 0.2rem 0 0.6rem; padding-left: 1.3rem; }
+
+    .tag {
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-weight: normal;
+      white-space: nowrap;
+    }
+
+    .tag.v1 { background: var(--felt); color: #fff; }
+    .tag.later { background: var(--tint); color: var(--felt-dark); border: 1px solid #bcd3c3; }
+    .tag.hyp { background: #fdf0cf; color: #7a5a00; border: 1px solid var(--gold); }
+
+    .checklist {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 1rem;
+    }
+
+    .checklist li {
+      position: relative;
+      padding: 0.35rem 0 0.35rem 1.9rem;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .checklist li:last-child { border-bottom: none; }
+
+    .checklist li::before {
+      content: "";
+      position: absolute;
+      left: 0.1rem;
+      top: 0.62rem;
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid var(--felt);
+      border-radius: 3px;
+      background: #fff;
+    }
+
+    .goals { padding-left: 1.3rem; }
+    .goals li { margin-bottom: 0.4rem; }
+
+    footer {
+      background: var(--felt-dark);
+      color: #cfcfcf;
+      text-align: center;
+      padding: 1.25rem;
+      font-size: 0.85rem;
+    }
+
+    footer a { color: var(--gold); }
+
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; gap: 1.5rem; }
+      nav.toc { position: static; }
+    }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.7rem; }
+      .layout { padding: 1.5rem 1rem 2rem; }
+      th, td { padding: 0.5rem 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Product Requirements Document</p>
+    <h1>Free Bet Blackjack Strategy Trainer</h1>
+    <a class="back" href="../">&larr; IST300 Sandbox</a>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Contents">
+      <h2>Contents</h2>
+      <ol>
+        <li><a href="#summary">Summary</a></li>
+        <li><a href="#background">Background</a></li>
+        <li><a href="#users">Users</a></li>
+        <li><a href="#research">User research</a></li>
+        <li><a href="#goals">Goals</a></li>
+        <li><a href="#requirements">Requirements</a></li>
+        <li><a href="#scope">Scope</a></li>
+        <li><a href="#release">Release plan</a></li>
+        <li><a href="#readiness">V1 launch readiness</a></li>
+        <li><a href="#future">Future direction</a></li>
+        <li><a href="#dependencies">Dependencies</a></li>
+        <li><a href="#risks">Risks</a></li>
+        <li><a href="#questions">Open questions</a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <div class="table-wrap meta">
+        <table>
+          <tr><th scope="row">Product</th><td>Free Bet Blackjack Strategy Trainer</td></tr>
+          <tr><th scope="row">Document owner</th><td>Tomoyoshi</td></tr>
+          <tr><th scope="row">Status</th><td>Draft for review</td></tr>
+          <tr><th scope="row">Last updated</th><td>22 September 2026</td></tr>
+          <tr><th scope="row">Target release</th><td>V1, December 2026</td></tr>
+          <tr><th scope="row">Prototype</th><td><a href="../free-bet/">Try the trainer</a></td></tr>
+        </table>
+      </div>
+
+      <section id="summary">
+        <h2>1. Summary</h2>
+        <p>A browser-based trainer that deals Free Bet Blackjack hands and grades every player decision against published optimal strategy.</p>
+        <p>Free play for the variant exists. Optimal strategy for it is published. Nothing currently connects the two. Players who want to learn Free Bet either read a static chart with no way to practise against it, or drill standard blackjack and try to remember the differences at the table.</p>
+        <p>V1 targets a single variant done correctly rather than several done approximately. The architecture separates the game module from the grading platform so additional variants become configuration rather than rebuilds.</p>
+      </section>
+
+      <section id="background">
+        <h2>2. Background</h2>
+
+        <h3>2.1 The problem</h3>
+        <p>Learning a blackjack variant requires converting a strategy chart into decisions made at speed. That conversion needs repetitions against feedback. For standard blackjack, dozens of free tools provide exactly this. For variants, the tooling thins out sharply and, for Free Bet specifically, disappears.</p>
+        <p>The failure mode this creates is not ignorance but misapplication: players who know standard basic strategy apply it to a variant where several decisions differ, and have no mechanism to discover where they are wrong.</p>
+
+        <h3>2.2 Competitive landscape</h3>
+        <p>A survey of available tools was conducted on 17 September 2026.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Game</th><th>Free play</th><th>Published strategy</th><th>Graded trainer</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Standard blackjack</td><td>Extensive</td><td>Yes</td><td>Extensive</td></tr>
+              <tr><td>Spanish 21</td><td>Yes</td><td>Yes</td><td>Yes — HitOrSplit</td></tr>
+              <tr><td>Mississippi Stud</td><td>Yes</td><td>Yes</td><td>Yes — Wizard of Odds, casinotrainer.net</td></tr>
+              <tr><td>Ultimate Texas Hold'em</td><td>Yes</td><td>Yes</td><td>Yes — dedicated product</td></tr>
+              <tr><td>Pai Gow Poker</td><td>Yes</td><td>House way only</td><td>Partial — teaches house way, not optimal</td></tr>
+              <tr class="highlight"><td>Free Bet Blackjack</td><td>Yes</td><td>Yes</td><td>None found</td></tr>
+              <tr><td>Blackjack Switch</td><td>Yes</td><td>Yes</td><td>None found</td></tr>
+              <tr><td>Zappit 21</td><td>Yes</td><td>Yes</td><td>None found</td></tr>
+              <tr><td>Double Exposure</td><td>Yes</td><td>Yes</td><td>None found</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>Interpretation.</strong> The gap is narrower than "niche games are underserved" but real. Several variants assumed to be underserved are in fact well covered. Free Bet Blackjack is the clearest verified gap among variants with an active player base.</p>
+        <div class="callout">
+          <p><strong>Counter-consideration.</strong> One research participant plays Spanish 21, has the problem this product solves, and never located the existing Spanish 21 trainer. Part of the observed gap is discoverability rather than absence, which bounds how strongly a market claim can be made.</p>
+        </div>
+      </section>
+
+      <section id="users">
+        <h2>3. Users</h2>
+
+        <h3>3.1 Primary user</h3>
+        <p>A recreational player who already knows standard basic strategy and wants to learn a variant before playing it for money. Practises at home, in sessions of roughly ten to thirty minutes, typically ahead of a planned casino visit.</p>
+
+        <h3>3.2 Explicitly not targeted</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Segment</th><th>Why not</th></tr></thead>
+            <tbody>
+              <tr><td>Blackjack beginners</td><td>Well served by existing standard-blackjack trainers</td></tr>
+              <tr><td>Advantage players</td><td>Card counting is a distinct skill with its own mature tooling</td></tr>
+              <tr><td>Online variant players</td><td>Different need — in-play reference, not pre-play drilling. See <a href="#scope">§7.2</a></td></tr>
+              <tr><td>Recreational gamblers</td><td>The product teaches decisions; it is not a gambling product</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="research">
+        <h2>4. User research</h2>
+        <p>Three participants, interviewed 17–22 September 2026. All three already knew standard basic strategy. Small sample; findings are directional.</p>
+
+        <h3>4.1 Findings</h3>
+        <p><strong>Players do not consult references at a physical table.</strong> Two of three participants described making a decision under uncertainty and consulting a source only afterward. Both cited the same cause without prompting: other players waiting. One described asking the player beside him rather than checking his phone.</p>
+        <p><strong>Context is lost before review happens.</strong> Both participants who reviewed a decision afterward reported being unable to recall the exact hand by the time they checked. The review therefore failed even when attempted.</p>
+        <p><strong>Information is available; practice is not.</strong> Both had located a strategy chart and saved it. Neither had any means of practising against it. One asked specifically for randomly generated hands.</p>
+        <p><strong>The constraint is the venue, not the game.</strong> The third participant plays online, where no other players are waiting, and does search for the correct play mid-hand. This bounds the first finding: the inhibitor is social, not informational.</p>
+
+        <h3>4.2 What the research did not establish</h3>
+        <p>No participant described tracking accuracy over time, drilling a specific situation deliberately, or checking table rules before sitting down. Requirements derived from those behaviours are marked as hypotheses in <a href="#requirements">§6</a> and are scheduled after validation.</p>
+      </section>
+
+      <section id="goals">
+        <h2>5. Goals</h2>
+
+        <h3>5.1 Product goals</h3>
+        <ol class="goals">
+          <li>A player who has never played Free Bet can complete a graded practice session without consulting any source outside the product.</li>
+          <li>Every decision is graded against a cited, verifiable strategy source.</li>
+          <li>A player can review any hand from a session without having remembered it.</li>
+        </ol>
+
+        <h3>5.2 Success metrics</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Metric</th><th>Target</th><th>How measured</th></tr></thead>
+            <tbody>
+              <tr><td>Session completion</td><td>A first-time user completes 20 hands without abandoning</td><td>Session log</td></tr>
+              <tr><td>Grading correctness</td><td>100% agreement with the cited chart across a fixed 200-hand regression set</td><td>Automated test suite</td></tr>
+              <tr><td>Time to first hand</td><td>Under 60 seconds from landing to first decision</td><td>Manual timing</td></tr>
+              <tr><td>Unassisted accuracy improvement</td><td>Measurable improvement across three sessions for a returning user</td><td>Session summary</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>5.3 Non-goals</h3>
+        <p>Growth, retention, and monetisation are out of scope for V1. The product has no acquisition strategy and none is planned.</p>
+      </section>
+
+      <section id="requirements">
+        <h2>6. Requirements</h2>
+
+        <h3>6.1 Product decisions</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Area</th><th>Decision</th><th>Rationale</th></tr></thead>
+            <tbody>
+              <tr><td>Launch variant</td><td>Free Bet Blackjack</td><td>Only verified gap with an active player base</td></tr>
+              <tr><td>Platform</td><td>Responsive web, desktop and mobile browser</td><td>No install; matches where users already practise</td></tr>
+              <tr><td>Practice model</td><td>Randomly dealt hands, graded per decision</td><td>Directly requested in research</td></tr>
+              <tr><td>Feedback timing</td><td>Immediately after each decision, before the next deal</td><td>No social constraint in the practice context</td></tr>
+              <tr><td>Default rules</td><td>6 decks · dealer hits soft 17 · dealer 22 pushes · free double on hard 9/10/11 · free split on all pairs except tens · blackjack pays 3:2</td><td>Most common published configuration — <strong>pending confirmation against the chosen strategy source</strong></td></tr>
+              <tr><td>Strategy source</td><td>One published Free Bet basic-strategy chart, cited in the repository</td><td>Grading correctness is bounded by source correctness</td></tr>
+              <tr><td>Authentication</td><td>None</td><td>Removes the largest barrier to a 60-second start</td></tr>
+              <tr><td>Persistence</td><td>Browser local storage</td><td>No backend required for V1</td></tr>
+              <tr><td>Extensibility</td><td>Game logic and strategy data separated from the grading platform</td><td>Additional variants become configuration</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <p><strong>Open dependency.</strong> The strategy source is not yet selected. If the chosen chart assumes a rule set other than the default above, the default changes to match the chart. This blocks F2 and must be resolved before implementation begins.</p>
+        </div>
+
+        <h3>6.2 Features</h3>
+        <div class="features">
+          <article class="feature" id="f1">
+            <h3>F1 · Hand engine <span class="tag v1">V1</span></h3>
+            <p>Generates and resolves Free Bet Blackjack hands under the configured rule set.</p>
+            <h4>Functional requirements</h4>
+            <ul>
+              <li>Deals from a six-deck shoe; reshuffles when penetration exceeds 75%</li>
+              <li>Applies free double on hard 9, 10 and 11</li>
+              <li>Applies free split on all pairs except ten-value pairs</li>
+              <li>Resolves a dealer total of 22 as a push against all non-busted hands</li>
+              <li>Pays 3:2 on blackjack, 1:1 otherwise</li>
+              <li>Offers hit, stand, double, split, and surrender where configured</li>
+            </ul>
+            <h4>Constraints</h4>
+            <ul>
+              <li>Must not deal a card combination impossible in a real six-deck shoe</li>
+              <li>Must not resolve any hand using standard blackjack payout rules</li>
+            </ul>
+          </article>
+
+          <article class="feature" id="f2">
+            <h3>F2 · Decision grader <span class="tag v1">V1</span></h3>
+            <p>Compares each player action against the strategy source and returns a verdict.</p>
+            <h4>Functional requirements</h4>
+            <ul>
+              <li>Resolves optimal play for the exact player total, hand composition and dealer upcard</li>
+              <li>Returns a verdict and names the optimal action regardless of outcome</li>
+              <li>Renders within 1 second of the action and before the next card is dealt</li>
+              <li>Flags hands where the player requested the answer before acting, and excludes them from unassisted accuracy</li>
+            </ul>
+            <h4>Constraints</h4>
+            <ul>
+              <li>Must report a gap rather than infer a verdict where the chart has no entry</li>
+              <li>Must never return an incorrect verdict for an optimal action</li>
+            </ul>
+            <p><strong>Depends on</strong> the strategy source decision in §6.1.</p>
+          </article>
+
+          <article class="feature" id="f3">
+            <h3>F3 · Session log <span class="tag v1">V1</span></h3>
+            <p>Records every hand for review after play.</p>
+            <h4>Functional requirements</h4>
+            <ul>
+              <li>Stores player cards, dealer upcard, dealer final total, action taken, optimal action, verdict, assisted flag, and timestamp</li>
+              <li>Presents hands newest first, with misplays visually distinguished</li>
+              <li>Persists across page refresh</li>
+            </ul>
+            <h4>Constraints</h4>
+            <ul>
+              <li>Must not require re-entry of any card value to review a hand</li>
+              <li>Must surface storage failure rather than presenting an empty history</li>
+            </ul>
+            <p><strong>Addresses</strong> the context-loss finding in <a href="#research">§4.1</a>.</p>
+          </article>
+
+          <article class="feature" id="f4">
+            <h3>F4 · Rule primer <span class="tag v1">V1</span></h3>
+            <p>Explains how Free Bet differs from standard blackjack.</p>
+            <h4>Functional requirements</h4>
+            <ul>
+              <li>Displays the three rule differences before the first hand of a first session</li>
+              <li>Remains reachable from a persistent control</li>
+              <li>Pauses play and preserves hand state when opened mid-hand</li>
+            </ul>
+            <h4>Constraints</h4>
+            <ul>
+              <li>Must not display automatically on return visits</li>
+              <li>Must not deal a card while open</li>
+            </ul>
+          </article>
+
+          <article class="feature" id="f5">
+            <h3>F5 · Session summary <span class="tag later">V1.1</span> <span class="tag hyp">Hypothesis</span></h3>
+            <p>Reports session performance.</p>
+            <p><strong>Validation status.</strong> No research participant described tracking accuracy. This feature is scheduled after validation and is the designated cut if validation fails. Removing it does not affect V1.</p>
+            <h4>Functional requirements</h4>
+            <ul>
+              <li>Reports hands played, unassisted accuracy, assisted count, and most frequently misplayed situation type</li>
+              <li>Reports raw counts rather than a percentage below ten unassisted hands</li>
+            </ul>
+            <h4>Constraints</h4>
+            <ul>
+              <li>Must not present a percentage derived from fewer than ten hands</li>
+              <li>Must not pool assisted and unassisted hands into a single figure</li>
+            </ul>
+          </article>
+
+          <article class="feature" id="f6">
+            <h3>F6 · Decision rationale <span class="tag later">V1.1</span></h3>
+            <p>Explains why the optimal action is optimal.</p>
+            <h4>Functional requirements</h4>
+            <ul>
+              <li>Presents the expected value of both the optimal action and the action taken</li>
+              <li>States that a decision is marginal where two actions fall within 0.1% EV</li>
+            </ul>
+            <p><strong>Validation status.</strong> Partially supported. One participant acted on a heuristic rather than understanding, which implies but does not establish the need.</p>
+          </article>
+
+          <article class="feature" id="f7">
+            <h3>F7 · Configurable house rules <span class="tag later">V2</span> <span class="tag hyp">Hypothesis</span></h3>
+            <p>Allows the rule set to be matched to a specific casino's table.</p>
+            <p><strong>Validation status.</strong> Not supported by research. No participant described checking table rules. Deferred pending validation.</p>
+          </article>
+
+          <article class="feature" id="f8">
+            <h3>F8 · Additional variants <span class="tag later">V2</span></h3>
+            <p>Adds a second game module, Spanish 21 being the leading candidate.</p>
+            <p>Architecture supports this from V1; no implementation in V1.</p>
+          </article>
+        </div>
+
+        <h3>6.3 Screens</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Screen</th><th>Purpose</th><th>Features</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Start</td><td>Variant selection, rule primer, begin session</td><td>F4</td></tr>
+              <tr><td>2</td><td>Table</td><td>Play, act, receive verdicts</td><td>F1, F2</td></tr>
+              <tr><td>3</td><td>Summary</td><td>Session performance</td><td>F5</td></tr>
+              <tr><td>4</td><td>Log</td><td>Hand-by-hand review</td><td>F3</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Screens 3 and 4 may be implemented as one page with two views.</p>
+      </section>
+
+      <section id="scope">
+        <h2>7. Scope</h2>
+
+        <h3>7.1 In scope for V1</h3>
+        <p>F1 through F4, across screens 1, 2 and 4. The releasable increment is: read the rule differences, play randomly dealt hands under correct variant rules, receive a graded verdict on each decision, review the session afterward.</p>
+
+        <h3>7.2 Out of scope, with rationale</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Excluded</th><th>Rationale</th></tr></thead>
+            <tbody>
+              <tr><td>Live assistance at a physical table</td><td>Research finding — two of three participants will not consult any source mid-hand, both citing other players waiting. The product would be unused at the moment it was designed for</td></tr>
+              <tr><td>Browser extension for online play</td><td>Different delivery surface and a different purpose. It assists real-money play rather than training. Viable future direction; see <a href="#future">§10</a></td></tr>
+              <tr><td>Real-money play</td><td>Changes product category, legal exposure, and audience</td></tr>
+              <tr><td>Poker</td><td>No fixed optimal-play table; correct play depends on opponent modelling. Grading model does not apply</td></tr>
+              <tr><td>Games requiring a runtime solver</td><td>Connect 4, chess, checkers. Correct play must be computed per position rather than looked up, requiring a different engine</td></tr>
+              <tr><td>Card counting and count deviations</td><td>Distinct skill, mature existing tooling, limited applicability where continuous shufflers are used</td></tr>
+              <tr><td>Accounts, profiles, leaderboards</td><td>Contradicts the no-authentication decision. No research support</td></tr>
+              <tr><td>Bankroll simulation</td><td>Chips are displayed so free doubles are legible. No bankroll is tracked. The product teaches decisions, not money management</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="release">
+        <h2>8. Release plan</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Release</th><th>Contents</th><th>Gate</th></tr></thead>
+            <tbody>
+              <tr><td><strong>V1</strong></td><td>F1, F2, F3, F4</td><td>A first-time user completes 20 graded hands and reviews the session, unaided</td></tr>
+              <tr><td><strong>V1.1</strong></td><td>F5, F6</td><td>F5 conditional on validation</td></tr>
+              <tr><td><strong>V2</strong></td><td>F7, F8</td><td>F7 conditional on validation</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="readiness">
+        <h2>9. V1 launch readiness</h2>
+        <p>V1 ships when every item below is true. Anything unchecked is a blocker, not a nice-to-have — the list is deliberately short so that it stays honest.</p>
+
+        <h3>9.1 Blocking before implementation</h3>
+        <ul class="checklist">
+          <li>Strategy source selected, cited, and stored in the repository with its assumed rule set recorded</li>
+          <li>Default rule set in §6.1 confirmed against that source, or amended to match it</li>
+          <li>Regression set of 200 hands with known-correct actions built from the source</li>
+        </ul>
+
+        <h3>9.2 Correctness</h3>
+        <ul class="checklist">
+          <li>Free double applies on hard 9, 10 and 11, and on no other total</li>
+          <li>Free split applies on all pairs except ten-value pairs</li>
+          <li>Dealer 22 pushes against every non-busted hand, and only against non-busted hands</li>
+          <li>Blackjack pays 3:2; all other wins pay 1:1</li>
+          <li>Shoe cannot produce a card combination impossible in six decks</li>
+          <li>Grader agrees with the cited chart on all 200 regression hands</li>
+          <li>Grader reports a gap rather than inferring a verdict where the chart has no entry</li>
+          <li>No optimal action is ever returned as incorrect</li>
+        </ul>
+
+        <h3>9.3 Function</h3>
+        <ul class="checklist">
+          <li>A session can be started and a first decision made within 60 seconds of landing</li>
+          <li>No account, email address, or payment detail is requested at any point</li>
+          <li>Verdict renders within 1 second of the action and before the next card</li>
+          <li>Assisted hands are flagged and excluded from unassisted accuracy</li>
+          <li>Session log records all nine fields listed in F3 and survives a page refresh</li>
+          <li>Any hand can be reviewed without re-entering a card value</li>
+          <li>Storage failure is surfaced rather than presented as an empty history</li>
+          <li>Rule primer displays on a first session, not on return visits, and never deals a card while open</li>
+        </ul>
+
+        <h3>9.4 Quality</h3>
+        <ul class="checklist">
+          <li>Usable on a phone browser in portrait</li>
+          <li>Keyboard-operable end to end, with visible focus</li>
+          <li>No real-money wager, deposit, or cash-out path exists anywhere in the product</li>
+          <li>Automated test coverage on the hand engine and the grader</li>
+        </ul>
+
+        <h3>9.5 Acceptance</h3>
+        <ul class="checklist">
+          <li>A user who has never played Free Bet completes 20 graded hands unaided, without consulting any source outside the product</li>
+          <li>The same user can then identify, from the log alone, which hands they misplayed</li>
+        </ul>
+      </section>
+
+      <section id="future">
+        <h2>10. Future direction</h2>
+        <p><strong>Online play.</strong> The research indicates that the constraint on mid-hand reference is social rather than informational. Where no other players are waiting, users do consult sources during a hand. This suggests a distinct product for online variant players — in-play reference rather than pre-play drilling — on a different delivery surface. Not pursued in this product.</p>
+        <p><strong>Variant expansion.</strong> Blackjack Switch, Zappit 21 and Double Exposure show the same profile as Free Bet: free play available, strategy published, no graded trainer. Each is configuration against the V1 platform rather than new engineering.</p>
+      </section>
+
+      <section id="dependencies">
+        <h2>11. Dependencies</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Dependency</th><th>Blocks</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Published Free Bet strategy chart, with its assumed rule set</td><td>F2, and the rule-set decision in §6.1</td><td>Unresolved</td></tr>
+              <tr><td>Validation of F5 and F7 hypotheses</td><td>V1.1 and V2 scope</td><td>Unresolved</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="risks">
+        <h2>12. Risks</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Risk</th><th>Impact</th><th>Likelihood</th><th>Mitigation</th></tr></thead>
+            <tbody>
+              <tr><td>Strategy source incorrect or assumes a different rule set</td><td>Every verdict is wrong; the product actively teaches error</td><td>Medium</td><td>Cite the source; cross-check against a second; regression-test 200 known hands</td></tr>
+              <tr><td>Variant rules implemented incorrectly</td><td>Users drill the wrong strategy</td><td>Medium</td><td>Each rule tested in isolation against F1's constraints</td></tr>
+              <tr><td>Research sample of three</td><td>Requirements rest on a narrow base</td><td>High</td><td>Hypotheses labelled rather than presented as findings; conditional features scheduled after V1</td></tr>
+              <tr><td>Discoverability, not absence, is the real gap</td><td>The product is built and never found</td><td>Medium</td><td>Accepted. No acquisition strategy in V1</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="questions">
+        <h2>13. Open questions</h2>
+        <ol class="goals">
+          <li>Which published Free Bet chart is authoritative, and what rule set does it assume? <strong>Blocks implementation.</strong></li>
+          <li>Do the F5 and F7 hypotheses survive further research, or are they cut?</li>
+          <li>When the online player searches mid-hand, does he find variant-specific guidance or standard-blackjack advice? Unasked; would sharpen §10.</li>
+          <li>Does the grading model need to handle composition-dependent decisions, or is total-plus-upcard sufficient for this variant?</li>
+        </ol>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <p>
+      Built for IST300 &middot;
+      <a href="https://github.com/ttakita-su/ist300-sandbox/blob/main/02-prd.md">Markdown source</a> &middot;
+      <a href="https://github.com/ttakita-su/ist300-sandbox">Source on GitHub</a>
+    </p>
+  </footer>
+</body>
+</html>
