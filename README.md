@@ -5,7 +5,7 @@ the hand-written static sites and lab deliverables built over the course of the 
 
 **Live site:** https://ttakita-su.github.io/ist300-sandbox/
 
-Everything is plain HTML and CSS — no build step, no frameworks, no dependencies.
+Everything is plain HTML, CSS, and JavaScript — no build step, no frameworks, no runtime dependencies.
 GitHub Pages serves the `main` branch from the repository root, so anything pushed to
 `main` is live within about a minute.
 
@@ -23,6 +23,10 @@ GitHub Pages serves the `main` branch from the repository root, so anything push
 
 One folder per site, each with its own `index.html` so the live URL is a clean folder path,
 and its own `style.css` where the pages share styling.
+
+## Free Bet Strategy Trainer
+
+Open [`free-bet/index.html`](free-bet/index.html) for the playable PRD implementation: random hands, strategy feedback, rule primer, and saved hand history. It is a standalone HTML file with embedded CSS and JavaScript. Run `node free-bet/tests.cjs` for the 200-case strategy regression and engine checks. Source assumptions and remaining validation are documented in [`free-bet/STRATEGY.md`](free-bet/STRATEGY.md).
 
 ## Sites
 
