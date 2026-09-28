@@ -14,6 +14,8 @@ GitHub Pages serves the `main` branch from the repository root, so anything push
 ```
 .
 ├── index.html       landing page linking to every site
+├── free-bet/        Free Bet Strategy Trainer — playable prototype
+├── prd/             Free Bet PRD, published as a web page
 ├── blackjack/       Blackjack 101 — four pages
 ├── campus-life/     Why Syracuse — three pages
 ├── dinosaurs/       test page
@@ -68,6 +70,9 @@ Live at [/dinosaurs/](https://ttakita-su.github.io/ist300-sandbox/dinosaurs/).
   Given–When–Then acceptance criteria and a quote from user interviews as evidence. The MVP
   slice is rules-to-graded-drill; live table assist was cut to Won't based on interview
   evidence.
+- [`02-prd.md`](02-prd.md) — product requirements document for the Free Bet trainer. It is
+  also published as a web page at [`prd/index.html`](prd/index.html), live at
+  [/prd/](https://ttakita-su.github.io/ist300-sandbox/prd/); edit both when the PRD changes.
 
 Lab files are named by lab number so they sort in order.
 
