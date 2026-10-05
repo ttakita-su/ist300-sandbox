@@ -1,0 +1,1563 @@
+/* Post-Credits — shared stylesheet
+   Layout: a dark screening room. A letterboxed still on a strip of 35mm film opens the
+   page, reviews sit in a grid of one-sheet posters drawn in CSS, and the footer rolls
+   like end credits. The whole site commits to one dark look on purpose. */
+
+:root {
+  --house: #131117;     /* auditorium dark: page ground */
+  --seat: #1d1a24;      /* raised surfaces, hover rows */
+  --aisle: #322d3b;     /* rules and borders */
+  --screen: #f1ebe1;    /* projected light: main text */
+  --dim: #a59dab;       /* secondary text */
+  --tungsten: #ffb547;  /* marquee bulb: the one accent */
+  --exit: #ff5d4d;      /* exit-sign red: spoiler warnings only */
+  --film: #060507;      /* film base, letterbox, footer */
+  --subtitle: #ffe14d;  /* subtitle yellow, used on film only */
+
+  --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --body: "Newsreader", Georgia, "Times New Roman", serif;
+  --mono: "Courier Prime", "Courier New", Courier, monospace;
+  --caption: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html {
+  background: var(--house);
+}
+
+body {
+  margin: 0;
+  background: var(--house);
+  color: var(--screen);
+  font-family: var(--body);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: var(--tungsten);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--tungsten);
+  outline-offset: 3px;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  text-wrap: balance;
+}
+
+.wrap {
+  max-width: 74rem;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.mono {
+  font-family: var(--mono);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0.75rem;
+  z-index: 10;
+  padding: 0.5rem 0.9rem;
+  background: var(--tungsten);
+  color: var(--film);
+  font-family: var(--mono);
+  font-weight: 700;
+}
+
+.skip-link:focus {
+  left: 0.75rem;
+}
+
+/* --- Masthead --- */
+
+.masthead {
+  background: var(--film);
+}
+
+.masthead-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 2rem;
+  padding-block: 1.1rem 1rem;
+}
+
+.wordmark {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 2.1rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--screen);
+  text-decoration: none;
+}
+
+.wordmark span {
+  color: var(--tungsten);
+}
+
+.tagline {
+  flex: 1 1 14rem;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.site-nav a {
+  padding: 0.35rem 0.75rem;
+  border-radius: 2px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-decoration: none;
+}
+
+.site-nav a:hover {
+  color: var(--screen);
+}
+
+.site-nav a[aria-current="page"] {
+  background: var(--tungsten);
+  color: var(--film);
+}
+
+/* A row of marquee bulbs under the masthead */
+.bulbs {
+  height: 12px;
+  background:
+    radial-gradient(circle, var(--screen) 0 1.5px, var(--tungsten) 2.5px, rgb(255 181 71 / 0.25) 4px, transparent 6px) 0 50% / 16px 12px repeat-x,
+    var(--film);
+}
+
+/* --- Shared type --- */
+
+.eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 1rem;
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--tungsten);
+}
+
+.eyebrow .mono {
+  font-weight: 400;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: var(--dim);
+}
+
+.dek {
+  margin: 0;
+  max-width: 36rem;
+  font-size: 1.2rem;
+  line-height: 1.5;
+}
+
+.meta {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--dim);
+}
+
+.stars {
+  margin: 0;
+  font-family: var(--caption);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  color: var(--tungsten);
+}
+
+.unrated {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  color: var(--dim);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 2px;
+  background: var(--tungsten);
+  color: var(--film);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.btn:hover {
+  background: var(--screen);
+}
+
+/* Kind chips: shape tells movie, show, and list apart */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.chip-movie {
+  background: var(--tungsten);
+  border-color: var(--tungsten);
+  color: var(--film);
+}
+
+.chip-show {
+  color: var(--tungsten);
+}
+
+.chip-list {
+  border-style: dashed;
+  color: var(--screen);
+}
+
+/* Spoiler level: a dot before the label */
+.spoil::before {
+  content: "";
+  display: inline-block;
+  width: 0.55em;
+  height: 0.55em;
+  margin-right: 0.45em;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: 0.1em;
+}
+
+.spoil-none {
+  color: var(--dim);
+}
+
+.spoil-light {
+  color: var(--tungsten);
+}
+
+.spoil-full {
+  color: var(--exit);
+}
+
+/* --- Film strip and stills --- */
+
+.filmstrip {
+  position: relative;
+  display: block;
+  margin: 0;
+  padding: 1.75rem clamp(0.75rem, 2.5vw, 1.75rem);
+  background: var(--film);
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Sprocket holes, backlit as if on a light table */
+.filmstrip::before,
+.filmstrip::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0.62rem;
+  background: linear-gradient(90deg, transparent 0.55rem, var(--screen) 0.55rem 1.35rem, transparent 1.35rem) 0 0 / 1.9rem 100% repeat-x;
+  opacity: 0.85;
+}
+
+.filmstrip::before {
+  top: 0.56rem;
+}
+
+.filmstrip::after {
+  bottom: 0.56rem;
+}
+
+a.filmstrip:hover .still {
+  filter: brightness(1.08);
+}
+
+.still {
+  position: relative;
+  overflow: hidden;
+  max-width: 100%;
+  aspect-ratio: 2.39 / 1;
+  background: var(--seat);
+  transition: filter 0.3s ease;
+}
+
+/* Projector warm-up on load: starts dim, never hidden */
+.still .art {
+  animation: warmup 1.6s ease-out both;
+}
+
+@keyframes warmup {
+  from {
+    filter: brightness(0.4) saturate(0.6);
+  }
+}
+
+/* Film grain over every still */
+.still::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.2;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  animation: grain 1.1s steps(5) infinite;
+}
+
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-3%, 2%); }
+  40% { transform: translate(2%, -3%); }
+  60% { transform: translate(-2%, -1%); }
+  80% { transform: translate(3%, 3%); }
+  100% { transform: translate(0, 0); }
+}
+
+/* Closed captions, broadcast style */
+.sdh {
+  position: absolute;
+  left: 50%;
+  bottom: 7%;
+  z-index: 2;
+  width: max-content;
+  max-width: 90%;
+  margin: 0;
+  padding: 0.2em 0.55em;
+  transform: translateX(-50%);
+  background: rgb(6 5 7 / 0.78);
+  color: var(--screen);
+  font-family: var(--caption);
+  font-weight: 600;
+  font-size: clamp(0.7rem, 1.7vw, 1.1rem);
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+/* --- Posters --- */
+
+.poster {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: 100%;
+  aspect-ratio: 2 / 3;
+  padding: 8% 8% 7%;
+  border-radius: 3px;
+  background: var(--seat);
+  color: var(--ink, var(--screen));
+  font-family: var(--display);
+  container-type: inline-size;
+  box-shadow: 0 0.8rem 1.6rem -1rem rgb(0 0 0 / 0.8);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.poster > span {
+  position: relative;
+  z-index: 1;
+}
+
+.poster-top {
+  font-weight: 700;
+  font-size: 0.7rem;
+  font-size: 5.5cqi;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.poster-title {
+  font-weight: 900;
+  font-size: 2.6rem;
+  font-size: 17cqi;
+  line-height: 0.88;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.poster-billing {
+  margin-top: auto;
+  font-weight: 500;
+  font-size: 0.6rem;
+  font-size: 4.4cqi;
+  line-height: 1.3;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2, var(--dim));
+}
+
+.poster.small > .poster-top,
+.poster.small > .poster-billing,
+.poster.mini > span {
+  display: none;
+}
+
+/* Real images drop in over the drawn art */
+.still img,
+.poster img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* --- Poster and still art ---
+   Each .p-* class draws one title. The same class works on a 2:3 poster and a
+   2.39:1 still. Discs are sized by --d against the shorter side of the frame. */
+
+.art {
+  position: absolute;
+  inset: 0;
+}
+
+.art::before,
+.art::after {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.poster .art::before,
+.poster .art::after {
+  width: var(--d, 40%);
+}
+
+.still .art::before,
+.still .art::after {
+  height: var(--d, 40%);
+}
+
+/* Dune: Part Two — sun over three dune ridges */
+.p-dune {
+  --ink: #2a1206;
+  --ink-2: #f3d6b5;
+}
+
+.p-dune .art {
+  background:
+    radial-gradient(ellipse at 50% 45%, transparent 55%, rgb(0 0 0 / 0.3)),
+    radial-gradient(120% 60% at 18% 120%, #3a1a0d 0 50%, transparent 50.3%),
+    radial-gradient(120% 70% at 82% 112%, #6b3216 0 50%, transparent 50.3%),
+    radial-gradient(170% 80% at 40% 112%, #a5532a 0 50%, transparent 50.3%),
+    linear-gradient(#f7c27a, #ec9550 60%, #d3703a);
+}
+
+.p-dune .art::before {
+  content: "";
+  --d: 34%;
+  left: 66%;
+  top: 36%;
+  transform: translate(-50%, -50%);
+  background: #fff1d0;
+  box-shadow: 0 0 2.5rem 0.6rem rgb(255 225 170 / 0.55);
+}
+
+/* Severance — four figures on a frozen horizon */
+.p-severance {
+  --ink: #10343b;
+  --ink-2: #3d5a62;
+}
+
+.p-severance .art {
+  background:
+    radial-gradient(0.2rem 0.55rem at 41% 65%, #1c2a30 0 85%, transparent 100%),
+    radial-gradient(0.2rem 0.55rem at 47% 65%, #1c2a30 0 85%, transparent 100%),
+    radial-gradient(0.2rem 0.55rem at 53% 65%, #1c2a30 0 85%, transparent 100%),
+    radial-gradient(0.2rem 0.55rem at 59% 65%, #1c2a30 0 85%, transparent 100%),
+    linear-gradient(transparent 67%, #9fb3bc 67% 67.8%, transparent 67.8%),
+    linear-gradient(#bfd0d7, #eef3f5 66%, #f6f8f9 68%, #dde6ea);
+}
+
+/* One take — a stopwatch ring and a red record light */
+.p-oner {
+  --ink: #f1ebe1;
+  --ink-2: #a8c2b5;
+}
+
+.p-oner .art {
+  background: radial-gradient(ellipse at 50% 42%, #245240, #17382b 60%, #0f261d);
+}
+
+.p-oner .art::before {
+  content: "";
+  --d: 60%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgb(241 235 225 / 0.8);
+}
+
+.p-oner .art::after {
+  content: "";
+  --d: 7%;
+  left: 86%;
+  top: 9%;
+  transform: translate(-50%, -50%);
+  background: var(--exit);
+  box-shadow: 0 0 0.8rem rgb(255 93 77 / 0.7);
+}
+
+/* Shōgun — red sun on black, cut by a blade of light */
+.p-shogun {
+  --ink: #f4ece0;
+  --ink-2: #b9a99a;
+}
+
+.p-shogun .art {
+  background: linear-gradient(#0d0b0b, #1c1413);
+}
+
+.p-shogun .art::before {
+  content: "";
+  --d: 72%;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 40% 35%, #d42433, #9e0f1c);
+}
+
+.p-shogun .art::after {
+  content: "";
+  left: calc(50% - 1px);
+  top: 12%;
+  width: 2px;
+  height: 80%;
+  aspect-ratio: auto;
+  border-radius: 0;
+  background: rgb(244 236 224 / 0.8);
+}
+
+/* Past Lives — two discs that overlap and brighten where they meet */
+.p-pastlives {
+  --ink: #f6e7d8;
+  --ink-2: #aab3cc;
+}
+
+.p-pastlives .art {
+  background: linear-gradient(#24345c, #1a2340 70%, #121a30);
+}
+
+.p-pastlives .art::before,
+.p-pastlives .art::after {
+  content: "";
+  --d: 44%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: screen;
+}
+
+.p-pastlives .art::before {
+  left: 41%;
+  background: #d98b3a;
+}
+
+.p-pastlives .art::after {
+  left: 59%;
+  background: #b8506a;
+}
+
+/* Across the Spider-Verse — misregistered halftone */
+.p-spiderverse {
+  --ink: #fff4f8;
+  --ink-2: #ffd0e2;
+}
+
+.p-spiderverse .art {
+  background:
+    radial-gradient(circle, rgb(0 214 255 / 0.5) 0 28%, transparent 31%) 0.18rem 0.12rem / 0.7rem 0.7rem,
+    radial-gradient(circle, rgb(20 8 40 / 0.5) 0 28%, transparent 31%) 0 0 / 0.7rem 0.7rem,
+    linear-gradient(160deg, #ff2e63, #c3166b 45%, #4b1477);
+}
+
+.p-spiderverse .poster-title {
+  font-size: 14cqi;
+  text-shadow: -0.05em 0 #00d6ff, 0.05em 0 #ff2e63;
+}
+
+/* --- Cards --- */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2.25rem 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.card-link:hover .poster,
+.card-link:focus-visible .poster {
+  transform: translateY(-4px);
+  box-shadow: 0 0 0 1px rgb(255 181 71 / 0.55), 0 1.2rem 2.4rem -1rem rgb(255 181 71 / 0.35);
+}
+
+.card-link:hover .card-title {
+  color: var(--tungsten);
+}
+
+.card-body {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.card-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+
+.card-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.45rem;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+
+.card-dek {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.45;
+  color: var(--dim);
+}
+
+/* --- Home: feature --- */
+
+.feature {
+  display: grid;
+  gap: 1rem;
+  padding-block: 2.5rem 0;
+}
+
+.feature-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 1.5rem 3rem;
+  margin-top: 0.75rem;
+}
+
+.feature-title {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(3rem, 10vw, 8.5rem);
+  line-height: 0.86;
+  text-transform: uppercase;
+}
+
+.feature-title a {
+  color: var(--screen);
+  text-decoration: none;
+}
+
+.feature-title a:hover {
+  color: var(--tungsten);
+}
+
+.feature-side {
+  display: grid;
+  justify-items: start;
+  gap: 0.8rem;
+}
+
+/* --- Sections --- */
+
+.section {
+  padding-block: 4rem 0;
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--aisle);
+}
+
+.section-head h2 {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.section-head a,
+.section-head p {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+.section-head p {
+  color: var(--dim);
+}
+
+.band {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 3rem;
+}
+
+/* Watch queue: the order is the order I'll watch them */
+.queue {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: queue;
+}
+
+.queue li {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 1rem;
+  padding-block: 0.8rem;
+  border-bottom: 1px dashed var(--aisle);
+}
+
+.queue li::before {
+  counter-increment: queue;
+  content: counter(queue, decimal-leading-zero);
+  font-family: var(--mono);
+  color: var(--tungsten);
+}
+
+.queue-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.3rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.queue-meta {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--dim);
+  text-align: right;
+}
+
+/* Rating scale */
+.scale {
+  display: grid;
+  margin: 0;
+}
+
+.scale div {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 1rem;
+  padding-block: 0.8rem;
+  border-bottom: 1px dashed var(--aisle);
+}
+
+.scale dt {
+  font-family: var(--caption);
+  letter-spacing: 0.08em;
+  color: var(--tungsten);
+}
+
+.scale dd {
+  margin: 0;
+}
+
+.scale strong {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* --- Page heads (archive, about, posts) --- */
+
+.page-head {
+  display: grid;
+  gap: 0.9rem;
+  max-width: 54rem;
+  padding-block: 2.75rem 1.75rem;
+}
+
+.page-title {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(2.75rem, 8vw, 6.5rem);
+  line-height: 0.88;
+  text-transform: uppercase;
+}
+
+.back {
+  justify-self: start;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--dim);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--tungsten);
+}
+
+/* --- Archive --- */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--aisle);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--screen);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.filter .count {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--dim);
+}
+
+.filter:hover {
+  border-color: var(--tungsten);
+}
+
+.filter[aria-pressed="true"] {
+  border-color: var(--tungsten);
+  background: var(--tungsten);
+  color: var(--film);
+}
+
+.filter[aria-pressed="true"] .count {
+  color: var(--film);
+}
+
+.filter-status {
+  margin: 1rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+
+.month {
+  margin-top: 2.5rem;
+}
+
+.month-head {
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--aisle);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--tungsten);
+}
+
+.listings {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listing a {
+  display: grid;
+  grid-template-columns: 4.5rem 3rem minmax(0, 1fr) 4.5rem 5.5rem;
+  grid-template-areas: "date poster main kind rating";
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1rem 0.75rem;
+  border-bottom: 1px solid var(--aisle);
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.listing a:hover {
+  background: var(--seat);
+}
+
+.listing a:hover .listing-title {
+  color: var(--tungsten);
+}
+
+.listing time {
+  grid-area: date;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+.listing .poster {
+  grid-area: poster;
+  width: 3rem;
+}
+
+.listing-main {
+  grid-area: main;
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.listing-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.4rem;
+  line-height: 1.05;
+  text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+
+.listing-dek {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.45;
+  color: var(--dim);
+}
+
+.listing .chip {
+  grid-area: kind;
+  justify-self: start;
+}
+
+.listing .stars {
+  grid-area: rating;
+  justify-self: end;
+}
+
+/* --- Post --- */
+
+.post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 2rem 0 0;
+  border-bottom: 1px solid var(--aisle);
+}
+
+.facts div {
+  flex: 1 1 8.5rem;
+  padding: 0.85rem 1.25rem 0.85rem 0;
+  border-top: 1px solid var(--aisle);
+}
+
+.facts dt {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.facts dd {
+  margin: 0.2rem 0 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  line-height: 1.15;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.post-body {
+  display: grid;
+  grid-template-columns: minmax(0, 38rem) minmax(0, 20rem);
+  justify-content: space-between;
+  align-items: start;
+  gap: 3rem 4rem;
+  margin-top: 2.25rem;
+}
+
+/* Screenplay slugline: where and when I watched it */
+.slugline {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 1rem;
+  text-transform: uppercase;
+  color: var(--tungsten);
+}
+
+.prose {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15em;
+  min-width: 0;
+  font-size: 1.18rem;
+  line-height: 1.7;
+}
+
+.prose p {
+  margin: 0;
+}
+
+.prose .lead {
+  font-size: 1.32rem;
+  line-height: 1.6;
+}
+
+.prose h2 {
+  margin-top: 0.9em;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 1.9rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.prose em {
+  font-style: italic;
+}
+
+/* Pull quote set as a film subtitle */
+.subquote {
+  margin: 0.6em 0;
+  padding: 2.75rem 1.25rem 1.5rem;
+  background: radial-gradient(ellipse at 50% 130%, #2a2530, var(--film) 70%);
+  text-align: center;
+}
+
+.subquote p {
+  max-width: 28rem;
+  margin-inline: auto;
+  font-family: var(--caption);
+  font-weight: 600;
+  font-size: clamp(1.05rem, 2.4vw, 1.4rem);
+  line-height: 1.35;
+  color: var(--subtitle);
+  text-shadow: 0 0 3px var(--film), 0 2px 2px var(--film);
+}
+
+.spoiler-warning {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px dashed var(--exit);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+}
+
+.spoiler-warning strong {
+  color: var(--exit);
+  letter-spacing: 0.14em;
+}
+
+.spoiler {
+  border: 1px dashed var(--exit);
+  border-radius: 2px;
+}
+
+.spoiler summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.8rem;
+  padding: 0.9rem 1.1rem;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  list-style: none;
+  cursor: pointer;
+}
+
+.spoiler summary::-webkit-details-marker {
+  display: none;
+}
+
+.spoiler summary strong {
+  letter-spacing: 0.14em;
+  color: var(--exit);
+}
+
+.spoiler summary::after {
+  content: "Show";
+  margin-left: auto;
+  color: var(--dim);
+  text-decoration: underline;
+}
+
+.spoiler[open] summary::after {
+  content: "Hide";
+}
+
+.spoiler-body {
+  display: grid;
+  gap: 1em;
+  padding: 0 1.1rem 1.1rem;
+}
+
+.spoiler-body p {
+  margin: 0;
+}
+
+.post-aside {
+  position: sticky;
+  top: 1.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.post-aside .meta a {
+  color: var(--dim);
+}
+
+/* Verdict ticket: notched at the perforation, stub carries the post number */
+.ticket {
+  --stub: 5.5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--stub);
+  border-radius: 4px;
+  background: var(--tungsten);
+  color: var(--film);
+  -webkit-mask:
+    radial-gradient(circle at calc(100% - var(--stub)) 0, transparent 0.6rem, #000 calc(0.6rem + 0.5px)) top / 100% 51% no-repeat,
+    radial-gradient(circle at calc(100% - var(--stub)) 100%, transparent 0.6rem, #000 calc(0.6rem + 0.5px)) bottom / 100% 51% no-repeat;
+  mask:
+    radial-gradient(circle at calc(100% - var(--stub)) 0, transparent 0.6rem, #000 calc(0.6rem + 0.5px)) top / 100% 51% no-repeat,
+    radial-gradient(circle at calc(100% - var(--stub)) 100%, transparent 0.6rem, #000 calc(0.6rem + 0.5px)) bottom / 100% 51% no-repeat;
+}
+
+.ticket-main {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1.1rem 1.25rem 1.25rem;
+}
+
+.ticket-label {
+  margin: 0;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.ticket-stars {
+  margin: 0;
+  font-family: var(--caption);
+  font-size: 1.6rem;
+  line-height: 1;
+  letter-spacing: 0.06em;
+}
+
+.ticket-pick {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 1.7rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.ticket-verdict {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.4;
+}
+
+.ticket-stub {
+  display: grid;
+  place-content: center;
+  gap: 0.15rem;
+  padding: 1rem 0.5rem;
+  border-left: 2px dashed rgb(6 5 7 / 0.4);
+  text-align: center;
+}
+
+.ticket-stub .mono {
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.ticket-no {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+/* Previous / next reel */
+.reel-nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.reel-nav .card-link {
+  flex-direction: row;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.reel-nav .poster {
+  flex: 0 0 6.5rem;
+}
+
+.reel-nav .next .card-link {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.reel-nav .next:only-child {
+  grid-column: 2;
+}
+
+.reel-nav .card-kicker {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reel-nav .next .card-kicker {
+  justify-content: flex-end;
+}
+
+.reel-soon {
+  display: grid;
+  align-content: center;
+  gap: 0.35rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--aisle);
+  border-radius: 3px;
+  text-align: right;
+}
+
+.reel-soon p {
+  margin: 0;
+}
+
+.reel-soon .card-kicker {
+  justify-content: flex-end;
+}
+
+/* --- About --- */
+
+.about-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 38rem) minmax(0, 24rem);
+  justify-content: space-between;
+  gap: 3rem 4rem;
+}
+
+.about-grid h2 {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 1.9rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.about-side {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+}
+
+.levels {
+  display: grid;
+  margin: 0;
+}
+
+.levels div {
+  padding-block: 0.8rem;
+  border-bottom: 1px dashed var(--aisle);
+}
+
+.levels dt {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.levels dd {
+  margin: 0.2rem 0 0;
+  color: var(--dim);
+}
+
+/* --- Footer: end credits --- */
+
+.credits {
+  margin-top: 5rem;
+  padding-block: 3.5rem 2.5rem;
+  background: var(--film);
+  text-align: center;
+}
+
+.credits-title {
+  margin: 0 0 1.75rem;
+  padding-left: 0.3em;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 2.4rem;
+  line-height: 1;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.credits-roll {
+  display: grid;
+  gap: 0.55rem;
+  max-width: 38rem;
+  margin: 0 auto;
+}
+
+.credits-roll div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.credits-roll dt,
+.credits-roll dd {
+  font-family: var(--display);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+}
+
+.credits-roll dt {
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--dim);
+  text-align: right;
+}
+
+.credits-roll dd {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-align: left;
+}
+
+.credits-roll a {
+  color: var(--screen);
+}
+
+.post-credits-scene {
+  max-width: 30rem;
+  margin: 4.5rem auto 0;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+
+.post-credits-scene strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  letter-spacing: 0.16em;
+  color: var(--tungsten);
+}
+
+/* --- Responsive --- */
+
+@media (max-width: 64rem) {
+  .card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 60rem) {
+  .post-body,
+  .about-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .post-aside {
+    position: static;
+    max-width: 26rem;
+  }
+}
+
+@media (max-width: 48rem) {
+  .feature-copy,
+  .band {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .band {
+    gap: 3rem;
+  }
+
+  .reel-nav {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reel-nav .next:only-child {
+    grid-column: auto;
+  }
+
+  .listing a {
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+    grid-template-areas:
+      "poster date rating"
+      "poster main main"
+      "poster kind kind";
+    align-items: start;
+    gap: 0.35rem 1rem;
+    padding-inline: 0;
+  }
+}
+
+@media (max-width: 34rem) {
+  .card-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .card-grid .card-link {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .card-grid .poster {
+    flex: 0 0 6.5rem;
+  }
+
+  .card-grid .poster-top,
+  .card-grid .poster-billing {
+    display: none;
+  }
+
+  .credits-roll div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .credits-roll dt,
+  .credits-roll dd {
+    text-align: center;
+  }
+
+  .credits-roll div + div {
+    margin-top: 0.4rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

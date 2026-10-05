@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Every Review · Post-Credits</title>
+  <meta name="description" content="Every movie, show, and list reviewed on Post-Credits, newest first.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23131117'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23ffb547'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;900&family=Courier+Prime:wght@400;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="masthead">
+    <div class="wrap masthead-inner">
+      <a class="wordmark" href="index.html">Post<span>-</span>Credits</a>
+      <p class="tagline">Movie and TV talk for after the lights come up</p>
+      <nav class="site-nav" aria-label="Main">
+        <a href="index.html">Home</a>
+        <a href="reviews.html" aria-current="page">Reviews</a>
+        <a href="about.html">About</a>
+      </nav>
+    </div>
+    <div class="bulbs" aria-hidden="true"></div>
+  </header>
+
+  <main id="main" class="wrap">
+    <header class="page-head">
+      <p class="eyebrow">The listings</p>
+      <h1 class="page-title">Every review</h1>
+      <p class="dek">Every post so far, newest first. Pick what you are in the mood for.</p>
+    </header>
+
+    <div class="filters" role="group" aria-label="Filter reviews">
+      <button type="button" class="filter" id="filter-all" data-filter="all" aria-pressed="true">All <span class="count">6</span></button>
+      <button type="button" class="filter" id="filter-movie" data-filter="movie" aria-pressed="false">Movies <span class="count">3</span></button>
+      <button type="button" class="filter" id="filter-show" data-filter="show" aria-pressed="false">Shows <span class="count">2</span></button>
+      <button type="button" class="filter" id="filter-list" data-filter="list" aria-pressed="false">Lists <span class="count">1</span></button>
+    </div>
+    <p class="filter-status" aria-live="polite">Showing all 6 reviews</p>
+
+    <!-- To add a post: copy one <li class="listing">, set data-kind to movie, show, or list,
+         and put it at the top of the right month. Counts update on their own. -->
+
+    <section class="month" aria-labelledby="month-2026-10">
+      <h2 class="month-head" id="month-2026-10">October 2026</h2>
+      <ol class="listings">
+        <li class="listing" data-kind="movie">
+          <a href="posts/dune-part-two-rewatch.html">
+            <time datetime="2026-10-03">Oct 03</time>
+            <div class="poster mini p-dune" aria-hidden="true"><div class="art"></div></div>
+            <div class="listing-main">
+              <h3 class="listing-title">Dune: Part Two</h3>
+              <p class="listing-dek">A rewatch before Part Three. The worm ride holds up and the ending hits harder.</p>
+            </div>
+            <span class="chip chip-movie">Movie</span>
+            <span class="stars" role="img" aria-label="4.5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&frac12;</span>
+          </a>
+        </li>
+      </ol>
+    </section>
+
+    <section class="month" aria-labelledby="month-2026-09">
+      <h2 class="month-head" id="month-2026-09">September 2026</h2>
+      <ol class="listings">
+        <li class="listing" data-kind="show">
+          <a href="posts/severance-woes-hollow.html">
+            <time datetime="2026-09-26">Sep 26</time>
+            <div class="poster mini p-severance" aria-hidden="true"><div class="art"></div></div>
+            <div class="listing-main">
+              <h3 class="listing-title">Severance: &ldquo;Woe&rsquo;s Hollow&rdquo;</h3>
+              <p class="listing-dek">S02E04. Lumon takes the innies outside, and the last five minutes change everything.</p>
+            </div>
+            <span class="chip chip-show">Show</span>
+            <span class="stars" role="img" aria-label="5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+          </a>
+        </li>
+        <li class="listing" data-kind="list">
+          <a href="posts/three-tv-oners.html">
+            <time datetime="2026-09-19">Sep 19</time>
+            <div class="poster mini p-oner" aria-hidden="true"><div class="art"></div></div>
+            <div class="listing-main">
+              <h3 class="listing-title">One take, no cuts</h3>
+              <p class="listing-dek">Three TV episodes shot as a single unbroken shot, in the order they aired.</p>
+            </div>
+            <span class="chip chip-list">List</span>
+            <span class="stars unrated">Not rated</span>
+          </a>
+        </li>
+        <li class="listing" data-kind="show">
+          <a href="posts/shogun-finale.html">
+            <time datetime="2026-09-12">Sep 12</time>
+            <div class="poster mini p-shogun" aria-hidden="true"><div class="art"></div></div>
+            <div class="listing-main">
+              <h3 class="listing-title">Sh&omacr;gun: &ldquo;A Dream of a Dream&rdquo;</h3>
+              <p class="listing-dek">S01E10. Ten episodes build to a war, and the finale skips the battle.</p>
+            </div>
+            <span class="chip chip-show">Show</span>
+            <span class="stars" role="img" aria-label="4 out of 5 stars">&#9733;&#9733;&#9733;&#9733;</span>
+          </a>
+        </li>
+        <li class="listing" data-kind="movie">
+          <a href="posts/past-lives.html">
+            <time datetime="2026-09-05">Sep 05</time>
+            <div class="poster mini p-pastlives" aria-hidden="true"><div class="art"></div></div>
+            <div class="listing-main">
+              <h3 class="listing-title">Past Lives</h3>
+              <p class="listing-dek">Two childhood friends from Seoul meet again in New York, twenty-four years later.</p>
+            </div>
+            <span class="chip chip-movie">Movie</span>
+            <span class="stars" role="img" aria-label="5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+          </a>
+        </li>
+      </ol>
+    </section>
+
+    <section class="month" aria-labelledby="month-2026-08">
+      <h2 class="month-head" id="month-2026-08">August 2026</h2>
+      <ol class="listings">
+        <li class="listing" data-kind="movie">
+          <a href="posts/across-the-spider-verse.html">
+            <time datetime="2026-08-29">Aug 29</time>
+            <div class="poster mini p-spiderverse" aria-hidden="true"><div class="art"></div></div>
+            <div class="listing-main">
+              <h3 class="listing-title">Across the Spider-Verse</h3>
+              <p class="listing-dek">The first review on the blog. A different art style for every universe.</p>
+            </div>
+            <span class="chip chip-movie">Movie</span>
+            <span class="stars" role="img" aria-label="4.5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&frac12;</span>
+          </a>
+        </li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="credits">
+    <div class="wrap">
+      <p class="credits-title">Post-Credits</p>
+      <dl class="credits-roll">
+        <div><dt>Written &amp; rated by</dt><dd>Tomoyoshi Takita</dd></div>
+        <div><dt>Made for</dt><dd>IST400 &middot; Syracuse University</dd></div>
+        <div><dt>Stills &amp; posters</dt><dd>Drawn in CSS</dd></div>
+        <div><dt>Type</dt><dd>Big Shoulders, Newsreader, Courier Prime</dd></div>
+        <div><dt>Projection booth</dt><dd><a href="../">IST300 Sandbox</a></dd></div>
+      </dl>
+      <p class="post-credits-scene"><strong>POST-CREDITS SCENE</strong> Next Saturday: all twelve episodes of Andor, season 2, in one post.</p>
+    </div>
+  </footer>
+
+  <script>
+    const buttons = document.querySelectorAll('.filter');
+    const listings = [...document.querySelectorAll('.listing')];
+    const months = document.querySelectorAll('.month');
+    const status = document.querySelector('.filter-status');
+    const names = { movie: 'movies', show: 'shows', list: 'lists' };
+
+    function matches(listing, kind) {
+      return kind === 'all' || listing.dataset.kind === kind;
+    }
+
+    function applyFilter(kind) {
+      buttons.forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.filter === kind));
+      });
+
+      let shown = 0;
+      listings.forEach((listing) => {
+        listing.hidden = !matches(listing, kind);
+        if (!listing.hidden) shown += 1;
+      });
+
+      months.forEach((month) => {
+        month.hidden = !month.querySelector('.listing:not([hidden])');
+      });
+
+      status.textContent = kind === 'all'
+        ? `Showing all ${shown} reviews`
+        : `Showing ${shown} of ${listings.length}, ${names[kind]} only`;
+    }
+
+    buttons.forEach((button) => {
+      const kind = button.dataset.filter;
+      button.querySelector('.count').textContent = listings.filter((listing) => matches(listing, kind)).length;
+      button.addEventListener('click', () => applyFilter(kind));
+    });
+
+    applyFilter('all');
+  </script>
+</body>
+</html>

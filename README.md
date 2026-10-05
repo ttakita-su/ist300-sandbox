@@ -18,6 +18,7 @@ GitHub Pages serves the `main` branch from the repository root, so anything push
 ├── prd/             Free Bet PRD, published as a web page
 ├── blackjack/       Blackjack 101 — four pages
 ├── campus-life/     Why Syracuse — three pages
+├── ist400-blogsite/ Post-Credits — movie and TV blog template
 ├── dinosaurs/       test page
 ├── prd/             Free Bet trainer PRD as a web page
 ├── docs/            lab write-ups
@@ -53,6 +54,14 @@ A three-page site arguing that Syracuse has the best campus life in America:
 [get involved](campus-life/get-involved.html), sharing
 [`campus-life/style.css`](campus-life/style.css).
 Live at [/campus-life/](https://ttakita-su.github.io/ist300-sandbox/campus-life/).
+
+### Post-Credits ([`ist400-blogsite/`](ist400-blogsite/))
+
+A movie and TV blog template for IST400: a featured review on a film strip, posters drawn in
+CSS, a reviews archive filterable by movies, shows, and lists, and six sample posts. Pages share
+[`ist400-blogsite/style.css`](ist400-blogsite/style.css). How to add a post is in
+[`ist400-blogsite/README.md`](ist400-blogsite/README.md).
+Live at [/ist400-blogsite/](https://ttakita-su.github.io/ist300-sandbox/ist400-blogsite/).
 
 ### Dinosaurs ([`dinosaurs/`](dinosaurs/))
 
