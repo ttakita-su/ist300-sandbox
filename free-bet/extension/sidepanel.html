@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Free Bet advisor</title>
+<link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+<div class="tabs" role="tablist" aria-label="Panel sections">
+ <button role="tab" id="tab-advisor" aria-controls="advisor" aria-selected="true">Advisor</button>
+ <button role="tab" id="tab-history" aria-controls="history" aria-selected="false" tabindex="-1">History</button>
+ <button role="tab" id="tab-about" aria-controls="about" aria-selected="false" tabindex="-1">About</button>
+</div>
+<p id="notice" class="notice" role="alert" hidden></p>
+<p id="status" class="visually-hidden" role="status"></p>
+<main>
+<section id="advisor" role="tabpanel" aria-labelledby="tab-advisor">
+ <h1 class="visually-hidden">Live hand advisor</h1>
+ <div class="felt">
+  <button class="seat" id="dealerSeat" type="button" aria-describedby="dealerHint"><span class="seat-name">Dealer</span><span class="cards" id="dealerCards"></span><span class="seat-hint" id="dealerHint">U to change</span></button>
+  <div class="answer" id="answer">
+   <p class="play" id="playLine"><span id="play"></span><span class="lammer" id="lammer" aria-hidden="true" hidden>free</span></p>
+   <p class="why" id="why"></p>
+   <p class="about-hand" id="aboutHand"></p>
+  </div>
+  <ol class="hand-list" id="handList" aria-label="Your hands"></ol>
+  <button class="seat" id="handSeat" type="button"><span class="seat-name" id="handName">You</span><span class="cards" id="handCards"></span><span class="total" id="handTotal"></span></button>
+ </div>
+ <p class="assumes" id="assumes"></p>
+ <div class="prompt-row"><p class="prompt" id="prompt"></p><p class="focus-state" id="focusState"></p></div>
+ <div class="dealer-strip" id="dealerStrip" role="group" aria-label="Dealer's upcard"><span class="strip-name" aria-hidden="true">Dealer</span></div>
+ <div class="keypad" id="keypad" role="group" aria-label="Your cards" aria-describedby="prompt" tabindex="-1"></div>
+ <div class="did" id="did"><span>Did something else?</span></div>
+ <div class="controls">
+  <button type="button" id="undo">Undo <kbd>⌫</kbd></button>
+  <button type="button" id="newRound">New round <kbd>N</kbd></button>
+ </div>
+</section>
+
+<section id="history" role="tabpanel" aria-labelledby="tab-history" hidden>
+ <h1>Hand history</h1>
+ <p class="lede">Hands you look up are kept in this extension on this device, newest first, and all count as assisted. The panel only knows what you typed. It keeps your <span id="limit"></span> most recent rounds.</p>
+ <label class="check"><input type="checkbox" id="saveToggle" checked> Save hands on this device</label>
+ <div id="historyList"></div>
+ <button type="button" id="clearHistory" class="quiet" hidden>Clear history</button>
+</section>
+
+<section id="about" role="tabpanel" aria-labelledby="tab-about" hidden>
+ <h1>About this panel</h1>
+ <p>Type the cards in a Free Bet Blackjack hand and the panel shows the basic-strategy play, including when a double or split is free. It reads the same strategy file as the <a href="https://ttakita-su.github.io/ist300-sandbox/free-bet/" target="_blank" rel="noopener">Free Bet trainer</a>, so the two give the same answers.</p>
+ <h2>How to use it</h2>
+ <p>Type your two cards, then the dealer's upcard, then every card you're dealt after that. A card you type means you followed the last answer. If you did something else, press H, S, D or P first, or use the buttons under the keypad. To enter the dealer's card at any point, tap it in the dealer row or press U first.</p>
+ <p>Keep the game in a normal tab, not full screen, so the panel stays beside it. <span id="shortcut"></span></p>
+ <h2>Keyboard</h2>
+ <dl class="keys" id="keys"></dl>
+ <h2>What it never does</h2>
+ <p>The panel has no access to web pages. It can't see, click or bet on the casino page, and it makes no network requests. You make every play. It takes no bets and handles no money.</p>
+ <h2>Table rules it assumes</h2>
+ <ul id="rulesList"></ul>
+ <p>At a table with other rules, this advice may be wrong. Basic strategy lowers the house edge but doesn't remove it: about 1% under these rules. If you use the panel while you play, check that the site's terms allow strategy aids.</p>
+ <h2>Your data</h2>
+ <p>Hands are stored only in this extension's storage on this device. Nothing is sent anywhere, there are no analytics, and no account or personal detail is ever asked for. Turn saving off or clear it in History, or remove the extension to delete everything.</p>
+ <h2>Strategy source</h2>
+ <p><a href="https://wizardofodds.com/games/free-bet-blackjack/" target="_blank" rel="noopener">Wizard of Odds, Free Bet Blackjack</a>: the original-hand, free-hand and pair charts, checked 28 September 2026. An independent second-source check is still to come. Where the chart has no answer, the panel says so instead of guessing.</p>
+ <p>Not affiliated with any casino or game publisher. Version <span id="version"></span>.</p>
+</section>
+</main>
+<footer>
+ <p>Advice only. No bets, and no access to the casino page. For adults 21+.</p>
+ <p>Gambling problem? Call or text <a href="tel:+18006973738">1-800-MY-RESET</a> (1-800-697-3738), or chat at <a href="https://www.1800myreset.org/" target="_blank" rel="noopener">1800myreset.org</a>. Free and confidential, 24/7.</p>
+</footer>
+<script src="strategy.js"></script>
+<script src="advisor.js"></script>
+<script src="sidepanel.js"></script>
+</body>
+</html>

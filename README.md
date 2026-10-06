@@ -15,11 +15,10 @@ GitHub Pages serves the `main` branch from the repository root, so anything push
 .
 ├── index.html       landing page linking to every site
 ├── free-bet/        Free Bet Strategy Trainer — playable prototype
+│   └── extension/   its Chrome extension (side panel advisor, prototype)
 ├── prd/             Free Bet PRD, published as a web page
 ├── blackjack/       Blackjack 101 — four pages
-├── campus-life/     Why Syracuse — three pages
 ├── ist400-blogsite/ Post-Credits — movie and TV blog template
-├── dinosaurs/       test page
 ├── prd/             Free Bet trainer PRD as a web page
 ├── docs/            lab write-ups
 └── archive/         old scratch files
@@ -30,7 +29,21 @@ and its own `style.css` where the pages share styling.
 
 ## Free Bet Strategy Trainer
 
-Open [`free-bet/index.html`](free-bet/index.html) for the playable PRD implementation: random hands, strategy feedback, rule primer, and saved hand history. It is a standalone HTML file with embedded CSS and JavaScript. Run `node free-bet/tests.cjs` for the 200-case strategy regression and engine checks. Source assumptions and remaining validation are documented in [`free-bet/STRATEGY.md`](free-bet/STRATEGY.md).
+Open [`free-bet/index.html`](free-bet/index.html) for the playable PRD implementation: random hands, strategy feedback, rule primer, and saved hand history. Its strategy charts and hand engine live in [`free-bet/extension/strategy.js`](free-bet/extension/strategy.js), which the trainer and the Chrome extension both load. Run `node free-bet/tests.cjs` for the 200-case strategy regression, the engine checks, and the extension's tests. Source assumptions and remaining validation are documented in [`free-bet/STRATEGY.md`](free-bet/STRATEGY.md).
+
+### Chrome extension (prototype, PRD F9)
+
+[`free-bet/extension/`](free-bet/extension/) is a Manifest V3 extension that opens in Chrome's side panel beside an online table. Type your two cards and the dealer's upcard, and it shows the basic-strategy play, including whether a double or split is free. It reads the same `strategy.js` as the trainer, and a test plays thousands of trainer rounds through the panel to check that the two agree on every decision.
+
+To try it:
+
+1. Open `chrome://extensions` and turn on **Developer mode**.
+2. Choose **Load unpacked** and select the `free-bet/extension` folder.
+3. Pin the extension, then click its icon (or press ⌘⇧Y / Ctrl+Shift+Y) to open the side panel.
+
+Type every card you're dealt: your two cards, the dealer's upcard, then each card you draw. A card you type means you followed the last answer; press H, S, D or P first when you did something else. U (or the dealer row) enters the dealer's card at any point, Backspace undoes, and N starts a new round. Looked-up hands are kept in the panel's History tab.
+
+The extension asks only for the `sidePanel` and `storage` permissions. It has no access to web pages, makes no network requests, and keeps hands in `chrome.storage.local` on the device. The panel can also be opened as a plain page (`free-bet/extension/sidepanel.html`) for a quick look; it then stores hands in `localStorage`.
 
 ## Sites
 
@@ -47,14 +60,6 @@ A four-page guide to the game of 21.
 
 All four share [`blackjack/style.css`](blackjack/style.css).
 
-### Why Syracuse ([`campus-life/`](campus-life/))
-
-A three-page site arguing that Syracuse has the best campus life in America:
-[index](campus-life/index.html), [traditions](campus-life/traditions.html), and
-[get involved](campus-life/get-involved.html), sharing
-[`campus-life/style.css`](campus-life/style.css).
-Live at [/campus-life/](https://ttakita-su.github.io/ist300-sandbox/campus-life/).
-
 ### Post-Credits ([`ist400-blogsite/`](ist400-blogsite/))
 
 A movie and TV blog template for IST400: a featured review on a film strip, posters drawn in
@@ -62,12 +67,6 @@ CSS, a reviews archive filterable by movies, shows, and lists, and six sample po
 [`ist400-blogsite/style.css`](ist400-blogsite/style.css). How to add a post is in
 [`ist400-blogsite/README.md`](ist400-blogsite/README.md).
 Live at [/ist400-blogsite/](https://ttakita-su.github.io/ist300-sandbox/ist400-blogsite/).
-
-### Dinosaurs ([`dinosaurs/`](dinosaurs/))
-
-A scratch page used to test page structure, tables, and deploys — the three Mesozoic eras,
-a species table, and quick facts. Self-contained, with its styles inline.
-Live at [/dinosaurs/](https://ttakita-su.github.io/ist300-sandbox/dinosaurs/).
 
 ## Coursework ([`docs/`](docs/))
 
