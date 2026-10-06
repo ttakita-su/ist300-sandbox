@@ -304,7 +304,7 @@
           <tr><th scope="row">Product</th><td>Free Bet Blackjack Strategy Trainer</td></tr>
           <tr><th scope="row">Document owner</th><td>Tomoyoshi</td></tr>
           <tr><th scope="row">Status</th><td>Draft for review</td></tr>
-          <tr><th scope="row">Last updated</th><td>22 September 2026</td></tr>
+          <tr><th scope="row">Last updated</th><td>6 October 2026</td></tr>
           <tr><th scope="row">Target release</th><td>V1, December 2026</td></tr>
           <tr><th scope="row">Prototype</th><td><a href="../free-bet/">Try the trainer</a></td></tr>
         </table>
@@ -314,6 +314,7 @@
         <h2>1. Summary</h2>
         <p>A browser-based trainer that deals Free Bet Blackjack hands and grades every player decision against published optimal strategy.</p>
         <p>Free play for the variant exists. Optimal strategy for it is published. Nothing currently connects the two. Players who want to learn Free Bet either read a static chart with no way to practise against it, or drill standard blackjack and try to remember the differences at the table.</p>
+        <p>The same strategy engine also ships as a Chrome extension. A player adds it to Chrome, keeps it open in a side panel beside an online casino table, enters the hand, and gets the correct play before acting. The trainer builds the skill; the extension supports the player while it is still being learned.</p>
         <p>V1 targets a single variant done correctly rather than several done approximately. The architecture separates the game module from the grading platform so additional variants become configuration rather than rebuilds.</p>
       </section>
 
@@ -356,15 +357,17 @@
         <h3>3.1 Primary user</h3>
         <p>A recreational player who already knows standard basic strategy and wants to learn a variant before playing it for money. Practises at home, in sessions of roughly ten to thirty minutes, typically ahead of a planned casino visit.</p>
 
-        <h3>3.2 Explicitly not targeted</h3>
+        <h3>3.2 Secondary user</h3>
+        <p>An online player of the same variant who wants the correct play during a hand. Plays in a desktop Chrome browser, where no other players are waiting and checking a source mid-hand costs nothing socially. Served by the Chrome extension (<a href="#f9">F9</a>).</p>
+
+        <h3>3.3 Explicitly not targeted</h3>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Segment</th><th>Why not</th></tr></thead>
             <tbody>
               <tr><td>Blackjack beginners</td><td>Well served by existing standard-blackjack trainers</td></tr>
               <tr><td>Advantage players</td><td>Card counting is a distinct skill with its own mature tooling</td></tr>
-              <tr><td>Online variant players</td><td>Different need — in-play reference, not pre-play drilling. See <a href="#scope">§7.2</a></td></tr>
-              <tr><td>Recreational gamblers</td><td>The product teaches decisions; it is not a gambling product</td></tr>
+              <tr><td>Recreational gamblers</td><td>The product teaches and advises decisions; it takes no wagers and is not a gambling product</td></tr>
             </tbody>
           </table>
         </div>
@@ -420,14 +423,14 @@
             <thead><tr><th>Area</th><th>Decision</th><th>Rationale</th></tr></thead>
             <tbody>
               <tr><td>Launch variant</td><td>Free Bet Blackjack</td><td>Only verified gap with an active player base</td></tr>
-              <tr><td>Platform</td><td>Responsive web, desktop and mobile browser</td><td>No install; matches where users already practise</td></tr>
+              <tr><td>Platform</td><td>Responsive web, desktop and mobile browser, plus a Chrome extension for online play</td><td>The web trainer needs no install; the extension goes where online players already are</td></tr>
               <tr><td>Practice model</td><td>Randomly dealt hands, graded per decision</td><td>Directly requested in research</td></tr>
               <tr><td>Feedback timing</td><td>Immediately after each decision, before the next deal</td><td>No social constraint in the practice context</td></tr>
               <tr><td>Default rules</td><td>6 decks · dealer hits soft 17 · dealer 22 pushes · free double on hard 9/10/11 · free split on all pairs except tens · blackjack pays 3:2</td><td>Most common published configuration — <strong>pending confirmation against the chosen strategy source</strong></td></tr>
               <tr><td>Strategy source</td><td>One published Free Bet basic-strategy chart, cited in the repository</td><td>Grading correctness is bounded by source correctness</td></tr>
               <tr><td>Authentication</td><td>None</td><td>Removes the largest barrier to a 60-second start</td></tr>
-              <tr><td>Persistence</td><td>Browser local storage</td><td>No backend required for V1</td></tr>
-              <tr><td>Extensibility</td><td>Game logic and strategy data separated from the grading platform</td><td>Additional variants become configuration</td></tr>
+              <tr><td>Persistence</td><td>Browser local storage; <code>chrome.storage.local</code> in the extension</td><td>No backend required</td></tr>
+              <tr><td>Extensibility</td><td>Game logic and strategy data separated from the grading platform</td><td>Additional variants become configuration, and the extension reuses the same strategy data</td></tr>
             </tbody>
           </table>
         </div>
@@ -545,6 +548,29 @@
             <p>Adds a second game module, Spanish 21 being the leading candidate.</p>
             <p>Architecture supports this from V1; no implementation in V1.</p>
           </article>
+
+          <article class="feature" id="f9">
+            <h3>F9 · Chrome extension for online play <span class="tag later">V1.1</span></h3>
+            <p>Gives the correct play during a live online hand.</p>
+            <h4>Functional requirements</h4>
+            <ul>
+              <li>Installs as a Chrome extension (Manifest V3) from the Chrome Web Store, and loads unpacked during development</li>
+              <li>Opens in Chrome's side panel so the casino table stays visible beside it</li>
+              <li>Lets the player enter their cards and the dealer upcard by click or keyboard in under 5 seconds</li>
+              <li>Returns the optimal action within 1 second of the last card being entered, including whether a free double or free split applies</li>
+              <li>Reads from the same strategy data as F2, so the trainer and the extension can never disagree</li>
+              <li>Works offline, with no network requests after install</li>
+              <li>Saves each looked-up hand so it can be reviewed afterward in the session log (F3)</li>
+            </ul>
+            <h4>Constraints</h4>
+            <ul>
+              <li>Must not read, click, or bet on the casino page. It advises; the player makes every choice</li>
+              <li>Must request no host permissions, so it has no access to any web page's content</li>
+              <li>Must state the rule set its advice assumes, and warn that the advice may be wrong at a table with different rules</li>
+              <li>Must not collect personal data, and must not send hand data off the device</li>
+            </ul>
+            <p><strong>Validation status.</strong> Supported by one participant: the online player searches for the correct play mid-hand (<a href="#research">§4.1</a>). One participant is a narrow base.</p>
+          </article>
         </div>
 
         <h3>6.3 Screens</h3>
@@ -556,6 +582,7 @@
               <tr><td>2</td><td>Table</td><td>Play, act, receive verdicts</td><td>F1, F2</td></tr>
               <tr><td>3</td><td>Summary</td><td>Session performance</td><td>F5</td></tr>
               <tr><td>4</td><td>Log</td><td>Hand-by-hand review</td><td>F3</td></tr>
+              <tr><td>5</td><td>Extension side panel</td><td>Enter a live hand, get the correct play</td><td>F9</td></tr>
             </tbody>
           </table>
         </div>
@@ -574,7 +601,7 @@
             <thead><tr><th>Excluded</th><th>Rationale</th></tr></thead>
             <tbody>
               <tr><td>Live assistance at a physical table</td><td>Research finding — two of three participants will not consult any source mid-hand, both citing other players waiting. The product would be unused at the moment it was designed for</td></tr>
-              <tr><td>Browser extension for online play</td><td>Different delivery surface and a different purpose. It assists real-money play rather than training. Viable future direction; see <a href="#future">§10</a></td></tr>
+              <tr><td>Reading the casino page or playing automatically</td><td>The extension (<a href="#f9">F9</a>) only advises on hands the player enters. Reading or clicking the table needs page access, breaks with every casino's markup, and turns an advice tool into a bot that casino terms prohibit</td></tr>
               <tr><td>Real-money play</td><td>Changes product category, legal exposure, and audience</td></tr>
               <tr><td>Poker</td><td>No fixed optimal-play table; correct play depends on opponent modelling. Grading model does not apply</td></tr>
               <tr><td>Games requiring a runtime solver</td><td>Connect 4, chess, checkers. Correct play must be computed per position rather than looked up, requiring a different engine</td></tr>
@@ -593,7 +620,7 @@
             <thead><tr><th>Release</th><th>Contents</th><th>Gate</th></tr></thead>
             <tbody>
               <tr><td><strong>V1</strong></td><td>F1, F2, F3, F4</td><td>A first-time user completes 20 graded hands and reviews the session, unaided</td></tr>
-              <tr><td><strong>V1.1</strong></td><td>F5, F6</td><td>F5 conditional on validation</td></tr>
+              <tr><td><strong>V1.1</strong></td><td>F5, F6, F9</td><td>F5 conditional on validation. F9: a user installs the extension, enters a hand, and receives the correct play unaided</td></tr>
               <tr><td><strong>V2</strong></td><td>F7, F8</td><td>F7 conditional on validation</td></tr>
             </tbody>
           </table>
@@ -652,7 +679,7 @@
 
       <section id="future">
         <h2>10. Future direction</h2>
-        <p><strong>Online play.</strong> The research indicates that the constraint on mid-hand reference is social rather than informational. Where no other players are waiting, users do consult sources during a hand. This suggests a distinct product for online variant players — in-play reference rather than pre-play drilling — on a different delivery surface. Not pursued in this product.</p>
+        <p><strong>Online play.</strong> The research indicates that the constraint on mid-hand reference is social rather than informational. Where no other players are waiting, users do consult sources during a hand. The Chrome extension (<a href="#f9">F9</a>) serves that need from V1.1. Possible later steps are other browsers and per-casino rule presets (with F7). Reading table state automatically stays out of scope (<a href="#scope">§7.2</a>).</p>
         <p><strong>Variant expansion.</strong> Blackjack Switch, Zappit 21 and Double Exposure show the same profile as Free Bet: free play available, strategy published, no graded trainer. Each is configuration against the V1 platform rather than new engineering.</p>
       </section>
 
@@ -664,6 +691,7 @@
             <tbody>
               <tr><td>Published Free Bet strategy chart, with its assumed rule set</td><td>F2, and the rule-set decision in §6.1</td><td>Unresolved</td></tr>
               <tr><td>Validation of F5 and F7 hypotheses</td><td>V1.1 and V2 scope</td><td>Unresolved</td></tr>
+              <tr><td>Chrome Web Store review of a gambling-related extension</td><td>Public release of F9</td><td>Unresolved</td></tr>
             </tbody>
           </table>
         </div>
@@ -679,6 +707,9 @@
               <tr><td>Variant rules implemented incorrectly</td><td>Users drill the wrong strategy</td><td>Medium</td><td>Each rule tested in isolation against F1's constraints</td></tr>
               <tr><td>Research sample of three</td><td>Requirements rest on a narrow base</td><td>High</td><td>Hypotheses labelled rather than presented as findings; conditional features scheduled after V1</td></tr>
               <tr><td>Discoverability, not absence, is the real gap</td><td>The product is built and never found</td><td>Medium</td><td>Accepted. No acquisition strategy in V1</td></tr>
+              <tr><td>An online casino's terms forbid assistance software</td><td>The player's account is closed or winnings are voided</td><td>Medium</td><td>No page access and no automation, so the extension works like a printed chart. The store listing tells users to check their casino's terms</td></tr>
+              <tr><td>Extension advice used at a table with different rules</td><td>Real money is lost on plays that are wrong for that table</td><td>Medium</td><td>Assumed rule set shown on every answer; per-casino rules deferred to F7</td></tr>
+              <tr><td>The extension reads as encouraging gambling</td><td>Store rejection; harm to at-risk users</td><td>Low</td><td>No wagers, deposits, bonuses, or affiliate links. Links to problem-gambling help in the panel</td></tr>
             </tbody>
           </table>
         </div>
@@ -691,6 +722,8 @@
           <li>Do the F5 and F7 hypotheses survive further research, or are they cut?</li>
           <li>When the online player searches mid-hand, does he find variant-specific guidance or standard-blackjack advice? Unasked; would sharpen §10.</li>
           <li>Does the grading model need to handle composition-dependent decisions, or is total-plus-upcard sufficient for this variant?</li>
+          <li>Which online casinos offer Free Bet Blackjack, and do their terms permit a strategy reference during play?</li>
+          <li>Will the Chrome Web Store accept the extension, and under which policy category?</li>
         </ol>
       </section>
     </main>
@@ -699,7 +732,7 @@
   <footer>
     <p>
       Built for IST300 &middot;
-      <a href="https://github.com/ttakita-su/ist300-sandbox/blob/main/02-prd.md">Markdown source</a> &middot;
+      <a href="https://github.com/ttakita-su/ist300-sandbox/blob/main/PRD.md">Markdown source</a> &middot;
       <a href="https://github.com/ttakita-su/ist300-sandbox">Source on GitHub</a>
     </p>
   </footer>

@@ -7,7 +7,7 @@
 | **Product** | Free Bet Blackjack Strategy Trainer |
 | **Document owner** | Tomoyoshi |
 | **Status** | Draft for review |
-| **Last updated** | 22 September 2026 |
+| **Last updated** | 6 October 2026 |
 | **Target release** | V1, December 2026 |
 
 ---
@@ -17,6 +17,8 @@
 A browser-based trainer that deals Free Bet Blackjack hands and grades every player decision against published optimal strategy.
 
 Free play for the variant exists. Optimal strategy for it is published. Nothing currently connects the two. Players who want to learn Free Bet either read a static chart with no way to practise against it, or drill standard blackjack and try to remember the differences at the table.
+
+The same strategy engine also ships as a Chrome extension. A player adds it to Chrome, keeps it open in a side panel beside an online casino table, enters the hand, and gets the correct play before acting. The trainer builds the skill; the extension supports the player while it is still being learned.
 
 V1 targets a single variant done correctly rather than several done approximately. The architecture separates the game module from the grading platform so additional variants become configuration rather than rebuilds.
 
@@ -58,14 +60,17 @@ A survey of available tools was conducted on 17 September 2026.
 
 A recreational player who already knows standard basic strategy and wants to learn a variant before playing it for money. Practises at home, in sessions of roughly ten to thirty minutes, typically ahead of a planned casino visit.
 
-### 3.2 Explicitly not targeted
+### 3.2 Secondary user
+
+An online player of the same variant who wants the correct play during a hand. Plays in a desktop Chrome browser, where no other players are waiting and checking a source mid-hand costs nothing socially. Served by the Chrome extension (F9).
+
+### 3.3 Explicitly not targeted
 
 | Segment | Why not |
 | --- | --- |
 | Blackjack beginners | Well served by existing standard-blackjack trainers |
 | Advantage players | Card counting is a distinct skill with its own mature tooling |
-| Online variant players | Different need — in-play reference, not pre-play drilling. See §7.2 |
-| Recreational gamblers | The product teaches decisions; it is not a gambling product |
+| Recreational gamblers | The product teaches and advises decisions; it takes no wagers and is not a gambling product |
 
 ---
 
@@ -119,14 +124,14 @@ Growth, retention, and monetisation are out of scope for V1. The product has no 
 | Area | Decision | Rationale |
 | --- | --- | --- |
 | Launch variant | Free Bet Blackjack | Only verified gap with an active player base |
-| Platform | Responsive web, desktop and mobile browser | No install; matches where users already practise |
+| Platform | Responsive web, desktop and mobile browser, plus a Chrome extension for online play | The web trainer needs no install; the extension goes where online players already are |
 | Practice model | Randomly dealt hands, graded per decision | Directly requested in research |
 | Feedback timing | Immediately after each decision, before the next deal | No social constraint in the practice context |
 | Default rules | 6 decks · dealer hits soft 17 · dealer 22 pushes · free double on hard 9/10/11 · free split on all pairs except tens · blackjack pays 3:2 | Most common published configuration — **pending confirmation against the chosen strategy source** |
 | Strategy source | One published Free Bet basic-strategy chart, cited in the repository | Grading correctness is bounded by source correctness |
 | Authentication | None | Removes the largest barrier to a 60-second start |
-| Persistence | Browser local storage | No backend required for V1 |
-| Extensibility | Game logic and strategy data separated from the grading platform | Additional variants become configuration |
+| Persistence | Browser local storage; `chrome.storage.local` in the extension | No backend required |
+| Extensibility | Game logic and strategy data separated from the grading platform | Additional variants become configuration, and the extension reuses the same strategy data |
 
 **Open dependency.** The strategy source is not yet selected. If the chosen chart assumes a rule set other than the default above, the default changes to match the chart. This blocks F2 and must be resolved before implementation begins.
 
@@ -246,6 +251,29 @@ Architecture supports this from V1; no implementation in V1.
 
 ---
 
+#### F9 · Chrome extension for online play · V1.1
+
+Gives the correct play during a live online hand.
+
+**Functional requirements**
+- Installs as a Chrome extension (Manifest V3) from the Chrome Web Store, and loads unpacked during development
+- Opens in Chrome's side panel so the casino table stays visible beside it
+- Lets the player enter their cards and the dealer upcard by click or keyboard in under 5 seconds
+- Returns the optimal action within 1 second of the last card being entered, including whether a free double or free split applies
+- Reads from the same strategy data as F2, so the trainer and the extension can never disagree
+- Works offline, with no network requests after install
+- Saves each looked-up hand so it can be reviewed afterward in the session log (F3)
+
+**Constraints**
+- Must not read, click, or bet on the casino page. It advises; the player makes every choice
+- Must request no host permissions, so it has no access to any web page's content
+- Must state the rule set its advice assumes, and warn that the advice may be wrong at a table with different rules
+- Must not collect personal data, and must not send hand data off the device
+
+**Validation status.** Supported by one participant: the online player searches for the correct play mid-hand (§4.1). One participant is a narrow base.
+
+---
+
 ### 6.3 Screens
 
 | # | Screen | Purpose | Features |
@@ -254,6 +282,7 @@ Architecture supports this from V1; no implementation in V1.
 | 2 | Table | Play, act, receive verdicts | F1, F2 |
 | 3 | Summary | Session performance | F5 |
 | 4 | Log | Hand-by-hand review | F3 |
+| 5 | Extension side panel | Enter a live hand, get the correct play | F9 |
 
 Screens 3 and 4 may be implemented as one page with two views.
 
@@ -270,7 +299,7 @@ F1 through F4, across screens 1, 2 and 4. The releasable increment is: read the 
 | Excluded | Rationale |
 | --- | --- |
 | Live assistance at a physical table | Research finding — two of three participants will not consult any source mid-hand, both citing other players waiting. The product would be unused at the moment it was designed for |
-| Browser extension for online play | Different delivery surface and a different purpose. It assists real-money play rather than training. Viable future direction; see §10 |
+| Reading the casino page or playing automatically | The extension (F9) only advises on hands the player enters. Reading or clicking the table needs page access, breaks with every casino's markup, and turns an advice tool into a bot that casino terms prohibit |
 | Real-money play | Changes product category, legal exposure, and audience |
 | Poker | No fixed optimal-play table; correct play depends on opponent modelling. Grading model does not apply |
 | Games requiring a runtime solver | Connect 4, chess, checkers. Correct play must be computed per position rather than looked up, requiring a different engine |
@@ -285,7 +314,7 @@ F1 through F4, across screens 1, 2 and 4. The releasable increment is: read the 
 | Release | Contents | Gate |
 | --- | --- | --- |
 | **V1** | F1, F2, F3, F4 | A first-time user completes 20 graded hands and reviews the session, unaided |
-| **V1.1** | F5, F6 | F5 conditional on validation |
+| **V1.1** | F5, F6, F9 | F5 conditional on validation. F9: a user installs the extension, enters a hand, and receives the correct play unaided |
 | **V2** | F7, F8 | F7 conditional on validation |
 
 ---
@@ -338,7 +367,7 @@ V1 ships when every item below is true. Anything unchecked is a blocker, not a n
 
 ## 10. Future direction
 
-**Online play.** The research indicates that the constraint on mid-hand reference is social rather than informational. Where no other players are waiting, users do consult sources during a hand. This suggests a distinct product for online variant players — in-play reference rather than pre-play drilling — on a different delivery surface. Not pursued in this product.
+**Online play.** The research indicates that the constraint on mid-hand reference is social rather than informational. Where no other players are waiting, users do consult sources during a hand. The Chrome extension (F9) serves that need from V1.1. Possible later steps are other browsers and per-casino rule presets (with F7). Reading table state automatically stays out of scope (§7.2).
 
 **Variant expansion.** Blackjack Switch, Zappit 21 and Double Exposure show the same profile as Free Bet: free play available, strategy published, no graded trainer. Each is configuration against the V1 platform rather than new engineering.
 
@@ -350,6 +379,7 @@ V1 ships when every item below is true. Anything unchecked is a blocker, not a n
 | --- | --- | --- |
 | Published Free Bet strategy chart, with its assumed rule set | F2, and the rule-set decision in §6.1 | Unresolved |
 | Validation of F5 and F7 hypotheses | V1.1 and V2 scope | Unresolved |
+| Chrome Web Store review of a gambling-related extension | Public release of F9 | Unresolved |
 
 ---
 
@@ -361,6 +391,9 @@ V1 ships when every item below is true. Anything unchecked is a blocker, not a n
 | Variant rules implemented incorrectly | Users drill the wrong strategy | Medium | Each rule tested in isolation against F1's constraints |
 | Research sample of three | Requirements rest on a narrow base | High | Hypotheses labelled rather than presented as findings; conditional features scheduled after V1 |
 | Discoverability, not absence, is the real gap | The product is built and never found | Medium | Accepted. No acquisition strategy in V1 |
+| An online casino's terms forbid assistance software | The player's account is closed or winnings are voided | Medium | No page access and no automation, so the extension works like a printed chart. The store listing tells users to check their casino's terms |
+| Extension advice used at a table with different rules | Real money is lost on plays that are wrong for that table | Medium | Assumed rule set shown on every answer; per-casino rules deferred to F7 |
+| The extension reads as encouraging gambling | Store rejection; harm to at-risk users | Low | No wagers, deposits, bonuses, or affiliate links. Links to problem-gambling help in the panel |
 
 ---
 
@@ -370,3 +403,5 @@ V1 ships when every item below is true. Anything unchecked is a blocker, not a n
 2. Do the F5 and F7 hypotheses survive further research, or are they cut?
 3. When the online player searches mid-hand, does he find variant-specific guidance or standard-blackjack advice? Unasked; would sharpen §10.
 4. Does the grading model need to handle composition-dependent decisions, or is total-plus-upcard sufficient for this variant?
+5. Which online casinos offer Free Bet Blackjack, and do their terms permit a strategy reference during play?
+6. Will the Chrome Web Store accept the extension, and under which policy category?

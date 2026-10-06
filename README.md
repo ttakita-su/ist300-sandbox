@@ -71,7 +71,7 @@ Live at [/dinosaurs/](https://ttakita-su.github.io/ist300-sandbox/dinosaurs/).
 
 ## Coursework ([`docs/`](docs/))
 
-- [`02-prd.md`](02-prd.md) — Product requirements document for the **Free Bet Blackjack Strategy
+- [`PRD.md`](PRD.md) — Product requirements document for the **Free Bet Blackjack Strategy
   Trainer**, also published as a web page at
   [/prd/](https://ttakita-su.github.io/ist300-sandbox/prd/) ([`prd/index.html`](prd/index.html)).
 - [`docs/lab3-backlog.md`](docs/lab3-backlog.md) — Lab 3 user-story backlog for the **Free Bet
@@ -79,7 +79,7 @@ Live at [/dinosaurs/](https://ttakita-su.github.io/ist300-sandbox/dinosaurs/).
   Given–When–Then acceptance criteria and a quote from user interviews as evidence. The MVP
   slice is rules-to-graded-drill; live table assist was cut to Won't based on interview
   evidence.
-- [`02-prd.md`](02-prd.md) — product requirements document for the Free Bet trainer. It is
+- [`PRD.md`](PRD.md) — product requirements document for the Free Bet trainer. It is
   also published as a web page at [`prd/index.html`](prd/index.html), live at
   [/prd/](https://ttakita-su.github.io/ist300-sandbox/prd/); edit both when the PRD changes.
 
