@@ -33,7 +33,12 @@ Open [`free-bet/index.html`](free-bet/index.html) for the playable PRD implement
 
 ### Chrome extension (prototype, PRD F9)
 
-[`free-bet/extension/`](free-bet/extension/) is a Manifest V3 extension that opens in Chrome's side panel beside an online table. Type your two cards and the dealer's upcard, and it shows the basic-strategy play, including whether a double or split is free. It reads the same `strategy.js` as the trainer, and a test plays thousands of trainer rounds through the panel to check that the two agree on every decision.
+[`free-bet/extension/`](free-bet/extension/) is a Manifest V3 extension, Blackjack Strategy Advisor, that opens in Chrome's side panel beside an online table. Type your two cards and the dealer's upcard, and it shows the basic-strategy play. A switch at the top of the panel, or the G key, picks the game:
+
+- **Free Bet**: Free Bet Blackjack. The panel says whether a double or split is free. It reads the same `strategy.js` as the trainer, and a test plays thousands of trainer rounds through the panel to check that the two agree on every decision.
+- **Blackjack**: regular blackjack, where every double and split costs a bet equal to your first.
+
+Each round keeps the game it was played in. Switching mid-round regrades that round's answers; switching after a round ends starts a new one, and Backspace brings the old round back.
 
 To try it:
 
@@ -41,9 +46,13 @@ To try it:
 2. Choose **Load unpacked** and select the `free-bet/extension` folder.
 3. Pin the extension, then click its icon (or press ⌘⇧Y / Ctrl+Shift+Y) to open the side panel.
 
-Type every card you're dealt: your two cards, the dealer's upcard, then each card you draw. A card you type means you followed the last answer; press H, S, D or P first when you did something else. U (or the dealer row) enters the dealer's card at any point, Backspace undoes, and N starts a new round. Looked-up hands are kept in the panel's History tab.
+Type every card you're dealt: your two cards, the dealer's upcard, then each card you draw. A card you type means you followed the last answer; press H, S, D or P first when you did something else. U (or the dealer row) enters the dealer's card at any point, Backspace undoes, N starts a new round, and G switches games. Looked-up hands are kept in the panel's History tab, each tagged with its game.
 
 The extension asks only for the `sidePanel` and `storage` permissions. It has no access to web pages, makes no network requests, and keeps hands in `chrome.storage.local` on the device. The panel can also be opened as a plain page (`free-bet/extension/sidepanel.html`) for a quick look; it then stores hands in `localStorage`.
+
+#### The regular blackjack chart
+
+It assumes six decks, a dealer who hits soft 17 and peeks for blackjack, 3 to 2 blackjacks, doubling on any first two cards (after splits too), splits up to four hands with aces resplittable, and no surrender. The chart is the [Wizard of Odds 4–8 deck chart](https://wizardofodds.com/games/blackjack/strategy/4-decks/) for a dealer who hits soft 17, checked on 6 October 2026 three ways: against Wizard of Odds' own six-deck tables, against independent charts (Ken Smith's Blackjack Info engine and others), and against an exact six-deck calculation. All three agree on every cell. Where the chart's double isn't possible (three or more cards), the panel shows its printed fallback: hit, or stand for a soft 18 or 19. A pair that can't split because four hands are in play is played as its total, so this game never leaves a gap. The trainer page stays Free Bet only. Details are in [`free-bet/STRATEGY.md`](free-bet/STRATEGY.md).
 
 ## Sites
 

@@ -215,6 +215,133 @@ test('a card typed after the round is over starts the next round',()=>{
  same(press([...deal(10,6,2),{t:'stand'}],'9'),{...none,newRound:true,then:[{t:'card',to:'hand',r:'9'}]});
 });
 
+// Regular blackjack, "Blackjack" in the panel. Two-card answers written out by hand from the verified chart (STRATEGY.md), dealer 2 to A. A two-card
+// Dh or Ds shows as D, and a pair the chart doesn't split shows the play for its total.
+const {Classic:C,ClassicRules,Rules,Games:G}=vm.runInContext('({Classic,ClassicRules,Rules,Games})',ctx);
+const classicFixtures=[
+ [[2,3],'HHHHHHHHHH'],[[2,4],'HHHHHHHHHH'],[[2,5],'HHHHHHHHHH'],[[2,6],'HHHHHHHHHH'],[[3,5],'HHHHHHHHHH'],[[2,7],'HDDDDHHHHH'],[[3,6],'HDDDDHHHHH'],
+ [[2,8],'DDDDDDDDHH'],[[4,6],'DDDDDDDDHH'],[[2,9],'DDDDDDDDDD'],[[5,6],'DDDDDDDDDD'],[[10,2],'HHSSSHHHHH'],[[7,5],'HHSSSHHHHH'],[[10,3],'SSSSSHHHHH'],
+ [[10,4],'SSSSSHHHHH'],[[10,5],'SSSSSHHHHH'],[[10,6],'SSSSSHHHHH'],[[9,7],'SSSSSHHHHH'],[[10,7],'SSSSSSSSSS'],[[10,8],'SSSSSSSSSS'],[[10,9],'SSSSSSSSSS'],
+ [['A',2],'HHHDDHHHHH'],[['A',3],'HHHDDHHHHH'],[['A',4],'HHDDDHHHHH'],[['A',5],'HHDDDHHHHH'],[['A',6],'HDDDDHHHHH'],[[6,'A'],'HDDDDHHHHH'],
+ [['A',7],'DDDDDSSHHH'],[['A',8],'SSSSDSSSSS'],[['A',9],'SSSSSSSSSS'],
+ [[2,2],'PPPPPPHHHH'],[[3,3],'PPPPPPHHHH'],[[4,4],'HHHPPHHHHH'],[[5,5],'DDDDDDDDHH'],[[6,6],'PPPPPHHHHH'],[[7,7],'PPPPPPHHHH'],[[8,8],'PPPPPPPPPP'],
+ [[9,9],'PPPPPSPPSS'],[[10,10],'SSSSSSSSSS'],[['J','Q'],'SSSSSSSSSS'],[['A','A'],'PPPPPPPPPP'],
+];
+const upcards=['2','3','4','5','6','7','8','9','10','A'];
+test('Blackjack reads every two-card hand from its chart, before and after a split',()=>{let cells=0;
+ for(const [rs,want] of classicFixtures)upcards.forEach((d,i)=>{
+  assert.equal(C.best(hand(rs),up(d),1),want[i],`${rs} vs ${d}`);
+  same(A.advise(hand(rs),up(d),1,'classic'),{kind:'action',action:want[i],free:false},`${rs} vs ${d}`);
+  // Doubling after a split is allowed, so a split hand reads the same chart.
+  if(rs.join()!=='A,A')same(A.advise(hand(rs,{split:true}),up(d),3,'classic'),{kind:'action',action:want[i],free:false},`split ${rs} vs ${d}`);
+  cells++;});
+ assert.equal(cells,410);
+});
+test('Blackjack falls back to the chart\'s printed play, so it never leaves a gap',()=>{
+ const play=(rs,d,count=1,o={})=>A.advise(hand(rs,o),up(d),count,'classic'),is=action=>({kind:'action',action,free:false});
+ same(play([2,3,6],6),is('H'),'three-card hard 11: Dh hits');
+ same(play([2,4,4],5),is('H'),'three-card hard 10: Dh hits');
+ same(play(['A',3,4],4),is('S'),'three-card soft 18: Ds stands');
+ same(play(['A',4,4],6),is('S'),'three-card soft 19: Ds stands');
+ same(play(['A',2,2],5),is('H'),'three-card soft 15: Dh hits');
+ same(play([8,8],10,4,{split:true}),is('H'),'8,8 at four hands plays hard 16');
+ same(play([8,8],6,4,{split:true}),is('S'));
+ same(play([9,9],6,4,{split:true}),is('S'),'9,9 at four hands plays hard 18');
+ same(play([2,2],5,4,{split:true}),is('H'),'2,2 at four hands plays hard 4');
+ same(play([5,5],9),is('D'),'5,5 plays hard 10');
+ same(play([10,10],6),is('S'),'10,10 plays hard 20');
+ same(play(['A',7],6,2,{aces:true,split:true}),{kind:'done',reason:'split-aces'});
+ same(play(['A',10],6,2,{aces:true,split:true}),{kind:'done',reason:'split-aces'});
+ same(play(['A','A'],6,2,{aces:true,split:true}),is('P'));
+ same(play(['A','A'],6,4,{aces:true,split:true}),{kind:'done',reason:'four-hands'});
+ same(play(['A',10],6),{kind:'blackjack'});same(play(['A',10],6,2,{split:true}),{kind:'twentyOne'});same(play([10,6,9],6),{kind:'bust'});
+});
+// Every state the panel can show an answer for, as in the Free Bet check above: Blackjack answers all of them, from Classic.best, with a play the table allows.
+test('every Blackjack decision matches Classic.best, is legal, and none is a gap',()=>{
+ const ranks=['A','2','3','4','5','6','7','8','9','10'];let checked=0;
+ for(const a of ranks)for(const b of ranks)for(const c of [null,...ranks])for(const d of ranks)for(const split of [false,true])for(const count of [1,2,3,4]){
+  const h=hand(c?[a,b,c]:[a,b],{split}),advice=A.advise(h,up(d),count,'classic'),name=`${h.cards.map(x=>x.r)} vs ${d}, ${count} hands`;
+  if(advice.kind!=='action'&&advice.kind!=='gap')continue;
+  assert.equal(advice.kind,'action',`gap at ${name}`);assert.equal(advice.free,false,name);
+  assert.equal(advice.action,C.best(h,up(d),count),name);
+  const s={game:'classic',index:0,hands:[{...h,status:'open'},...Array.from({length:count-1},()=>hand([2,3]))]};
+  assert.ok(A.legal(s)[advice.action],`${advice.action} isn't allowed at ${name}`);checked++;
+ }
+ assert.equal(checked,68320,'a decision state was reported as a finished hand');
+});
+const routeIn=(game,events,aim)=>plain(A.next(A.replay(events,game),aim)),pressIn=(game,events,input,aim)=>plain(A.press(A.replay(events,game),input,aim));
+// Plays keys as the panel would. A key that starts a new round leaves its closing events (a stand) on this round, and ends it.
+const keys=(game,list)=>{const events=[];let aim=null;for(const k of list){const r=A.press(A.replay(events,game),String(k),aim);aim=r.aim;events.push(...plain(r.events));if(r.newRound)break;}return events;};
+test('a round remembers its game, and Free Bet is the default',()=>{
+ assert.equal(A.replay([]).game,'freebet');assert.equal(A.replay(deal(8,8,6),'classic').game,'classic');
+});
+test('a Blackjack split puts the new hand on a full bet, and tens can split',()=>{
+ same(hands(A.replay([...deal(8,8,6),{t:'split'}],'classic')),[{cards:'8',free:false,aces:false,split:true,status:'open'},{cards:'8',free:false,aces:false,split:true,status:'open'}]);
+ same(hands(A.replay([...deal('A','A',6),{t:'split'}],'classic')),[{cards:'A',free:false,aces:true,split:true,status:'open'},{cards:'A',free:false,aces:true,split:true,status:'open'}]);
+ assert.equal(A.replay([...deal(10,10,6),{t:'split'}],'classic').hands.length,2);
+ assert.equal(A.replay([...deal(10,10,6),{t:'split'}],'freebet').hands.length,1);
+ same(pressIn('classic',deal(10,10,6),'P'),{...none,events:[{t:'split'}]});same(pressIn('freebet',deal(10,10,6),'P'),none);
+ const four=[...deal(8,8,6),{t:'split'},card(8),{t:'split'},card(8),{t:'split'},card(8)];
+ assert.equal(A.replay([...four,{t:'split'}],'classic').hands.length,4);assert.equal(A.legal(A.replay(four,'classic')).P,false);
+});
+test('Blackjack split aces take one card each unless it is another ace',()=>{
+ const status=events=>A.replay(events,'classic').hands.map(h=>h.status).join(' ');
+ assert.equal(status([...deal('A','A',6),{t:'split'},card(7)]),'closed open');
+ assert.equal(status([...deal('A','A',6),{t:'split'},card('A')]),'open open');
+ same(pressIn('classic',[...deal('A','A',6),{t:'split'},card(7)],'D'),none);
+});
+test('Blackjack logs carry no free bets',()=>{
+ const s=A.replay([...deal(8,8,6),{t:'split'},card(3),{t:'double'},card(5),{t:'select',index:1},card(10),{t:'stand'}],'classic');
+ same(log(s),['1: 8 8 v 6 [1] P > P correct','1: 8 3 v 6 [2] D > D correct','2: 8 10 v 6 [2] S > S correct']);
+ assert.ok(plain(s.decisions).every(d=>d.free===false&&d.advice.free===false));
+ same(log(A.replay([...deal(10,10,6),{t:'split'}],'classic')),['1: 10 10 v 6 [1] S > P misplay']);
+});
+test('Blackjack routes the next card by its own answers',()=>{
+ same(routeIn('classic',deal(4,6,10)),go({prompt:'drawn'}));
+ same(route(deal(4,6,10)),go({before:[{t:'double'}],prompt:'double-card'}));
+ same(routeIn('classic',deal(4,6,9)),go({before:[{t:'double'}],prompt:'double-card'}));
+ same(routeIn('classic',deal('A',7,3)),go({before:[{t:'double'}],prompt:'double-card'}));
+ same(route(deal('A',7,3)),go({before:[{t:'stand'}],newRound:true,prompt:'new-round'}));
+ same(routeIn('classic',deal(8,8,6)),go({before:[{t:'split'}],prompt:'split'}));
+ same(routeIn('classic',deal(10,10,6)),go({before:[{t:'stand'}],newRound:true,prompt:'new-round'}));
+ same(routeIn('classic',[...deal('A',2,4),card(5)]),go({before:[{t:'stand'}],newRound:true,prompt:'new-round'}));
+ same(routeIn('classic',[...deal(2,3,6),card(6)]),go({prompt:'drawn'}));
+ same(routeIn('classic',[...deal(10,10,6),{t:'split'},card(5)]),go({before:[{t:'stand'},{t:'select',index:1}],prompt:'next-hand',hand:2}));
+ same(pressIn('classic',deal(4,6,10),'9'),{...none,events:[{t:'card',to:'hand',r:'9'}]});
+ same(pressIn('classic',deal(4,6,9),'9'),{...none,events:[{t:'double'},{t:'card',to:'hand',r:'9'}]});
+ same(pressIn('classic',deal(8,8,6),'3'),{...none,events:[{t:'split'},{t:'card',to:'hand',r:'3'}]});
+ same(pressIn('classic',deal(10,7,6),'9'),{...none,events:[{t:'stand'}],newRound:true,then:[{t:'card',to:'hand',r:'9'}]});
+});
+test('a split round typed card by card is logged the same way in Blackjack',()=>{
+ const typed=['8','8','6','3','5','10','2'];
+ same(log(A.replay(keys('classic',typed),'classic')),['1: 8 8 v 6 [1] P > P correct','1: 8 3 v 6 [2] D > D correct','2: 8 10 v 6 [2] S > S correct']);
+ same(log(A.replay(keys('freebet',typed))),['1: 8 8 v 6 [1] P free > P correct','1: 8 3 v 6 [2] D free > D correct','2: 8 10 v 6 free [2] S > S correct']);
+});
+test('the same events in the other game are regraded',()=>{
+ const doubled=[...deal(4,6,10),{t:'double'},card(9)];
+ same(log(A.replay(doubled,'freebet')),['1: 4 6 v 10 [1] D free > D correct']);
+ same(log(A.replay(doubled,'classic')),['1: 4 6 v 10 [1] H > D misplay']);
+ const split=[...deal(8,8,'A'),{t:'split'},card(3),{t:'double'},card(5),{t:'select',index:1},card(9),{t:'stand'}];
+ same(log(A.replay(split,'freebet')),['1: 8 8 v A [1] P free > P correct','1: 8 3 v A [2] D free > D correct','2: 8 9 v A free [2] H > S misplay']);
+ same(log(A.replay(split,'classic')),['1: 8 8 v A [1] P > P correct','1: 8 3 v A [2] D > D correct','2: 8 9 v A [2] S > S correct']);
+});
+test('switching game keeps a round\'s cards unless it split tens',()=>{
+ assert.equal(A.sameHands([...deal(8,8,6),{t:'split'},card(3)],'freebet','classic'),true);
+ assert.equal(A.sameHands([...deal(4,6,10),{t:'double'},card(9)],'freebet','classic'),true);
+ assert.equal(A.sameHands(deal(10,10,6),'classic','freebet'),true);
+ assert.equal(A.sameHands([...deal(10,10,6),{t:'split'},card(5)],'classic','freebet'),false);
+});
+test('G switches games',()=>{
+ same(keyed('g','G'),['G','G']);
+});
+test('the game registry gives each game its chart, rules and source',()=>{
+ same(Object.keys(G),['freebet','classic']);
+ assert.equal(G.freebet.strategy,S);assert.equal(G.freebet.rules,Rules);assert.equal(G.classic.strategy,C);assert.equal(G.classic.rules,ClassicRules);
+ same([G.freebet.name,G.classic.name,G.freebet.free,G.classic.free,G.freebet.splitTens,G.classic.splitTens],['Free Bet','Blackjack',true,false,false,true]);
+ for(const g of Object.values(G)){assert.ok(g.title&&g.edge&&g.rules.short&&g.rules.full.length,g.name);for(const k of ['label','url','covers','checked','note'])assert.ok(g.source[k],`${g.name} source ${k}`);assert.match(g.source.url,/^https:\/\//);}
+ assert.equal(G.freebet.source.checked,'28 September 2026');assert.equal(G.classic.source.checked,'6 October 2026');
+});
+
 // Chrome refuses to load the package if a file the manifest names is missing, and F9 forbids page access.
 test('the manifest names only files that exist and asks for no page access',()=>{
  const m=JSON.parse(fs.readFileSync(ext+'manifest.json','utf8'));
@@ -223,6 +350,14 @@ test('the manifest names only files that exist and asks for no page access',()=>
  for(const key of ['host_permissions','optional_host_permissions','content_scripts','externally_connectable','web_accessible_resources'])assert.equal(m[key],undefined,`${key} gives page access`);
  assert.deepEqual([...m.permissions].sort(),['sidePanel','storage']);
  for(const f of fs.readdirSync(ext))assert.ok(!f.startsWith('_'),`Load unpacked rejects ${f}`);
+});
+// The Web Store refuses a manifest description over 132 characters, and the panel now covers two games.
+test('the manifest names both games within Chrome\'s description limit',()=>{const m=JSON.parse(fs.readFileSync(ext+'manifest.json','utf8'));
+ assert.ok(m.description.length<=132,`the description is ${m.description.length} characters`);assert.match(m.description,/Free Bet Blackjack/);assert.match(m.description,/regular blackjack/);
+});
+// The panel draws each game's rules, house edge and source from Games, so its HTML holds no copy that could drift from strategy.js.
+test('the side panel takes rules and sources from Games, not its own copy',()=>{const html=fs.readFileSync(ext+'sidepanel.html','utf8');
+ for(const g of Object.values(G))for(const t of [g.rules.short,...g.rules.full,g.edge,g.source.url,g.source.label,g.source.checked])assert.ok(!html.includes(t),`sidepanel.html repeats "${t}"`);
 });
 
 console.log(`Passed ${passed} extension checks.`);
