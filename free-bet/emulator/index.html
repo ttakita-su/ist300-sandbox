@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Extension emulator</title>
+<link rel="icon" href="../extension/icons/icon32.png">
+<style>
+/* A mock Chrome window around the real extension pages. Kept outside extension/ so it is not shipped. Every extension page runs in a frame whose
+   chrome.* object is the shim below; the trainer tab is the page the panel would sit beside. */
+:root{--frame:#dee1e6;--toolbar:#fff;--tab:#fff;--tab-hover:#eceef1;--ink:#202124;--muted:#5f6368;--line:#dadce0;--omni:#f1f3f4;--accent:#1a73e8;--dev:#f8f9fa;--menu:#fff;--shadow:0 2px 10px rgba(0,0,0,.18);color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--frame:#202124;--toolbar:#35363a;--tab:#35363a;--tab-hover:#2b2c2f;--ink:#e8eaed;--muted:#9aa0a6;--line:#4a4c50;--omni:#202124;--accent:#8ab4f8;--dev:#292a2d;--menu:#3c3c3f;--shadow:0 2px 10px rgba(0,0,0,.5);color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--frame);color:var(--ink);font:13px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+svg{width:16px;height:16px;fill:currentColor;flex:none}
+.win{display:flex;flex-direction:column;height:100%}
+.strip{display:flex;align-items:flex-end;height:40px;padding:0 8px;gap:8px}
+.lights{display:flex;gap:8px;align-self:center;padding:0 6px}.lights i{width:12px;height:12px;border-radius:50%;background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.tabs{display:flex;flex:1;min-width:0;gap:2px;overflow:hidden}
+.tab{display:flex;align-items:center;gap:8px;flex:0 1 240px;min-width:48px;height:34px;padding:0 6px 0 12px;border-radius:10px 10px 0 0;color:var(--muted);cursor:default;user-select:none}
+.tab:hover{background:var(--tab-hover)}
+.tab[aria-selected=true]{background:var(--tab);color:var(--ink)}
+.tab img,.tab .fav{width:16px;height:16px;flex:none}
+.tab .ttl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab .x{display:grid;place-items:center;width:20px;height:20px;border-radius:50%}.tab .x:hover{background:var(--line)}.tab .x svg{width:12px;height:12px}
+.toolbar{display:flex;align-items:center;gap:4px;height:40px;padding:0 8px;background:var(--toolbar);border-bottom:1px solid var(--line)}
+.tb{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;color:var(--muted)}.tb:hover:not(:disabled){background:var(--tab-hover)}.tb:disabled{opacity:.4;cursor:default}
+.tb img{width:16px;height:16px}
+.omni{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;margin:0 6px;border-radius:15px;background:var(--omni);color:var(--muted)}
+.omni span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+.omni b{font-weight:400;color:var(--muted)}
+.menu-wrap{position:relative}
+.menu{position:absolute;right:0;top:36px;z-index:5;width:300px;padding:8px 0;border-radius:8px;background:var(--menu);box-shadow:var(--shadow)}
+.menu h2{margin:0;padding:6px 16px 8px;font-size:13px;font-weight:600}
+.menu .row{display:flex;align-items:center;gap:10px;padding:4px 8px 4px 16px}
+.menu .row:hover{background:var(--tab-hover)}
+.menu .row .name{flex:1;text-align:left;display:flex;align-items:center;gap:10px;padding:4px 0}
+.menu .row img{width:16px;height:16px}
+.menu .pin{color:var(--muted)}.menu .pin[aria-pressed=true]{color:var(--accent)}
+.menu p{margin:6px 16px 2px;color:var(--muted);font-size:12px}
+.body{flex:1;min-height:0;display:flex;position:relative;background:var(--toolbar)}
+.pages{flex:1;min-width:0;position:relative}
+.pages iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+.grip{width:6px;margin:0 -3px;z-index:2;cursor:col-resize;position:relative}.grip::after{content:"";position:absolute;inset:0 2px;background:var(--line)}
+.grip:hover::after,.grip.drag::after{background:var(--accent)}
+.panel{display:flex;flex-direction:column;flex:none;width:360px;background:var(--toolbar)}
+.panel header{display:flex;align-items:center;gap:8px;height:40px;padding:0 6px 0 12px;border-bottom:1px solid var(--line)}
+.panel header img{width:16px;height:16px}
+.panel header .name{flex:1;min-width:0;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel header .name svg{width:14px;height:14px;vertical-align:-2px;color:var(--muted)}
+.panel .host{flex:1;min-height:0;position:relative}
+.panel .host iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.dragging iframe{pointer-events:none}
+.dev{flex:none;background:var(--dev);border-top:1px solid var(--line);font-size:12px}
+.dev-bar{display:flex;align-items:center;gap:6px;height:30px;padding:0 10px}
+.dev-bar .title{font-weight:600;display:flex;align-items:center;gap:6px}
+.dev-bar .title svg{transition:transform .15s}.dev[data-open] .dev-bar .title svg{transform:rotate(180deg)}
+.dev-bar .sum{color:var(--muted);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dev-bar .act{padding:3px 8px;border-radius:4px;border:1px solid var(--line);background:var(--toolbar)}.dev-bar .act:hover{border-color:var(--muted)}
+.errs{color:#d93025;font-weight:600}
+.dev-body{display:none;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;height:220px;border-top:1px solid var(--line)}
+.dev[data-open] .dev-body{display:grid}
+.dev-col{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}.dev-col:last-child{border:0}
+.dev-col h3{margin:0;padding:6px 10px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.dev-col .scroll{flex:1;min-height:0;overflow:auto;padding:0 10px 8px;font:11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.dev details{border-bottom:1px solid var(--line);padding:3px 0}.dev summary{cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dev summary .k{color:var(--accent)}.dev summary .v{color:var(--muted)}
+.dev pre{margin:4px 0 4px 14px;white-space:pre-wrap;word-break:break-all;max-height:160px;overflow:auto}
+.log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.log .t{color:var(--muted)}.log .c{color:var(--accent)}.log .e{color:#d93025}
+.empty{color:var(--muted);padding:4px 0}
+.fatal{position:fixed;inset:0;display:grid;place-items:center;padding:20px;background:var(--frame)}
+.fatal div{max-width:520px;padding:24px;border-radius:12px;background:var(--toolbar);box-shadow:var(--shadow);font-size:14px;line-height:1.55}
+.fatal h1{margin:0 0 8px;font-size:18px}.fatal code{font:13px ui-monospace,Menlo,monospace;background:var(--omni);padding:2px 5px;border-radius:4px}
+[hidden]{display:none!important}
+/* Narrow screens: the panel covers the page, as there is no room to sit beside it. */
+@media (max-width:720px){.lights{display:none}.panel{position:absolute;inset:0;width:auto!important;z-index:3}.grip{display:none}.dev-body{grid-template-columns:1fr;height:260px}.dev-col{border-right:0;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<div class="win" id="win">
+ <div class="strip"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span><div class="tabs" id="tabs" role="tablist" aria-label="Tabs"></div></div>
+ <div class="toolbar">
+  <button class="tb" disabled aria-label="Back"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+  <button class="tb" disabled aria-label="Forward"><svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></button>
+  <button class="tb" id="reload" aria-label="Reload this tab" title="Reload this tab"><svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
+  <div class="omni" id="omni"><span id="omniIcon"></span><span id="omniUrl"></span></div>
+  <button class="tb" id="action" hidden><img alt=""></button>
+  <div class="menu-wrap">
+   <button class="tb" id="puzzle" aria-label="Extensions" title="Extensions" aria-expanded="false" aria-controls="extMenu"><svg viewBox="0 0 24 24"><path d="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5a2.5 2.5 0 0 0-5 0V5H4a2 2 0 0 0-2 2v3.8h1.5a2.7 2.7 0 0 1 0 5.4H2V20a2 2 0 0 0 2 2h3.8v-1.5a2.7 2.7 0 0 1 5.4 0V22H17a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 0 0-5z"/></svg></button>
+   <div class="menu" id="extMenu" hidden>
+    <h2>Extensions</h2>
+    <div class="row"><button class="name" id="menuRun"><img alt=""><span></span></button><button class="tb pin" id="pin" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M16 9V4h1a1 1 0 0 0 0-2H7a1 1 0 0 0 0 2h1v5a3 3 0 0 1-3 3v2h5.97v7l1 1 1-1v-7H19v-2a3 3 0 0 1-3-3z"/></svg></button></div>
+    <p>Emulated: no other extensions are installed.</p>
+   </div>
+  </div>
+ </div>
+ <div class="body" id="body">
+  <div class="pages" id="pages"></div>
+  <div class="grip" id="grip" role="separator" aria-orientation="vertical" aria-label="Resize side panel" tabindex="0" hidden></div>
+  <aside class="panel" id="panel" aria-label="Side panel" hidden>
+   <header><img alt="" id="panelIcon"><span class="name" id="panelName"></span><button class="tb" id="closePanel" aria-label="Close side panel" title="Close"><svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button></header>
+   <div class="host" id="panelHost"></div>
+  </aside>
+ </div>
+ <div class="dev" id="dev">
+  <div class="dev-bar">
+   <button class="title" id="devToggle" aria-expanded="false" aria-controls="devBody"><svg viewBox="0 0 24 24"><path d="M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>Emulator</button>
+   <span class="sum" id="devSum"></span>
+   <button class="act" id="freshPanel" title="Close the side panel and open a new one, as Chrome does">Reopen panel</button>
+   <button class="act" id="clearStorage" title="chrome.storage.local.clear()">Clear storage</button>
+   <button class="act" id="reinstall" title="Remove the extension's data and install it again">Reinstall</button>
+  </div>
+  <div class="dev-body" id="devBody">
+   <div class="dev-col"><h3>chrome.storage.local</h3><div class="scroll" id="storageView"></div></div>
+   <div class="dev-col"><h3>chrome.* calls, newest first</h3><div class="scroll log" id="logView"></div></div>
+  </div>
+ </div>
+</div>
+<script>
+'use strict';
+const EXT=new URL('../extension/',location.href).href,TRAINER=new URL('../index.html',location.href).href;
+const ID='kgbhjaloedmkpmlnhfmfepfnhcbgnpmn',ORIGIN=`chrome-extension://${ID}/`,WINDOW=1,isMac=/Mac|iPhone|iPad/.test(navigator.platform);
+const $=id=>document.getElementById(id);
+const LS={get(k,d){try{const v=localStorage.getItem('bjemu.'+k);return v===null?d:JSON.parse(v);}catch{return d;}},set(k,v){try{localStorage.setItem('bjemu.'+k,JSON.stringify(v));}catch{}}};
+let manifest,storage=LS.get('storage',{}),behavior={openPanelOnActionClick:false},panelCtx=null,activeTab=null,nextCtx=1,nextTab=1,errors=0;
+const sources={},contexts=new Map(),tabs=[],log=[];
+
+// The shim. It runs inside each extension frame before the page's own scripts, so `chrome` there is this object. Everything it returns is built in the
+// frame's own realm (JSON in, JSON out), as the real API's objects would be.
+function shim(cfg){
+ const emu=parent.__emu,args=a=>JSON.stringify(a===undefined?null:a);
+ const call=(name,a,fn)=>new Promise((res,rej)=>{emu.log(cfg.ctx,name,a);setTimeout(()=>{try{const v=fn();res(v===undefined?undefined:JSON.parse(v));}catch(e){emu.log(cfg.ctx,name+' rejected',e.message,true);rej(new Error(e.message));}});});
+ const event=()=>{const ls=[];return{addListener(f){if(!ls.includes(f))ls.push(f);},removeListener(f){const i=ls.indexOf(f);if(i>=0)ls.splice(i,1);},hasListener:f=>ls.includes(f),hasListeners:()=>ls.length>0,dispatch(...a){for(const f of [...ls])try{f(...a);}catch(e){console.error(e);}}};};
+ const changed=event(),localChanged=event(),installed=event();
+ const local={
+  get:k=>call('storage.local.get',k,()=>emu.storageGet(args(k))),
+  set:o=>call('storage.local.set',o,()=>emu.storageSet(args(o))),
+  remove:k=>call('storage.local.remove',k,()=>emu.storageRemove(args(k))),
+  clear:()=>call('storage.local.clear',undefined,()=>emu.storageClear()),
+  getBytesInUse:k=>call('storage.local.getBytesInUse',k,()=>emu.bytesInUse(args(k))),
+  onChanged:localChanged,QUOTA_BYTES:10485760};
+ const api={
+  runtime:{id:cfg.id,getManifest:()=>JSON.parse(emu.manifest()),getURL:p=>cfg.origin+String(p).replace(/^\//,''),getContexts:f=>call('runtime.getContexts',f,()=>emu.getContexts(args(f))),onInstalled:installed,lastError:undefined},
+  storage:{local,onChanged:changed},
+  commands:{getAll:()=>call('commands.getAll',undefined,()=>emu.commands())},
+  tabs:{getCurrent:()=>call('tabs.getCurrent',undefined,()=>emu.currentTab(cfg.ctx)),create:o=>call('tabs.create',o,()=>emu.createTab(args(o)))},
+  // Chrome only opens the panel inside a user gesture, so that is read now, before the call goes async.
+  sidePanel:{open:o=>{const gesture=navigator.userActivation?navigator.userActivation.isActive:true;return call('sidePanel.open',o,()=>emu.openPanel(args(o),gesture));},
+   setPanelBehavior:o=>call('sidePanel.setPanelBehavior',o,()=>emu.setBehavior(args(o))),getPanelBehavior:()=>call('sidePanel.getPanelBehavior',undefined,()=>emu.getBehavior()),
+   setOptions:o=>call('sidePanel.setOptions',o,()=>undefined)}};
+ Object.defineProperty(window,'chrome',{value:api,writable:true,configurable:true});
+ emu.register(cfg.ctx,{deliver(type,json){setTimeout(()=>{const d=JSON.parse(json);if(type==='storage'){changed.dispatch(d,'local');localChanged.dispatch(d);}else if(type==='installed')installed.dispatch(d);});}});
+ addEventListener('keydown',e=>{if(emu.isShortcut(e.code,e.metaKey,e.ctrlKey,e.shiftKey,e.altKey)){e.preventDefault();e.stopImmediatePropagation();emu.command();}},true);
+ addEventListener('error',e=>emu.error(cfg.ctx,e.message));
+ addEventListener('unhandledrejection',e=>emu.error(cfg.ctx,'Unhandled rejection: '+(e.reason&&e.reason.message||e.reason)));
+}
+
+// What the frames call. Values cross as JSON strings so each realm builds its own objects.
+const has=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
+window.__emu={
+ register(ctx,api){const c=contexts.get(ctx);if(c)c.api=api;},
+ log:(ctx,name,a,isErr)=>addLog(ctx,name,a,isErr),
+ error(ctx,msg){errors++;addLog(ctx,'error',msg,true);},
+ manifest:()=>JSON.stringify(manifest),
+ storageGet(k){k=JSON.parse(k);const out={};
+  if(k===null)Object.assign(out,storage);else if(typeof k==='string'){if(has(storage,k))out[k]=storage[k];}
+  else if(Array.isArray(k)){for(const x of k)if(has(storage,x))out[x]=storage[x];}else for(const [x,d] of Object.entries(k))out[x]=has(storage,x)?storage[x]:d;
+  return JSON.stringify(out);},
+ // Like Chrome, a key whose value didn't change raises no onChanged.
+ storageSet(json){const o=JSON.parse(json),ch={};for(const [k,v] of Object.entries(o)){if(v===undefined||JSON.stringify(storage[k])===JSON.stringify(v))continue;ch[k]={newValue:v};if(has(storage,k))ch[k].oldValue=storage[k];storage[k]=v;}commit(ch);},
+ storageRemove(json){const k=JSON.parse(json),ch={};for(const x of [].concat(k))if(has(storage,x)){ch[x]={oldValue:storage[x]};delete storage[x];}commit(ch);},
+ storageClear(){const ch={};for(const [k,v] of Object.entries(storage))ch[k]={oldValue:v};storage={};commit(ch);},
+ bytesInUse(json){const k=JSON.parse(json),keys=k===null?Object.keys(storage):[].concat(k);return JSON.stringify(keys.filter(x=>has(storage,x)).reduce((n,x)=>n+x.length+JSON.stringify(storage[x]).length,0));},
+ getContexts(json){const f=JSON.parse(json)||{};return JSON.stringify([...contexts.entries()].map(([id,c])=>({contextId:'ctx-'+id,contextType:c.type,documentUrl:c.type==='BACKGROUND'?undefined:ORIGIN+c.page,documentOrigin:c.type==='BACKGROUND'?undefined:ORIGIN.slice(0,-1),tabId:c.tabId??-1,windowId:c.type==='BACKGROUND'?-1:WINDOW,frameId:c.type==='BACKGROUND'?-1:0,incognito:false}))
+  .filter(c=>(!f.contextTypes||f.contextTypes.includes(c.contextType))&&(!f.tabIds||f.tabIds.includes(c.tabId))&&(!f.documentUrls||f.documentUrls.includes(c.documentUrl))));},
+ commands:()=>JSON.stringify([{name:'_execute_action',description:'',shortcut:shortcutText()}]),
+ currentTab(ctx){const c=contexts.get(ctx),t=c&&tabs.find(x=>x.id===c.tabId);return t?JSON.stringify(tabInfo(t)):undefined;},
+ createTab(json){const o=JSON.parse(json)||{};return JSON.stringify(tabInfo(openTab(o.url??'chrome://newtab/',o.active!==false)));},
+ openPanel(json,gesture){const o=JSON.parse(json)||{};
+  if(!gesture)throw new Error('`sidePanel.open()` may only be called in response to a user gesture.');
+  if(o.windowId===undefined&&o.tabId===undefined)throw new Error('At least one of `tabId` and `windowId` must be provided');
+  if(o.windowId!==undefined&&o.windowId!==WINDOW)throw new Error(`No window with id: ${o.windowId}.`);
+  setPanel(true);},
+ setBehavior(json){Object.assign(behavior,JSON.parse(json)||{});},
+ getBehavior:()=>JSON.stringify(behavior),
+ isShortcut:(code,meta,ctrl,shift,alt)=>{const s=shortcut();return !!s&&code===s.code&&meta===s.meta&&ctrl===s.ctrl&&shift===s.shift&&alt===s.alt;},
+ command:()=>runAction('shortcut')};
+function commit(ch){if(!Object.keys(ch).length)return;
+ try{localStorage.setItem('bjemu.storage',JSON.stringify(storage));}catch(e){throw new Error('Storage write failed: '+e.message);}
+ const json=JSON.stringify(ch);for(const c of contexts.values())c.api?.deliver('storage',json);drawStorage();}
+
+// The manifest's suggested key for this platform, as Chrome would match it and as commands.getAll would print it.
+function shortcut(){const k=manifest?.commands?._execute_action?.suggested_key,s=k&&(isMac&&k.mac||k.default);if(!s)return null;
+ const parts=s.split('+'),key=parts.pop(),has=p=>parts.includes(p);
+ return{key,code:/^[A-Z]$/.test(key)?'Key'+key:/^\d$/.test(key)?'Digit'+key:key,meta:isMac&&(has('Command')||has('Ctrl')),ctrl:isMac?has('MacCtrl'):has('Ctrl'),shift:has('Shift'),alt:has('Alt')};}
+function shortcutText(){const s=shortcut();if(!s)return'';
+ return isMac?(s.ctrl?'⌃':'')+(s.alt?'⌥':'')+(s.shift?'⇧':'')+(s.meta?'⌘':'')+s.key:[s.ctrl&&'Ctrl',s.alt&&'Alt',s.shift&&'Shift',s.key].filter(Boolean).join('+');}
+
+// Extension frames: the page's own HTML with a <base> pointing at extension/ and the shim ahead of every script.
+async function source(page){if(!sources[page]){const r=await fetch(EXT+page);if(!r.ok)throw new Error(`${page}: HTTP ${r.status}`);sources[page]=await r.text();}return sources[page];}
+function inject(html,ctx){const head=`<base href="${EXT}"><script>(${shim})(${JSON.stringify({ctx,id:ID,origin:ORIGIN})})<\/script>`;
+ return /<head[^>]*>/i.test(html)?html.replace(/<head[^>]*>/i,m=>m+head):head+html;}
+function extFrame(page,type,tabId){const ctx=nextCtx++,f=document.createElement('iframe');contexts.set(ctx,{type,page,tabId});f.dataset.ctx=ctx;
+ f.srcdoc=inject(sources[page],ctx);f.title=page;return f;}
+function dropFrame(f){if(f.dataset.ctx)contexts.delete(+f.dataset.ctx);f.remove();}
+const label=ctx=>{const c=contexts.get(ctx);return c?{BACKGROUND:'background',SIDE_PANEL:'side panel',TAB:c.page}[c.type]:'closed frame';};
+
+// Tabs. A relative URL in tabs.create is relative to the extension, as in Chrome.
+function resolve(url){if(/^[a-z][a-z\d+.-]*:/i.test(url))return url.startsWith(ORIGIN)?{ext:url.slice(ORIGIN.length),url}:{url};return{ext:url.replace(/^\//,''),url:ORIGIN+url.replace(/^\//,'')};}
+function openTab(raw,active=true){const r=resolve(raw),t={id:nextTab++,url:r.url,ext:r.ext,title:r.ext||r.url};
+ if(r.ext&&!(r.ext in sources)){t.frame=Object.assign(document.createElement('iframe'),{srcdoc:`<p style="font:14px system-ui;padding:24px">This emulator only loads the extension's own pages it knows about. ${r.ext} isn't one.</p>`});}
+ else if(r.ext)t.frame=extFrame(r.ext,'TAB',t.id);
+ else if(/^https?:/.test(r.url))t.frame=Object.assign(document.createElement('iframe'),{src:r.url});
+ else t.frame=Object.assign(document.createElement('iframe'),{srcdoc:'<title>New Tab</title><body style="background:Canvas"></body>'});
+ t.frame.hidden=true;t.frame.addEventListener('load',()=>frameLoaded(t));$('pages').append(t.frame);tabs.push(t);
+ if(active||!activeTab)activate(t.id);else drawTabs();return t;}
+function frameLoaded(t){try{const d=t.frame.contentDocument;if(d?.title)t.title=d.title;if(!t.ext)t.frame.contentWindow.addEventListener('keydown',forwardShortcut,true);}catch{}drawTabs();}
+function activate(id){activeTab=id;for(const t of tabs)t.frame.hidden=t.id!==id;drawTabs();}
+function closeTab(id){const i=tabs.findIndex(t=>t.id===id);if(i<0)return;dropFrame(tabs[i].frame);tabs.splice(i,1);
+ if(!tabs.length)openTab(TRAINER);else if(activeTab===id)activate(tabs[Math.min(i,tabs.length-1)].id);else drawTabs();}
+function reloadTab(){const t=tabs.find(x=>x.id===activeTab);if(!t)return;
+ if(t.ext&&t.frame.dataset.ctx){const f=extFrame(t.ext,'TAB',t.id);f.addEventListener('load',()=>frameLoaded(t));t.frame.replaceWith(f);contexts.delete(+t.frame.dataset.ctx);t.frame=f;}
+ else try{t.frame.contentWindow.location.reload();}catch{t.frame.src=t.frame.src;}}
+const tabInfo=t=>({id:t.id,windowId:WINDOW,index:tabs.indexOf(t),active:t.id===activeTab,highlighted:t.id===activeTab,pinned:false,incognito:false,url:t.url,title:t.title,status:'complete'});
+function drawTabs(){const ext=manifest?EXT+manifest.icons['16']:'';
+ $('tabs').replaceChildren(...tabs.map(t=>{const el=document.createElement('div'),x=document.createElement('button');el.className='tab';el.setAttribute('role','tab');el.setAttribute('aria-selected',String(t.id===activeTab));el.title=t.title;
+  const fav=t.ext?Object.assign(document.createElement('img'),{src:ext,alt:''}):Object.assign(document.createElement('span'),{className:'fav',innerHTML:'<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.93 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14a8.2 8.2 0 0 1 0-4h3.38a16.5 16.5 0 0 0 0 4H4.26zm.81 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.07 16zm2.95-8H5.07a7.99 7.99 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.02 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66a14.7 14.7 0 0 1 0-4h4.68a14.7 14.7 0 0 1 0 4zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14a16.5 16.5 0 0 0 0-4h3.38a8.2 8.2 0 0 1 0 4h-3.38z"/></svg>'});
+  x.className='x';x.setAttribute('aria-label','Close '+t.title);x.innerHTML='<svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+  x.addEventListener('click',e=>{e.stopPropagation();closeTab(t.id);});el.addEventListener('mousedown',e=>{if(e.button===1){e.preventDefault();closeTab(t.id);}else if(!e.target.closest('.x'))activate(t.id);});
+  el.append(fav,Object.assign(document.createElement('span'),{className:'ttl',textContent:t.title}),x);return el;}));
+ const t=tabs.find(x=>x.id===activeTab);if(!t)return;
+ $('omniIcon').innerHTML=t.ext?`<img src="${ext}" alt="" width="16" height="16">`:'<svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg>';
+ $('omniUrl').replaceChildren(...(t.ext?[Object.assign(document.createElement('b'),{textContent:manifest.name+' | '}),t.url]:[t.url]));}
+
+// The side panel. Closing it destroys the page, as Chrome does, so reopening runs the panel's start-up again.
+function setPanel(open){if(open===!!panelCtx)return;
+ if(open){const f=extFrame(manifest.side_panel.default_path,'SIDE_PANEL');panelCtx=+f.dataset.ctx;$('panelHost').append(f);$('panel').hidden=$('grip').hidden=false;f.addEventListener('load',()=>f.contentWindow.focus(),{once:true});}
+ else{const f=$('panelHost').querySelector('iframe');if(f)dropFrame(f);panelCtx=null;$('panel').hidden=$('grip').hidden=true;}
+ addLog(0,open?'side panel opened':'side panel closed');}
+// The toolbar button and its shortcut. With openPanelOnActionClick (set by background.js) they toggle the panel; without it they'd fire action.onClicked.
+function runAction(how){closeMenu();if(behavior.openPanelOnActionClick)setPanel(!panelCtx);else addLog(0,`action ${how}: openPanelOnActionClick is off, so the panel stays as it is`,undefined,true);}
+function forwardShortcut(e){if(window.__emu.isShortcut(e.code,e.metaKey,e.ctrlKey,e.shiftKey,e.altKey)){e.preventDefault();runAction('shortcut');}}
+
+function setPinned(p){LS.set('pinned',p);$('action').hidden=!p;$('pin').setAttribute('aria-pressed',String(p));$('pin').setAttribute('aria-label',p?'Unpin from toolbar':'Pin to toolbar');$('pin').title=p?'Unpin':'Pin';}
+function closeMenu(){$('extMenu').hidden=true;$('puzzle').setAttribute('aria-expanded','false');}
+
+// The emulator drawer: what the extension has stored and every chrome.* call it made.
+function addLog(ctx,name,a,isErr){let text='';try{text=a===undefined?'':typeof a==='string'?a:JSON.stringify(a);}catch{text='[unserialisable]';}
+ log.unshift({at:new Date(),who:ctx?label(ctx):'emulator',name,text:text.length>160?text.slice(0,160)+'…':text,isErr});log.length=Math.min(log.length,300);drawLog();}
+function drawLog(){if(!devOpen()){drawSum();return;}
+ $('logView').replaceChildren(...log.map(l=>{const d=document.createElement('div');d.title=`${l.name} ${l.text}`;
+  d.append(Object.assign(document.createElement('span'),{className:'t',textContent:l.at.toLocaleTimeString([],{hour12:false})+' '}),Object.assign(document.createElement('span'),{className:'c',textContent:l.who+' '}),Object.assign(document.createElement('span'),{className:l.isErr?'e':'',textContent:l.name+(l.text?' '+l.text:'')}));return d;}));drawSum();}
+function drawStorage(){drawSum();if(!devOpen())return;const keys=Object.keys(storage).sort((a,b)=>a==='settings'?-1:b==='settings'?1:(storage[b]?.started??0)-(storage[a]?.started??0));
+ if(!keys.length){$('storageView').replaceChildren(Object.assign(document.createElement('p'),{className:'empty',textContent:'Empty.'}));return;}
+ $('storageView').replaceChildren(...keys.map(k=>{const v=storage[k],d=document.createElement('details'),s=document.createElement('summary');
+  const brief=k.startsWith('round:')&&v&&typeof v==='object'?`${v.game??'freebet'}, ${v.decisions?.length??0} decision${v.decisions?.length===1?'':'s'}${v.open?', open':''}`:JSON.stringify(v);
+  s.append(Object.assign(document.createElement('span'),{className:'k',textContent:k}),' ',Object.assign(document.createElement('span'),{className:'v',textContent:brief}));
+  d.append(s,Object.assign(document.createElement('pre'),{textContent:JSON.stringify(v,null,1)}));return d;}));}
+function drawSum(){const n=Object.keys(storage).length,rounds=Object.keys(storage).filter(k=>k.startsWith('round:')).length;
+ $('devSum').replaceChildren(`${n} stored key${n===1?'':'s'} (${rounds} round${rounds===1?'':'s'}) · ${log.length} call${log.length===1?'':'s'} · panel ${panelCtx?'open':'closed'}`,...(errors?[' · ',Object.assign(document.createElement('span'),{className:'errs',textContent:`${errors} error${errors>1?'s':''}`})]:[]));}
+const devOpen=()=>'open' in $('dev').dataset;
+function toggleDev(open){const d=$('dev');if(open)d.dataset.open='';else delete d.dataset.open;$('devToggle').setAttribute('aria-expanded',String(open));LS.set('dev',open);drawStorage();drawLog();}
+
+// The background "service worker": background.js in a hidden frame that never sleeps. onInstalled fires on first install and when the version changes.
+function startBackground(){const f=extFrame('background.html','BACKGROUND');f.hidden=true;document.body.append(f);
+ f.addEventListener('load',()=>{const was=LS.get('installedVersion',null),c=contexts.get(+f.dataset.ctx);if(was===manifest.version)return;
+  LS.set('installedVersion',manifest.version);const d=was===null?{reason:'install'}:{reason:'update',previousVersion:was};addLog(+f.dataset.ctx,'runtime.onInstalled',d);c.api?.deliver('installed',JSON.stringify(d));},{once:true});}
+
+function fatal(e){const d=document.createElement('div');d.className='fatal';
+ d.innerHTML=`<div><h1>The emulator needs a web server</h1><p>It reads the extension's files with <code>fetch</code>, which browsers block on <code>file://</code> pages.</p><p>From the repository root, run <code>python3 -m http.server 8000</code>, then open <code>http://localhost:8000/free-bet/emulator/</code>.</p><p style="color:var(--muted)"></p></div>`;
+ d.querySelector('p:last-child').textContent='Details: '+e.message;document.body.append(d);}
+
+async function boot(){
+ try{const r=await fetch(EXT+'manifest.json');if(!r.ok)throw new Error(`manifest.json: HTTP ${r.status}`);manifest=await r.json();
+  await Promise.all([manifest.side_panel.default_path,'welcome.html'].map(source));sources['background.html']=`<!DOCTYPE html><html><head></head><body><script src="${manifest.background.service_worker}"><\/script></body></html>`;}
+ catch(e){fatal(e);return;}
+ const icon=s=>EXT+(manifest.action.default_icon?.[s]||manifest.icons[s]);
+ for(const img of [$('action').querySelector('img'),$('menuRun').querySelector('img'),$('panelIcon')])img.src=icon('32');
+ $('action').title=manifest.action.default_title+(shortcutText()?` (${shortcutText()})`:'');$('action').setAttribute('aria-label',manifest.action.default_title);
+ $('menuRun').querySelector('span').textContent=$('panelName').textContent=manifest.name;
+ setPinned(LS.get('pinned',false));
+ $('action').addEventListener('click',()=>runAction('click'));$('menuRun').addEventListener('click',()=>runAction('click'));
+ $('pin').addEventListener('click',()=>setPinned(!LS.get('pinned',false)));
+ $('puzzle').addEventListener('click',e=>{e.stopPropagation();const open=$('extMenu').hidden;$('extMenu').hidden=!open;$('puzzle').setAttribute('aria-expanded',String(open));});
+ document.addEventListener('click',e=>{if(!e.target.closest('.menu-wrap'))closeMenu();});
+ addEventListener('blur',closeMenu);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();forwardShortcut(e);});
+ $('closePanel').addEventListener('click',()=>setPanel(false));$('reload').addEventListener('click',reloadTab);
+ $('devToggle').addEventListener('click',()=>toggleDev(!devOpen()));
+ $('freshPanel').addEventListener('click',()=>{setPanel(false);setPanel(true);});
+ $('clearStorage').addEventListener('click',()=>{window.__emu.storageClear();addLog(0,'storage cleared from the emulator');});
+ $('reinstall').addEventListener('click',()=>{try{for(const k of ['storage','installedVersion','pinned'])localStorage.removeItem('bjemu.'+k);}catch{}location.reload();});
+ // Resizing the panel, by pointer or arrow keys, between Chrome's 320px minimum and most of the window.
+ const grip=$('grip'),clamp=w=>Math.round(Math.max(320,Math.min(w,Math.max(320,innerWidth-240)))),setWidth=w=>{$('panel').style.width=clamp(w)+'px';LS.set('panelWidth',clamp(w));};
+ setWidth(LS.get('panelWidth',360));
+ grip.addEventListener('pointerdown',e=>{e.preventDefault();grip.setPointerCapture(e.pointerId);grip.classList.add('drag');document.body.classList.add('dragging');});
+ grip.addEventListener('pointermove',e=>{if(grip.classList.contains('drag'))setWidth(innerWidth-e.clientX);});
+ grip.addEventListener('pointerup',()=>{grip.classList.remove('drag');document.body.classList.remove('dragging');});
+ grip.addEventListener('keydown',e=>{const d={ArrowLeft:16,ArrowRight:-16}[e.key];if(d){e.preventDefault();setWidth($('panel').offsetWidth+d);}});
+ toggleDev(LS.get('dev',false));
+ openTab(TRAINER);
+ startBackground();}
+boot();
+</script>
+</body>
+</html>
