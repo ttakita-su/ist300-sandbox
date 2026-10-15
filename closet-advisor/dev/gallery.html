@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Illustration gallery (dev)</title>
+  <link rel="stylesheet" href="../css/tokens.css">
+  <style>
+    :root { --tile: 170px; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: var(--paper);
+      color: var(--ink);
+      font-size: var(--text-sm);
+      line-height: 1.45;
+    }
+    header.page {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s3) var(--s6);
+      align-items: baseline;
+      padding: var(--s4) var(--gutter);
+      background: color-mix(in srgb, var(--paper) 92%, transparent);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(6px);
+    }
+    h1 { margin: 0; font-size: var(--text-xl); font-stretch: var(--wide); font-weight: 800; }
+    h2 { margin: var(--s8) 0 var(--s3); font-size: var(--text-lg); font-stretch: var(--wide); font-weight: 750; }
+    h3 { margin: var(--s5) 0 var(--s2); font-size: var(--text-md); font-weight: 650; }
+    .meta { color: var(--ink-muted); font-stretch: var(--condensed); font-variant-numeric: tabular-nums; }
+    nav.filters { display: flex; flex-wrap: wrap; gap: var(--s2); }
+    nav.filters a {
+      padding: 2px var(--s3);
+      border: 1px solid var(--field-border);
+      border-radius: var(--r-pill);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    nav.filters a[aria-current="true"] { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+    main { padding: 0 var(--gutter) var(--s14); max-width: 1600px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--tile) * 2 + 24px), 1fr)); gap: var(--s4); }
+    .grid.single { grid-template-columns: repeat(auto-fill, minmax(calc(var(--tile) + 16px), 1fr)); }
+    figure { margin: 0; padding: var(--s2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-tile); }
+    .pair { display: flex; gap: 8px; }
+    .studio { width: var(--tile); height: var(--tile); border-radius: 10px; display: grid; place-items: center; overflow: hidden; }
+    .studio.light { background: #e6e8e3; }
+    .studio.dark { background: #272b49; }
+    .studio img { width: 100%; height: 100%; display: block; }
+    figcaption { margin-top: var(--s2); display: grid; gap: 1px; }
+    .id { font-stretch: var(--condensed); color: var(--ink-muted); word-break: break-all; }
+    .code { font-stretch: var(--condensed); font-weight: 650; letter-spacing: 0.01em; }
+    .flags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+    .flag { font-size: var(--text-xs); padding: 0 6px; border-radius: var(--r-label); background: var(--sunken); color: var(--ink-muted); }
+    .flag.warn { background: var(--warn-soft); color: var(--warn); }
+    .flag.info { background: var(--info-soft); color: var(--info); }
+    .dupes { display: grid; gap: var(--s4); }
+    .dupe { padding: var(--s3); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-tile); }
+    .dupe .row { display: flex; flex-wrap: wrap; gap: var(--s3); }
+    .note { color: var(--ink-muted); margin: 0 0 var(--s2); }
+    .demo { margin: var(--s4) 0 0; color: var(--ink-muted); }
+  </style>
+</head>
+<body>
+  <header class="page">
+    <h1>Illustration gallery</h1>
+    <span class="meta" id="stats">Rendering…</span>
+    <nav class="filters" id="filters" aria-label="Filters"></nav>
+  </header>
+  <main id="main">
+    <p class="demo">Developer page. Every brand, product, code and price is fictional demo data, and every image is generated here from catalog palettes.</p>
+  </main>
+  <script type="module" src="./gallery.js"></script>
+</body>
+</html>

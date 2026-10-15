@@ -1,0 +1,17 @@
+{
+  "name": "Rotation (prototype)",
+  "short_name": "Rotation",
+  "description": "Photograph what you own, see what to buy next, and compare retailer offers. Demo catalog with fictional brands and prices.",
+  "start_url": "./#/discover",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1f2ee",
+  "theme_color": "#1c2042",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

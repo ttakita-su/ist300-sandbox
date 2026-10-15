@@ -3,3 +3,12 @@
 
 # macOS
 .DS_Store
+
+# Dev dependencies (Playwright) for the prototype tests
+closet-advisor/node_modules/
+
+# Local environment files may hold secrets; only the empty template is tracked
+.env
+.env.local
+.env*.local
+!.env.example

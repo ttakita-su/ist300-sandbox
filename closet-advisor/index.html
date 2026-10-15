@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Rotation (prototype): photograph what you own, find what to buy next, and compare retailer offers. Demo catalog with fictional brands and prices.">
+  <meta name="theme-color" content="#f1f2ee" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#14162b" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Rotation">
+  <title>Rotation</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon-180.png">
+  <link rel="preload" href="./fonts/archivo-latin-wdth.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="./css/tokens.css">
+  <link rel="stylesheet" href="./css/base.css">
+  <link rel="stylesheet" href="./css/components.css">
+  <link rel="stylesheet" href="./css/screens/account.css">
+  <link rel="stylesheet" href="./css/screens/add.css">
+  <link rel="stylesheet" href="./css/screens/collection.css">
+  <link rel="stylesheet" href="./css/screens/discover.css">
+  <link rel="stylesheet" href="./css/screens/workspace.css">
+  <script>
+    // Apply the saved theme before first paint so dark mode doesn't flash light.
+    try {
+      var t = localStorage.getItem('rotation.theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  </script>
+  <script type="module" src="./js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="app">
+    <div class="offline-banner" id="offline" role="status" hidden>
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M8.5 16.4a5 5 0 0 1 7 0M12 20h.01"/></svg>
+      You're offline. Your collection still works; label reading needs a connection.
+    </div>
+    <main id="main" class="screen" tabindex="-1">
+      <noscript>
+        <p>Rotation needs JavaScript to run. It stores everything in this browser and sends nothing to a server.</p>
+      </noscript>
+    </main>
+    <nav class="tabbar" id="tabbar" aria-label="Main"></nav>
+  </div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+</body>
+</html>
