@@ -101,6 +101,15 @@ Live at [/ist400-blogsite/](https://ttakita-su.github.io/ist300-sandbox/ist400-b
   also published as a web page at [`prd/index.html`](prd/index.html), live at
   [/prd/](https://ttakita-su.github.io/ist300-sandbox/prd/); edit both when the PRD changes.
 
+- [`docs/03-architecture.md`](docs/03-architecture.md) — CP-M3 technical architecture for the
+  **Free Bet trainer** MVP slice (F1–F4; S11, S1–S5): components traced to requirements, the
+  stack compared against React + Firebase, a hop-by-hop trace of a graded decision (S3), test
+  results, and every known gap between the PRD and the code.
+- [`docs/design/architecture-map.md`](docs/design/architecture-map.md) — the architecture map
+  as an ASCII diagram; every box names the story or PRD item it exists for.
+- [`docs/decisions/001-stack.md`](docs/decisions/001-stack.md) — stack decision record: plain
+  HTML/JS on GitHub Pages with `localStorage`, and what that choice costs.
+
 Lab files are named by lab number so they sort in order.
 
 ## Running it locally
