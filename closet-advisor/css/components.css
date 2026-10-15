@@ -1043,6 +1043,12 @@ button.list-item {
   text-align: left;
 }
 
+.list-item .grow {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .list-item .grow > :first-child {
   font-weight: 620;
 }

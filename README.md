@@ -40,11 +40,21 @@ Open [`free-bet/index.html`](free-bet/index.html) for the playable PRD implement
 
 Each round keeps the game it was played in. Switching mid-round regrades that round's answers; switching after a round ends starts a new one, and Backspace brings the old round back.
 
-To try it:
+To try it online without installing anything, open the
+[panel preview](https://ttakita-su.github.io/ist300-sandbox/free-bet/extension/sidepanel.html) or the
+[extension emulator](https://ttakita-su.github.io/ist300-sandbox/free-bet/emulator/).
 
-1. Open `chrome://extensions` and turn on **Developer mode**.
-2. Choose **Load unpacked** and select the `free-bet/extension` folder.
-3. Pin the extension, then click its icon (or press ⌘⇧Y / Ctrl+Shift+Y) to open the side panel.
+#### Installing from GitHub
+
+The extension isn't on the Chrome Web Store, so it's installed from this repository in Developer mode:
+
+1. On the [repository page](https://github.com/ttakita-su/ist300-sandbox), click the green **Code** button, then **Download ZIP**.
+2. Unzip the download. The extension is in `ist300-sandbox-main/free-bet/extension`.
+3. In Chrome, go to `chrome://extensions` and turn on **Developer mode** (top-right toggle).
+4. Click **Load unpacked** and select the `extension` folder (the one containing `manifest.json`).
+5. Click the puzzle-piece icon in the toolbar and pin **Blackjack Strategy Advisor**. Click its icon, or press ⌘⇧Y / Ctrl+Shift+Y, to open the side panel.
+
+Keep the unzipped folder: Chrome loads the extension from it, so deleting or moving it removes the extension. Updates aren't automatic. To get a newer version, download the ZIP again, replace the folder, and click the reload icon on the extension's card in `chrome://extensions`. Chrome may warn about developer-mode extensions; that's expected for anything installed this way.
 
 Type every card you're dealt: your two cards, the dealer's upcard, then each card you draw. A card you type means you followed the last answer; press H, S, D or P first when you did something else. U (or the dealer row) enters the dealer's card at any point, Backspace undoes, N starts a new round, and G switches games. Looked-up hands are kept in the panel's History tab, each tagged with its game.
 
