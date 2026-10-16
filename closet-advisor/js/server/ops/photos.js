@@ -8,15 +8,21 @@
 //   processing row:     { id, userId, kind: 'processing', blob, ..., processingId: null,
 //                         sourceId: <id of the original/label row> }
 //   cleaned row:        { id, userId, kind: 'cleaned', blob, ..., sourceId: <original id> }
+//   web row:            { id, userId, kind: 'web', blob, ..., processingId: null, sourceId: null,
+//                         source: { imageUrl, pageUrl, host } }  a store's image kept on this
+//                         device; it follows the same privacy and sharing rules as the person's photos
 import { ApiError, invalid } from '../errors.js';
 import { newId } from '../../lib/ids.js';
 import { canReadPhoto, isOwner, sharedItemIds, stylistCanReadRequest } from '../policy.js';
-import { leadingBytes, sniffImageType, validateUploadBlob } from '../validate-image.js';
+import { cleanLinkUrl, displayHost } from '../records.js';
+import { leadingBytes, sniffImageType, validateStoreImageBlob, validateUploadBlob } from '../validate-image.js';
 
 export const PHOTO_URL_TTL_MS = 10 * 60 * 1000;
 // A URL with less than this left is replaced rather than handed out again.
 const REUSE_MARGIN_MS = 60 * 1000;
-const UPLOAD_KINDS = ['original', 'label'];
+const UPLOAD_KINDS = ['original', 'label', 'web'];
+// What a kept store image may be stored as: normalize re-encodes AVIF and GIF in the browser.
+const KEPT_WEB_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const photoNotFound = () =>
   new ApiError('not_found', "That photo isn't available. It may have been deleted, or it isn't shared with you.");
@@ -161,6 +167,84 @@ export async function deletePhotos(ctx, userId, photoIds) {
   return [...deleted];
 }
 
+/**
+ * Validates, normalizes and stores one photo: the original or label row plus its processing copy,
+ * or for kind 'web' a single row with where the image came from. Shared by uploadPhoto and
+ * importWebImage (ops/web.js) so a store image goes through the same checks as an upload.
+ * Throws ApiError ('invalid', 'unsupported', 'unavailable') with a message to show.
+ * @param {any} ctx
+ * @param {{ blob: Blob, kind: 'original'|'label'|'web', source?: { imageUrl?: string, pageUrl?: string } }} input
+ * @returns {Promise<{ photoId: string, processingId: string|null, width: number|null, height: number|null, mime: string, bytes: number }>}
+ */
+export async function storePhoto(ctx, { blob, kind, source }) {
+  const web = kind === 'web';
+  let origin = null;
+  if (web) {
+    const imageUrl = cleanLinkUrl(source?.imageUrl);
+    if (!imageUrl) throw invalid({ 'source.imageUrl': 'Add the link of the store image' }, 'Say which store image this is.');
+    const pageUrl = cleanLinkUrl(source?.pageUrl);
+    origin = { imageUrl, pageUrl, host: displayHost(pageUrl ?? imageUrl) };
+  }
+  const { mime: uploadedMime } = web ? await validateStoreImageBlob(blob) : await validateUploadBlob(blob);
+
+  let normalized;
+  try {
+    normalized = await ctx.providers.imaging.normalize(blob);
+  } catch (error) {
+    // normalize speaks about the person's photos; a store image needs its own words.
+    if (!web || !(error instanceof ApiError)) throw error;
+    throw new ApiError(
+      error.code === 'unsupported' ? 'unsupported' : 'invalid',
+      "The store's image couldn't be opened, or it's smaller than 200 pixels, so it wasn't saved. Save the item without it.",
+    );
+  }
+  if (!normalized || !isBlob(normalized.original) || !isBlob(normalized.processing)) {
+    throw new ApiError('unavailable', web ? "The store's image couldn't be processed. Save the item without it, or try again." : "This photo couldn't be processed. Try again, or choose another photo.");
+  }
+  // Record the type of what is stored (the re-encoded copy), read from its bytes.
+  const originalMime = (await sniffBlob(normalized.original)) ?? normalized.mime ?? uploadedMime;
+  if (web && !KEPT_WEB_TYPES.includes(originalMime)) {
+    throw new ApiError('unsupported', "This browser couldn't convert the store's image, so it wasn't saved. Save the item without it.");
+  }
+  const createdAt = ctx.iso();
+  const photoId = newId('pho');
+  // A store image is never analyzed, so it needs no processing copy.
+  const processingId = web ? null : newId('pho');
+  const original = {
+    id: photoId,
+    userId: ctx.actor.id,
+    kind,
+    blob: normalized.original,
+    mime: originalMime,
+    width: positiveOrNull(normalized.width),
+    height: positiveOrNull(normalized.height),
+    bytes: normalized.original.size,
+    createdAt,
+    processingId,
+    sourceId: null,
+    ...(web ? { source: origin } : {}),
+  };
+  await ctx.db.put('photos', original);
+  if (processingId) {
+    const processingMime = (await sniffBlob(normalized.processing)) ?? normalized.mime ?? uploadedMime;
+    await ctx.db.put('photos', {
+      id: processingId,
+      userId: ctx.actor.id,
+      kind: 'processing',
+      blob: normalized.processing,
+      mime: processingMime,
+      width: positiveOrNull(normalized.processingWidth),
+      height: positiveOrNull(normalized.processingHeight),
+      bytes: normalized.processing.size,
+      createdAt,
+      processingId: null,
+      sourceId: photoId,
+    });
+  }
+  await ctx.metric('photo_uploaded', { kind, mime: originalMime });
+  return { photoId, processingId, width: original.width, height: original.height, mime: originalMime, bytes: original.bytes };
+}
+
 /** The live request that lets this stylist see the photo, or null. Policy decides; this finds which. */
 async function stylistPhotoGrant(ctx, photo) {
   const [items, requests, assignments] = await Promise.all([
@@ -169,7 +253,7 @@ async function stylistPhotoGrant(ctx, photo) {
     ctx.db.where('stylistAssignments', 'stylistId', ctx.actor.id),
   ]);
   if (!canReadPhoto(ctx.actor, photo, { items, requests, assignments })) return null;
-  const showsPhoto = (item) => item.photos?.originalId === photo.id || item.photos?.cleanedId === photo.id;
+  const showsPhoto = (item) => [item.photos?.originalId, item.photos?.cleanedId, item.photos?.webId].includes(photo.id);
   return (
     requests.find(
       (r) =>
@@ -183,8 +267,8 @@ async function stylistPhotoGrant(ctx, photo) {
 
 export const ops = {
   /**
-   * Validates and stores a photo the person uploaded or captured.
-   * args: { blob: Blob, kind: 'original' | 'label', idempotencyKey? }
+   * Validates and stores a photo the person uploaded or captured, or a store's image (kind 'web').
+   * args: { blob: Blob, kind: 'original' | 'label' | 'web', source?: { imageUrl, pageUrl? }, idempotencyKey? }
    * - Sniff the real type from the first bytes (validate-image.js): JPEG, PNG, WebP, HEIC/HEIF.
    *   Reject anything else with ApiError('unsupported', ...). Reject > 15 MB ('invalid').
    * - ctx.providers.imaging.normalize(blob) re-encodes (strips EXIF/GPS), corrects orientation,
@@ -194,6 +278,10 @@ export const ops = {
    * - Stores two private `photos` rows (kind 'original' or 'label', plus 'processing'), both
    *   with userId = actor. The original row stores processingId; the processing row stores
    *   sourceId. Never log image bytes.
+   * - Kind 'web' (a store image, usually saved through importWebImage): JPEG, PNG, WebP, GIF or
+   *   AVIF, kept only once normalize has re-encoded it (else 'unsupported'). One row, no
+   *   processing copy (processingId null), with source { imageUrl, pageUrl, host }; host comes
+   *   from the page link (or the image link), never from input.
    * - Optional provider fields processingWidth/processingHeight size the processing row;
    *   without them its dimensions are stored as unknown (null).
    * result: { photoId, processingId, width, height, mime, bytes }
@@ -204,48 +292,7 @@ export const ops = {
     async run(ctx, args) {
       const kind = args.kind ?? 'original';
       if (!UPLOAD_KINDS.includes(kind)) throw invalid({ kind: 'Choose a photo of the item or of its label' }, 'Choose what this photo shows.');
-      const { mime: uploadedMime } = await validateUploadBlob(args.blob);
-
-      const normalized = await ctx.providers.imaging.normalize(args.blob);
-      if (!normalized || !isBlob(normalized.original) || !isBlob(normalized.processing)) {
-        throw new ApiError('unavailable', "This photo couldn't be processed. Try again, or choose another photo.");
-      }
-      // Record the type of what is stored (the re-encoded copy), read from its bytes.
-      const originalMime = (await sniffBlob(normalized.original)) ?? normalized.mime ?? uploadedMime;
-      const processingMime = (await sniffBlob(normalized.processing)) ?? normalized.mime ?? uploadedMime;
-      const createdAt = ctx.iso();
-      const photoId = newId('pho');
-      const processingId = newId('pho');
-      const original = {
-        id: photoId,
-        userId: ctx.actor.id,
-        kind,
-        blob: normalized.original,
-        mime: originalMime,
-        width: positiveOrNull(normalized.width),
-        height: positiveOrNull(normalized.height),
-        bytes: normalized.original.size,
-        createdAt,
-        processingId,
-        sourceId: null,
-      };
-      const processing = {
-        id: processingId,
-        userId: ctx.actor.id,
-        kind: 'processing',
-        blob: normalized.processing,
-        mime: processingMime,
-        width: positiveOrNull(normalized.processingWidth),
-        height: positiveOrNull(normalized.processingHeight),
-        bytes: normalized.processing.size,
-        createdAt,
-        processingId: null,
-        sourceId: photoId,
-      };
-      await ctx.db.put('photos', original);
-      await ctx.db.put('photos', processing);
-      await ctx.metric('photo_uploaded', { kind, mime: originalMime });
-      return { photoId, processingId, width: original.width, height: original.height, mime: originalMime, bytes: original.bytes };
+      return storePhoto(ctx, { blob: args.blob, kind, source: args.source });
     },
   },
 

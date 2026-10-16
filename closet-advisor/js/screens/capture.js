@@ -43,7 +43,7 @@ export default [
       const samples = listSamples();
       return html`<div class="stack stack-lg">
         ${backHead({ title: 'Photograph an item', back: `#/add?dest=${dest}` })}
-        <p class="muted">${dest === 'wishlist' ? 'Saving to your wishlist.' : 'Adding to your collection.'} The photo is analyzed on this device and stays in this browser.</p>
+        <p class="muted">${dest === 'wishlist' ? 'Saving to your wishlist.' : 'Adding to your collection.'} The photo is matched on this device. It's sent to Microsoft Bing only if you choose Search online stores afterwards.</p>
         <div class="stack stack-sm">
           <span class="field-label">What is it?</span>
           <div class="cluster">

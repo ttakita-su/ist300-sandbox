@@ -8,6 +8,11 @@ committing to any of them.
 **Nothing below is confirmed for this project.** No accounts, applications, approvals, keys or
 contracts exist yet. Every "Access" line is something still to obtain.
 
+The one exception is the prototype's local server (`npm start`, `backend/`), which reads Bing's
+public pages and stores' product pages for an educational demo; see
+[Bing visual search, web search and Shopping](#bing-visual-search-web-search-and-shopping).
+It has no account, key or agreement with Microsoft or any store.
+
 Related notes from the rest of the team: StockX and GOAT link handling in
 [marketplaces.md](marketplaces.md), affiliate links and conversion reporting in
 [affiliate.md](affiliate.md), recommendations in [recommendations.md](recommendations.md).
@@ -17,7 +22,8 @@ Related notes from the rest of the team: StockX and GOAT link handling in
 | Provider | Role in Rotation | Status for this project | Cost as published | Recommendation |
 | --- | --- | --- | --- | --- |
 | [Google Vision API Product Search](#google-cloud-vision-api-product-search) | Managed visual product search | Not started. Product in maintenance mode; its suggested replacement is end of life | $4.50 per 1,000 queries after 1,000 free | Don't build on it |
-| [Google Lens](#google-lens) | Consumer visual search | No public API exists | n/a | Not available |
+| [Google Lens](#google-lens) | Consumer visual search | No public API; Google blocks automated use | n/a | Not used |
+| [Bing visual search, web search and Shopping](#bing-visual-search-web-search-and-shopping) | Photo search and real store listings in the prototype | Used by the local server through Bing's public pages, no API or agreement | Free as used; not licensed | Prototype only, low volume; not for production |
 | [Google Cloud Vision API](#google-cloud-vision-api-ocr-and-detection) | Server OCR of labels, optional | Not started | $1.50 per 1,000 text detections after 1,000 free | Optional fallback |
 | [Gemini Enterprise Agent Platform embeddings](#gemini-enterprise-agent-platform-multimodal-embeddings) (formerly Vertex AI) | Image embeddings for retrieval | Not started | $0.0001 per image (`multimodalembedding@001`) | Default for Milestone 1 |
 | [Amazon Bedrock embeddings](#amazon-bedrock-multimodal-embeddings) | Alternative image embeddings | Not started | $0.00006 per image | Alternative |
@@ -86,11 +92,67 @@ content from any of our services in violation of the machine-readable instructio
 pages". Their results are web pages and images owned by others, not licensed product data, so
 they couldn't back a catalog identity or a displayed image even if the terms allowed it.
 
-**Fallback.** Not needed: Rotation identifies items against its own licensed catalog.
+**Tried from the prototype (2026-10-15).** Two attempts from the local machine, then stopped:
+a plain upload to Lens got only Google's "enable JavaScript" page with no results, and a
+headless-browser attempt was sent to Google's `/sorry/index` "unusual traffic" page (HTTP 429).
+Google blocks automated Lens and Search use from this prototype, so the local server never
+contacts Google. Getting past that would mean evading a block, which the prototype doesn't do.
+
+**Fallback.** Rotation identifies items against its own licensed catalog. For the prototype's
+"search online stores with this photo", the local server uses Bing visual search instead (next
+section).
 
 Sources: [Google developer forum](https://discuss.google.dev/t/difference-google-lens-vs-google-cloud-vision-api/193387),
 [Google Terms of Service](https://policies.google.com/terms),
 [SerpApi Google Lens API](https://serpapi.com/google-lens-api).
+
+### Bing visual search, web search and Shopping
+
+**What the prototype does with it.** The local server (`backend/bing.mjs`, through the guarded
+upstream in `backend/net.mjs`) reads three kinds of Bing pages. There is no API key and no
+agreement with Microsoft; these are the same public pages a browser gets, fetched with the
+honest User-Agent `Mozilla/5.0 (compatible; RotationLookup/0.1; educational prototype)`. Google
+is never contacted.
+
+| Use | Requests | What is read |
+| --- | --- | --- |
+| Text search (`POST /api/search`) | `GET https://www.bing.com/search?q=<query>&setlang=en-US&cc=US` and `GET https://www.bing.com/shop?q=<query>&setlang=en-US`, in parallel | Organic results (`li.b_algo`: title, link unwrapped from Bing's `/ck/a` redirect without following it, snippet), at most 10, product pages and known retailers first, Bing and MSN pages dropped. Free Shopping listings (`li.br-item` marked `NonSponsoredOffer` true: title, price text, seller, image, Bing product-page link), at most 24. Ad cards and sponsored listings are never read. |
+| Photo search (`POST /api/lens`) | 1. `GET https://www.bing.com/images?FORM=HDRSC2&setlang=en-us` for the upload token and cookies, reused for 10 minutes. 2. `POST https://www.bing.com/images/kblob` (multipart: `imgurl` empty, `cbir=sbi`, `imageBin` = the photo as base64) with the token header. 3. The `/search?q=<recognized name>` page Bing answers with, plus Bing Shopping for that name | The name Bing recognized (the `q` of its `redirectUrl`), then the same results and listings as a text search. A redirect off `www.bing.com`, or a name under 2 characters, is "no match" and is never followed. |
+| Listing images | The browser hot-links thumbnails from Bing's image host (`th.bing.com`) in result lists and the save form's preview, lazily and without a referrer | Nothing. When the person saves a listing with its image, the server downloads it once through `/api/image` and the browser keeps a re-encoded copy |
+
+Rules the code keeps: one person action is one search (two Bing pages) or one photo search (an
+upload plus two pages, and a token page at most every 10 minutes); requests to `bing.com` are
+spaced at least 1 second apart and cached in memory for 15 minutes; a failed upload is not
+retried. A 401, 403 or 429, or a results page with no results and Bing's challenge wording
+(captcha, "verify you are human", "unusual traffic"), counts as a block: Bing then gets no
+requests for 30 minutes and the app says to try later or search by name. Bing's cookies stay in
+the server's memory and go only to Bing; no other site gets cookies. The photo is sent only
+when the person presses "Search online stores" on the match screen, next to the line "Sends this
+photo to Microsoft Bing to recognize it", as the 768 px copy without EXIF or GPS. The server
+keeps the answer for 15 minutes under a SHA-256 of the bytes, never the bytes.
+
+**Verified live on 2026-10-15** (from the developer's Mac, honest User-Agent, no blocks or
+CAPTCHAs, at least 2 seconds between requests to one host in the test run):
+
+- Text search "Casio F-91W": ok in about 2.2 seconds, 24 free listings (for example Walmart
+  "$28.99", read as 2899 USD) and 10 web results (casio.com and amazon.com product pages first).
+- Photo search: a Casio F-91W photo was recognized as "Casio F-91W" (about 7 seconds, 24
+  listings) and a Converse photo at 768 px as "Converse Chuck Taylor All Star" (about
+  6 seconds, 24 listings, 9 web results). In an earlier probe, 3 of 3 real photos were named
+  correctly. The test photos are from Wikimedia Commons and may already be indexed by Bing, so
+  ordinary phone photos will do worse.
+- This is identify-then-shop: Bing names the item and Rotation searches for that name. It is not
+  a list of visually similar images, and a wrong name gives wrong listings.
+- Listing prices are read only for `$`, `€` and `£`; others keep the price text with a `null`
+  price.
+
+**Terms caveat.** Bing's result pages and its image-upload endpoint are undocumented and can
+change without notice; when they do, the server fails safe (a missing token gives "Bing's photo
+search page has changed", a missing listing marker gives no listings). Microsoft's terms don't
+grant automated access to Bing's pages, and Microsoft's supported route, the Bing Search APIs,
+was retired in 2025. This use is for an educational prototype run locally at low volume. A
+production build needs a licensed source instead (the embeddings and affiliate feeds in this
+note), and Bing listings, like any web data, never become a catalog identity or an offer.
 
 ### Google Cloud Vision API: OCR and detection
 
@@ -404,7 +466,9 @@ not be fetched for this note. A shopping advisor for other people doesn't fit th
 **Usable route.** The affiliate feed through Impact (above), if StockX approves Rotation and the
 feed terms allow showing names, prices and images in a third-party app.
 
-**Terms that matter.** StockX's terms prohibit scraping. Rotation never fetches StockX pages
+**Terms that matter.** StockX's terms prohibit scraping. The production plan doesn't use its
+pages, and neither does the prototype: a pasted StockX link is never requested (StockX also
+answered 403 to the one test request on 2026-10-15). Rotation reads the link's words instead
 (see [marketplaces.md](marketplaces.md)).
 
 **Fallback.** Paste-a-link import as text, confirmed by the person, and a plain link to StockX's
@@ -570,7 +634,7 @@ Sources: [Netlify pricing](https://www.netlify.com/pricing/).
 (`js/engine/ocr.js`). Version 7.0.0 (2025-12-15), Apache-2.0 license, a WebAssembly port of the
 Tesseract engine. It doesn't change Tesseract's recognition model and doesn't read PDFs.
 
-**Terms that matter.** The photo never leaves the device. By default the library loads its
+**Terms that matter.** Label reading never sends the photo anywhere. By default the library loads its
 worker, core and language data from the jsDelivr CDN; production should host those files itself
 (`workerPath`, `corePath`, `langPath`) so label reading doesn't depend on, or send requests to, a
 third-party CDN.

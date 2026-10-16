@@ -7,6 +7,7 @@ const extra = process.argv.slice(2);
 const CHECKS = [
   ['Every route as each role', here('./smoke.mjs'), []],
   ['Photo pipeline', here('./photo.mjs'), extra.filter((a) => a === '--ocr')],
+  ['Real product lookups (fixture stores, no network)', here('./web.mjs'), []],
 ];
 
 let failed = 0;

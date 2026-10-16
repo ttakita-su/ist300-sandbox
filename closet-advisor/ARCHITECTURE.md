@@ -4,12 +4,15 @@ Rotation (working name) is the prototype of the AI closet and shopping advisor b
 document is the contract every module is written against, and it describes what is built, not
 what was planned. Read **Conventions** and **Data model** first, then the section for the module
 you are working on. Screen builders: section 5.4 lists every operation with its arguments and
-result, and section 7.3 says what each screen calls and which states it must show.
+result, and section 7.3 says what each screen calls and which states it must show. The local
+server for real store lookups, and the network rules it must keep, are in section 2.1.
 
 ## 1. What the prototype is
 
 A mobile-first web app with no build step, served as static files (GitHub Pages serves it at
-`/closet-advisor/`). It runs the whole product journey in the browser:
+`/closet-advisor/`), plus an optional local Node server (`npm start`, `backend/`) that serves
+the same files and adds live product lookups (section 2.1). It runs the whole product journey
+in the browser:
 
 photo → candidate products → confirm item and variant → catalog image → collection →
 similar/matching recommendations → retailer offer comparison → affiliate redirect.
@@ -30,17 +33,26 @@ What is real in the prototype:
 - Affiliate clicks, conversions and purchases are separate records.
 - Access rules (the equivalent of Postgres row-level security) are pure functions with tests.
 - A synthetic evaluation (`npm run eval`, `docs/evaluation.md`) measures the matching pipeline.
+- **Live mode** (only with `npm start`): real product lookups. A pasted store link is read for
+  its structured product data, typed words search Bing Shopping and Bing web results, and a photo
+  the person chooses to send goes to Bing visual search. What comes back is a draft the person
+  confirms and saves as a custom item with a `WebSnapshot` (4.3); it never becomes a catalog
+  identity, an offer or a recommendation. Without the server (GitHub Pages,
+  `python3 -m http.server`, `npm run serve`, the tests) every live call answers `not_connected`
+  with a sentence saying how to start it.
 
 What is demo:
 
 - The catalog, brands, retailers, offers and prices are **fictional** and labeled as demo
-  everywhere they appear. Retailer domains use the reserved `.example` TLD, so no link leaves
-  for a real store. GTINs use the GS1 restricted-circulation prefix 2, so they can never collide
-  with a real product.
+  everywhere they appear. Demo retailer domains use the reserved `.example` TLD, so no catalog
+  or offer link leads to a real store. GTINs use the GS1 restricted-circulation prefix 2, so
+  they can never collide with a real product. Only live mode touches real stores, and only for
+  the person's own lookups.
 - The "server" is a module layer running in the same browser tab, storing data in IndexedDB.
   It mirrors the boundary a Next.js + Supabase build would have (see `docs/PLAN.md`,
   `docs/providers.md` and `supabase/README.md`), but it is not a security boundary: anyone can
-  open devtools.
+  open devtools. The local Node server is not that server either: it holds no accounts or
+  items, only fetches on request and keeps nothing (2.1).
 - Catalog images are SVG illustrations generated from each variant's palette, so the prototype
   owns every image it displays.
 - Sample photos (`js/engine/samples.js`) are catalog illustrations staged like phone photos, so
@@ -50,9 +62,20 @@ What is demo:
 
 ```
 closet-advisor/
+  README.md               how to run it, live features, privacy, troubleshooting (for people)
   index.html              app shell; loads css/*.css and js/app.js as a module
   manifest.webmanifest    PWA manifest
-  sw.js                   service worker (app shell, stale-while-revalidate; no cross-origin)
+  sw.js                   service worker (app shell, stale-while-revalidate; never cross-origin
+                          requests or ./api/)
+  api/status.json         { "live": false }: what every static host serves; the local server
+                          answers this path itself with { "live": true, ... }
+  backend/                the local server (Node 24, zero dependencies; section 2.1)
+    server.mjs            startAppServer(): static allowlist + /api; `npm start` runs it
+    routes.mjs            /api handlers and request checks (POST, X-Rotation, Host, Origin)
+    net.mjs               createUpstream(): the guarded outbound fetcher (SSRF checks, honest
+                          User-Agent, per-host spacing, cache, block detection and cooldown)
+    extract.mjs           extractProduct(html, url): structured product data from a store page
+    bing.mjs              createBing(): Bing web search, Shopping and visual search parsers
   css/
     tokens.css            color, type, spacing tokens; light/dark themes
     base.css              element defaults, layout primitives, focus, motion
@@ -64,11 +87,12 @@ closet-advisor/
     app.js                bootstrap: open db, seed, session restore, router, chrome
     client.js             browser singleton: db + api + current session token
     lib/                  html.js, router.js, ui.js, format.js, icons.js, ids.js
-    ui/                   components.js (shared views), item-forms.js, catalog-picker.js, hydrate.js
+    ui/                   components.js (shared views), item-forms.js, catalog-picker.js, hydrate.js,
+                          web-product.js (store result lists, the web save form, "Seen at")
     data/                 schema.js, colors.js, catalog.js, retailers.js, illustrations.js,
                           catalog-index.js
     engine/               features, matcher, recommend, harmony, explain, parse-request, offers,
-                          affiliate, conversions, duplicates, provenance (pure);
+                          affiliate, conversions, duplicates, provenance, web-guess (pure);
                           image, samples, ocr, reference, eval (browser)
     server/               errors.js, db.js, auth.js, policy.js, records.js, views.js, api.js,
                           catalog-repo.js, seed.js, urlsafety.js, validate-image.js,
@@ -76,9 +100,12 @@ closet-advisor/
     screens/              one file per screen group; index.js lists them (Phase 2)
   dev/                    gallery.html (every illustration), components.html (component sheet)
   tests/
-    unit/*.test.mjs       `npm test` (node --test, no dependencies)
+    unit/*.test.mjs       `npm test` (node --test, no dependencies; backend-*.test.mjs cover backend/)
     fixtures/scenes.mjs   synthetic product scenes for Node feature and matching tests
-    e2e/*.mjs             Playwright (devDependency) against tests/serve.mjs
+    fixtures/web/         fixtureUpstream(): made-up store pages, images and Bing answers
+                          (hosts under .fixture.alt) so backend and e2e tests never use the network
+    e2e/*.mjs             Playwright (devDependency) against tests/serve.mjs, and web.mjs against
+                          backend/server.mjs with the fixture upstream
     helpers.mjs, serve.mjs
   supabase/               production schema, RLS policies and storage (not run by the prototype)
   docs/                   PLAN, providers, affiliate, recommendations, marketplaces, evaluation
@@ -93,9 +120,104 @@ Rules:
   `js/server/providers/*.browser.js`, `js/lib/*`, `js/ui/*`, `js/screens/*`, `js/app.js` and
   `js/client.js`. Everything else imports cleanly in Node 24 (`node --test`) with no DOM.
   (`js/lib/format.js`, `html.js` and `ids.js` happen to work in Node and engines use them.)
+- `backend/` is Node only and never imported by the browser. It may import
+  `js/server/urlsafety.js` and `js/server/validate-image.js` (both dependency-free); nothing in
+  `js/` imports `backend/`. The browser reaches it only through same-origin `./api/*` requests
+  in `js/server/providers/web.browser.js`.
 - No runtime dependencies except Tesseract.js 7.0.0, which `js/engine/ocr.js` loads lazily from
   jsDelivr (worker, engine and English data too) only when a label photo is read. Everything
-  works without it.
+  works without it. The backend uses only Node's standard library.
+- The browser itself contacts no store or search engine, with one exception: thumbnails in
+  web result lists and the web save form's preview are hot-linked from the store's or Bing's
+  image host (`loading="lazy"`, `referrerpolicy="no-referrer"`, through `safeUrl()`). Saved
+  items show the copy kept on the device (photo kind `'web'`).
+
+### 2.1 Live mode: the local server (`backend/`)
+
+`npm start` runs `backend/server.mjs`. It uses port 8130, or the next free port up to 8139,
+and prints the address (`--port` / `PORT` choose another). It binds to `127.0.0.1`; `HOST` or
+`--host` (for example `0.0.0.0` for a phone on the same Wi-Fi) binds elsewhere, and the bound
+interface addresses are then added to the allowed `Host` values. It reads no other
+environment variable and no `.env` file. `startAppServer({ port, host, upstream })` returns
+`{ server, port, url, close() }`; tests pass `port: 0` and `upstream: fixtureUpstream()`.
+
+**Static files.** Only `/`, `index.html`, `manifest.webmanifest`, `sw.js` and the folders `css/`,
+`js/`, `fonts/`, `icons/` and `dev/` are served; everything else (`backend/`, `tests/`, `docs/`,
+`supabase/`, `node_modules/`, dotfiles, `.env*`) is 404. Encoded slashes, dot segments and
+symlinks leading outside the folder are refused. Every response is `Cache-Control: no-store`.
+
+**How the browser knows.** `providers.web.status()` reads `./api/status.json` once per page
+load. The committed file says `{ "live": false }`; the local server answers that path with
+`{ "live": true, "version": 1, "engines": { "lookup": "page", "search": "bing", "photo": "bing" } }`.
+Starting the server after the page loaded needs a reload.
+
+**HTTP API.** Every `/api/*` request except `GET /api/status.json` must be a `POST` with
+`X-Rotation: 1`, a `Host` this server answers to (`127.0.0.1:<port>`, `localhost:<port>`, plus
+the bound address), no `Origin` or `http://<Host>`, and not `Sec-Fetch-Site: cross-site`;
+otherwise `403 { status: 'forbidden', reason }`. `OPTIONS` gets 405 and there are no CORS
+headers anywhere, so another site's page can neither send the custom header nor read an
+answer, and DNS rebinding fails the `Host` check. JSON bodies are at most 16 KB, photos 6 MB.
+Every `reason` is a full sentence that can be shown. Expected outcomes are HTTP 200 with a
+`status`; request errors are 400, 403, 404, 405, 413 or 415.
+
+| Route | Body | Result |
+| --- | --- | --- |
+| `GET /api/status.json` | none | `{ live: true, version: 1, engines }` |
+| `POST /api/lookup` | `{ url }` | `{ status: 'found', page: Page }` \| `{ status: 'not_product', host, reason, page: Page \| null }` (fetched, not a single product; a 404 or 410 page is `not_product` with `page: null`) \| `{ status: 'blocked', host, reason }` \| `{ status: 'invalid_url', code, reason }` \| `{ status: 'unavailable', host, reason }` (DNS, timeout, 5xx, too large, not HTML) |
+| `POST /api/search` | `{ query }` (2 to 200 characters) | `{ status: 'ok', engine: 'bing', query, shopping: [Listing], results: [WebResult] }` \| `{ status: 'blocked' \| 'unavailable' \| 'invalid', reason }`; `ok` when either Bing page answered |
+| `POST /api/lens` | raw JPEG, PNG or WebP (type sniffed from the bytes) | `{ status: 'ok', engine: 'bing', query /* what Bing recognized */, shopping, results }` \| `{ status: 'no_match', reason }` \| `blocked` \| `unavailable` \| `invalid` with `reason` |
+| `POST /api/image` | `{ url }` | 200 with the image bytes (JPEG, PNG, WebP, GIF or AVIF, sniffed), `Content-Type` and `X-Final-Url`; or `{ status: 'invalid_url' \| 'blocked' \| 'unsupported' \| 'unavailable', reason }` with 400, 415, 502 or 504 |
+
+```js
+Page { url /* canonical on the same site, else final; tracking parameters removed */,
+       requestedUrl, host /* no www. */, siteName, name, brand, description,
+       images: [https url] /* best first, max 8 */, price: { amountMinor, currency } | null,
+       availability: 'in_stock'|'out_of_stock'|'preorder'|'backorder'|'discontinued'|'limited'|null,
+       condition: 'new'|'used'|'refurbished'|null, color, sku, gtin, mpn, sizes: [string],
+       via: ['json-ld'|'microdata'|'meta'|'shopify'|'adapter'|'title'], fetchedAt }
+Listing { id: 'shop_1', title, price: { amountMinor, currency } | null, priceText, seller,
+          imageUrl, url /* Bing's product page */, source: 'bing_shopping' }   // max 24, free listings only
+WebResult { id: 'web_1', title, url, host, snippet, productPage: boolean }  // max 10, no bing.com/msn.com
+```
+
+`extractProduct` takes each field from the first layer that has it: JSON-LD `Product` /
+`ProductGroup` (the variant matched to the URL), site adapters (Amazon, GOAT `__NEXT_DATA__`,
+Seiko), microdata, OpenGraph and `product:*` meta, then `<title>`, canonical link and host.
+"Found" needs a product signal (structured data, `og:type` product, a price, or a name and image
+on a product-looking URL), not just a title. On a Shopify store, one `/products/<handle>.js`
+follow-up on the same host adds cent prices and variants. Money is integer minor units with the
+currency's real digits; anything unknown is `null`. Bing details are in
+`docs/providers.md` (Bing visual search, web search and Shopping).
+
+**Network rules** (non-negotiable; `backend/net.mjs` enforces them for every outbound request):
+
+- **Honest client.** User-Agent `Mozilla/5.0 (compatible; RotationLookup/0.1; educational
+  prototype)`. No headless browser, no stealth or spoofed fingerprint, no CAPTCHA handling. Google
+  is never contacted.
+- **No circumvention.** A 401, 403 or 429, or a CAPTCHA, bot-check, Akamai, Cloudflare,
+  PerimeterX or DataDome block page or a waiting room (any status) is `blocked`. Nothing is
+  retried, and that site (`www.` ignored) goes on a 30-minute cooldown: later requests return
+  `blocked` without contacting it. Cooldowns live in memory; a restart clears them.
+- **Polite and minimal.** One upstream page per person action (plus at most one Shopify `.js`
+  follow-up on the same host; a photo search is an upload plus two Bing pages). Requests to one
+  host run one at a time, at least 1 s apart. Answers are cached in memory for 15 minutes (200
+  entries, 64 MB) and identical in-flight requests are shared. No crawling, no prefetching.
+- **Safe fetching (SSRF).** Every URL and every redirect hop goes through `validateImportUrl` /
+  `checkRedirectChain` (`js/server/urlsafety.js`, at most 5 hops); every A/AAAA answer is checked
+  against the blocked ranges and the connection is pinned to the checked address; 12 s timeout;
+  byte caps after decompression (pages 8 MB, JSON 2 MB, images 10 MB); content-type allowlists;
+  no cookies, except Bing's own in-memory jar, sent only to `www.bing.com`.
+- **Route budgets.** Lookup and search answer within 22 s and lens within 36 s, before the
+  browser gives up (25 s and 40 s). Once Bing has named a photo, lens returns whatever lists it
+  has when time runs out.
+
+**Privacy.** The server stores nothing on disk and has no accounts. A photo sent to
+`/api/lens` lives in memory for that request only; the lens answer is cached for 15 minutes
+under a SHA-256 of the bytes, never the bytes. The browser sends the photo only from
+`searchWebForPhoto`, which runs only when the person presses "Search online stores" on the
+match screen next to the line saying it goes to Microsoft Bing. It sends the 768 px processing
+copy (already re-encoded without EXIF or GPS), rotated as the person rotated it. Metrics carry
+statuses and counts, never URLs, hosts, queries or user ids.
 
 ## 3. Conventions
 
@@ -107,6 +229,11 @@ Rules:
   (`icons.js`, `illustrations.js`). Never build markup by string concatenation of user data.
 - URLs placed in `href`/`src` go through `safeUrl()` (allows `http:`, `https:`, `blob:`,
   `data:image/`, relative and hash URLs).
+- Anything a store page or Bing returned is untrusted: text only through `html` (never
+  `raw()`), links and images only through `safeUrl()`, store links as plain
+  `target="_blank" rel="noopener noreferrer"` links (never affiliate redirects), remote images
+  with `referrerpolicy="no-referrer"`. Server-side, ops rebuild every web answer field by field
+  (`cleanWebSnapshot`, `cleanPage`, `cleanListing`) before storing or returning it.
 - Money is an integer number of minor units plus an ISO currency (`{ amountMinor, currency }`
   or `priceMinor` + `currency`). Never floats for money. Format with `format.money()`.
 - Times are ISO strings in records; the server takes `ctx.now()` (ms) so tests can fix time.
@@ -171,6 +298,11 @@ Identity rules (the UI and storage must keep these distinct):
   different colorway than the one chosen) and the item is flagged for review.
 - Size, clothing size, watch dimensions beyond the catalog's sourced facts, authenticity and
   condition are never inferred from a photo. Sizes come only from what the person enters.
+- Web data (a store page, a Bing Shopping listing, Bing visual search) never becomes a catalog
+  identity. Items saved from it are `manual` with null ids, one `product_link` / `url` evidence
+  line saying where the details came from, and a `WebSnapshot` (4.3). Size, condition and
+  authenticity are never taken from a page or photo, and a store price never fills
+  `targetPriceMinor` or `details.purchase`.
 
 ### 4.2 Catalog (static seed in `js/data/*.js`, copied into IndexedDB on first run)
 
@@ -288,11 +420,17 @@ profile  { userId, onboardedAt: ISO|null,
            styles: [STYLE_TAG], colorsLiked: [COLOR_NAME], colorsAvoided: [COLOR_NAME],
            uses: [INTENDED_USE], categories: [CATEGORY], theme: 'system'|'light'|'dark' }
 
-photo    { id, userId, kind: 'original' | 'processing' | 'cleaned' | 'label',
+photo    { id, userId, kind: 'original' | 'processing' | 'cleaned' | 'label' | 'web',
            blob: Blob, mime, width: number|null, height: number|null, bytes, createdAt,
            processingId: string|null,   // original/label row -> its processing copy
-           sourceId: string|null }      // processing/cleaned row -> the row it was made from
-                                        // private; blobs never leave except as object URLs
+           sourceId: string|null,       // processing/cleaned row -> the row it was made from
+           source?: { imageUrl, pageUrl: string|null, host } }   // 'web' rows only
+                                        // private; blobs never leave except as object URLs,
+                                        // and a processing copy is sent to Bing only from
+                                        // searchWebForPhoto (2.1)
+// 'web': a store's image kept on this device (importWebImage), re-encoded by imaging.normalize
+// like an upload, one row with no processing copy; host comes from pageUrl (else imageUrl).
+// It follows the same privacy, export, deletion and stylist-sharing rules as the person's photos.
 
 ownedItem {
   id, userId, createdAt, updatedAt, archivedAt: ISO | null,
@@ -306,10 +444,27 @@ ownedItem {
     serialNumber: string | null,        // watches only, private, never a product identifier
   },
   ownerChanges: [{ part: 'strap' | 'bracelet' | 'other', description, widthMm: number|null }],
-  photos: { originalId: string | null, cleanedId: string | null, labelIds: [string] },
-  display: 'catalog' | 'original' | 'cleaned',
-  sourceUrl?: string | null,            // added from a product link
+  photos: { originalId: string | null, cleanedId: string | null, labelIds: [string],
+            webId: string | null },     // webId: a store image (photo kind 'web')
+  display: 'catalog' | 'original' | 'cleaned' | 'web',
+  sourceUrl?: string | null,            // added from a product link; web items: web.url
+  web: WebSnapshot | null,              // only on custom items saved from the web
   fromWishlistId?: string               // created by markPurchased
+}
+
+WebSnapshot {                           // records.cleanWebSnapshot rebuilds it from input
+  url,                                  // the product page, or Bing's page for a listing;
+                                        // http(s), <= 2048, no credentials
+  host,                                 // derived from url, never taken from input
+  siteName, title, brand, color,        // as read (title <= 200, others <= 120) or null
+  price: { amountMinor, currency } | null,   // integer 0..1e9, ISO currency; a snapshot, not an offer
+  availability: 'in_stock'|'out_of_stock'|'preorder'|'backorder'|'discontinued'|'limited'|null,
+  identifiers: { sku, gtin, mpn },      // each string (<= 64) or null
+  imageUrl,                             // where the image came from (provenance; never rendered
+                                        // for saved items, which show photos.webId)
+  via: 'page' | 'search' | 'photo',     // store page, Bing Shopping listing, Bing visual search
+  query,                                // typed query (search) or Bing's recognized name (photo)
+  fetchedAt                             // ISO; a value after now + 1 day becomes now
 }
 
 Identity {
@@ -326,8 +481,9 @@ wishlistItem {
   desired: { size: Size | null, condition: WISH_CONDITION, variantFlexible: boolean },
   targetPriceMinor: number | null, currency: 'USD',
   sourceUrl: string | null, matchPending: boolean,
-  photos: { originalId: string | null }, purchasedOwnedId: string | null
-}
+  photos: { originalId: string | null, webId: string | null },
+  web: WebSnapshot | null, purchasedOwnedId: string | null
+}                                       // no display field: views derive it (5.2)
 
 matchJob {
   id, userId, createdAt, updatedAt, dest: 'owned' | 'wishlist', category: CATEGORY | null,
@@ -344,8 +500,24 @@ matchJob {
               done, total } | null,     // indexing counts reference renders
   attempts: number, error: { code, message } | null, latencyMs: number | null,
   result: MatchResult | null, confirmedItemId: string | null,
+  web: JobWeb | null,                   // online store results, only after searchWebForPhoto;
+                                        // kept through addMatchEvidence and retryMatchJob
   runId                                 // internal; never returned
 }
+
+JobWeb {
+  status: 'ok' | 'no_match' | 'not_connected' | 'blocked' | 'unavailable',
+  engine: 'bing' | null, query: string | null,   // what Bing recognized
+  shopping: [Listing & { draft: WebDraft }],     // Listing and WebResult: section 2.1
+  results: [WebResult],                          // pages to read with lookupProductPage
+  reason: string | null, searchedAt: ISO
+}
+
+WebDraft {                              // engine/web-guess.js draftFromWeb; a guess to confirm
+  category: CATEGORY | null,
+  custom: { brand, name, variantName /* the page's color */, type, colors: [COLOR_NAME] },
+  web: WebSnapshot, imageUrl: string | null
+}                                       // never a size, condition or catalog id
 
 MatchResult {
   retrieval: RETRIEVAL,
@@ -391,7 +563,8 @@ correction  { id, userId, productId, variantId, field, currentValue, proposedVal
 idempotency { id: `${userId}:${op}:${key}`, result, createdAt }   // 24 hours
 event       { id, type, at, data }      // metrics; no user ids, no free text
 config      { key, value }              // 'providerSimulation', 'rankingWeights',
-                                        // 'offerFreshnessHours', 'matchTimeoutMs', 'evalReport'
+                                        // 'offerFreshnessHours', 'matchTimeoutMs',
+                                        // 'webSearchTimeoutMs' (45000), 'evalReport'
 catalogFeatures { id: `${variantId}:${ILLUSTRATION_VERSION}`, variantId, specHash, features, ... }
 ```
 
@@ -417,11 +590,18 @@ export const ops = {
   the first result without running again (24 hours; concurrent taps share one run). Screens
   create one key per intent (per form render, per confirm tap sequence) with
   `idempotencyKey()` from `js/lib/ids.js` and reuse it on retries.
-- `rateLimit`: `'scan'` (30 per hour) or `'recs'` (120 per hour) per actor; `rate_limited`
-  carries `details.retryAfterMs`.
+- `rateLimit`: `'scan'` (30 per hour), `'recs'` (120 per hour), `'web'` (60 per hour: store
+  page lookups, online store searches and photo searches, each a real request through the local
+  server) or `'webImage'` (240 per hour: store images saved with items) per actor;
+  `rate_limited` carries `details.retryAfterMs`. With `chargeInRun: true` the dispatcher
+  doesn't charge before `run()`; the op calls `ctx.rateLimit()` once its input is valid, so a
+  malformed link or query costs nothing.
+- `keepResult(result) -> boolean` (idempotent ops): whether a result is stored under the key.
+  `importWebImage` keeps only `ok`, so a retry after a failed download asks again.
 - `ctx` = `{ actor, token, db, clock, config: { get, set }, providers, catalog(),
   invalidateCatalog(), now(), iso(), audit(action, targetType, targetId, meta),
-  metric(type, data), call(opName, args) /* internal, same actor */ }`.
+  metric(type, data), call(opName, args) /* internal, same actor */,
+  rateLimit(kind?) /* charges one use; throws rate_limited */ }`.
 - Return plain data. `api.js` deep-clones results so callers never hold store references.
 - Throw `ApiError(code, message, details)` from `errors.js`. Codes: `unauthenticated`,
   `forbidden`, `not_found`, `invalid`, `conflict`, `duplicate`, `rate_limited`, `timeout`,
@@ -441,12 +621,13 @@ export const ops = {
 | `ops/profile.js` | `getProfile`, `updateProfile`, `completeOnboarding` |
 | `ops/catalog.js` | `searchCatalog`, `getProduct`, `getVariant`, `listBrands` |
 | `ops/photos.js` | `uploadPhoto`, `getPhotoUrl`, `cleanupPhoto` |
-| `ops/matching.js` | `createMatchJob`, `getMatchJob`, `addMatchEvidence`, `retryMatchJob`, `rejectMatch`, `confirmMatch` |
+| `ops/matching.js` | `createMatchJob`, `getMatchJob`, `addMatchEvidence`, `retryMatchJob`, `rejectMatch`, `searchWebForPhoto`, `confirmMatch` |
 | `ops/inventory.js` | `listOwned`, `getOwned`, `createOwned`, `updateOwned`, `archiveOwned`, `restoreOwned`, `deleteOwned`, `setDisplayImage`, `correctMatch`, `reportCatalogIssue`, `checkDuplicates` |
 | `ops/wishlist.js` | `listWishlist`, `getWishlistItem`, `createWishlist`, `updateWishlist`, `removeWishlist`, `markPurchased` |
 | `ops/recs.js` | `recommend`, `helpMeChoose`, `giveFeedback`, `listFeedback`, `removeFeedback`, `parseRequest` |
 | `ops/offers.js` | `getOffers`, `createClick`, `importFromUrl` |
 | `ops/marketplaces.js` | `listMarketplaces`, `searchMarketplaces`, `importMarketplaceLink` |
+| `ops/web.js` | `webStatus`, `lookupProductPage`, `searchWebProducts`, `importWebImage` |
 | `ops/stylist.js` | `listMyStylists`, `createStylistRequest`, `listStylistRequests`, `getStylistRequest`, `revokeStylistRequest`, `submitStylistRecs`, `listStylistRecs`, `getAuditLog` |
 | `ops/privacy.js` | `exportMyData`, `deleteMyAccount` |
 | `ops/admin.js` | `adminOverview`, `adminListProducts`, `adminImportFeed`, `adminListCorrections`, `adminResolveCorrection`, `adminListImages`, `adminSetImageStatus`, `adminListOffers`, `adminRefreshOffer`, `adminListJobs`, `adminRetryJob`, `adminGetProviders`, `adminSetProviderSimulation`, `adminGetWeights`, `adminSetWeights`, `adminListAccounts`, `adminAssignStylist`, `adminEndAssignment`, `adminListClicks`, `adminConversions`, `adminLoadDemoConversions`, `adminSaveEvalReport`, `adminGetEvalReport` |
@@ -454,8 +635,10 @@ export const ops = {
 Each operation's arguments and result are also documented with JSDoc in its file. Cross-module
 helpers other ops use: `requeueMatchJob(ctx, jobId)` and `loadReferenceIndex(env)` /
 `analyzeAndMatch(input)` (`ops/matching.js`), `ownedViews`, `loadOwned`, `checkPhotoRefs`
-(`ops/inventory.js`), `wishViews` (`ops/wishlist.js`), `deletePhotos`, `revokePhotoUrls`
-(`ops/photos.js`), `correctionField`, `coerceCorrectionValue` (`ops/admin.js`),
+(`ops/inventory.js`), `wishViews` (`ops/wishlist.js`), `deletePhotos`, `revokePhotoUrls`,
+`storePhoto` (the one validate-normalize-store path for uploads and store images,
+`ops/photos.js`), `cleanSearchLists`, `photoSearchResult` (`ops/web.js`), `cleanWebSnapshot`,
+`webEvidence`, `webIdentity`, `cleanLinkUrl`, `displayHost` (`records.js`), `correctionField`, `coerceCorrectionValue` (`ops/admin.js`),
 `sanitizeConstraints` (`ops/recs.js`), `searchProducts`, `tokenize` (`ops/catalog.js`).
 
 ### 5.2 Items returned to screens
@@ -474,7 +657,9 @@ VariantView {                            // server/views.js variantView
 OwnedView = ownedItem & {
   product: ProductSummary | null,
   variant: { id, name, identifiers, colors, attributes } | null,
-  brandName: string, title: string, subtitle: string, code: string | null,   // label strip
+  brandName: string, title: string, subtitle: string, code: string | null,   // label strip;
+                            // custom web items: web.identifiers.mpn ?? sku (a style code)
+  web: WebSnapshot | null,  // null on records saved before web snapshots existed
   image: DisplayImage,
   copies: number            // how many active records share this variant (multiple copies)
 }
@@ -482,26 +667,33 @@ OwnedView = ownedItem & {
 // 'Color not confirmed' (clothing), 'Reference not confirmed' (watches); custom: variantName
 // or 'Custom item'.
 
-WishlistView = wishlistItem & { product, variant, brandName, title, subtitle, code, image,
+WishlistView = wishlistItem & { product, variant, brandName, title, subtitle, code, image, web,
   linkedOwned: [{ id, category, brandName, title, subtitle, image }],
   ownedCopies: number, purchasedOwned: { id } | null }
 
 DisplayImage {
-  kind: 'catalog' | 'original' | 'cleaned' | 'placeholder',
+  kind: 'catalog' | 'original' | 'cleaned' | 'web' | 'placeholder',
   url: string | null,       // data: URL for catalog images; null for photos (hydrate)
-  photoId: string | null,   // for photos; screens hydrate with api.getPhotoUrl
-  label: 'Catalog image' | 'Your photo' | 'Your photo, cleaned up' | null,
+  photoId: string | null,   // for photos and store images; screens hydrate with api.getPhotoUrl
+  label: 'Catalog image' | 'Your photo' | 'Your photo, cleaned up'
+       | 'Image from nike.com' | 'Store image' | null,   // a store image never says "Your photo"
   attribution: string | null,
   fallbackReason: string | null,   // why the catalog image isn't shown (say it, don't hide it)
-  options: ['catalog'?, 'original'?, 'cleaned'?]   // what the person can switch to
+  options: ['catalog'?, 'original'?, 'cleaned'?, 'web'?]   // what the person can switch to
 }
+// Order: the wanted display when it has an image, then the person's photo, then the store
+// image (photos.webId), then the catalog image, then the placeholder. Defaults: items saved
+// from a link or text search show 'web'; items saved from the photo flow show 'original' and
+// keep 'web' as an option. Wishlist views derive the display: catalog image when permitted,
+// else the person's photo, else the store image.
 
 RedactedItem {             // what a stylist sees (policy.redactForStylist), allowlist only
   id, category, productId, variantId, custom, product, variant, title, brandName, subtitle, code,
   image,                   // a photo only when the request shares photos
   details: { size, condition, notes: string | null },   // notes only when shared
   ownerChanges, identity: { resolution, variant }, shared: { photos, notes }
-}                          // never: purchase, serialNumber, evidence, photo ids
+}                          // never: purchase, serialNumber, evidence, photo ids, web snapshot;
+                           // store images are hidden unless photos are shared, like photos
 ```
 
 The display choice is the person's and is kept; `image` says what is actually shown. The
@@ -511,6 +703,7 @@ original photo is never deleted or replaced when the catalog image is displayed.
 
 Providers keep external services replaceable. Each has a browser implementation (on the
 device, `index.browser.js`) and a test implementation (`test.js`, Node, fixture features).
+`web` is the only one that talks to the network on purpose, and only through the local server.
 
 ```
 imaging.normalize(blob) -> { original: Blob, processing: Blob, width, height, mime,
@@ -526,7 +719,22 @@ offers.list(catalog, variantId, now) -> offer[] with lastCheckedAt resolved
 conversions.report()    -> { connected: false, network: null, events: [] } | { connected: true, network, events }
 marketplaces.list(), marketplaces.search(id, query, { catalog })   // StockX/GOAT not connected
 urls.objectUrl(blob, id), urls.revoke(url)            // photo URLs (tests: 'blob:test/<id>')
+web.status()            -> { live: boolean, reason: string|null }   // ./api/status.json, once per page load
+web.lookup({ url })     -> /api/lookup answer | { status: 'not_connected', reason }
+web.search({ query })   -> /api/search answer | not_connected
+web.searchImage({ blob, rotate }) -> /api/lens answer | not_connected
+                           // rotates on a canvas when rotate != 0 and sends a JPEG
+web.fetchImage({ url }) -> { status: 'ok', blob, mime, finalUrl } | { status, reason }
 ```
+
+`web` (`providers/web.browser.js`) sends same-origin `POST`s to `./api/*` with `X-Rotation: 1`
+and timeouts (lookup, search and image 25 s, lens 40 s). It never throws for expected failures:
+without the server every call is `{ status: 'not_connected', reason: NOT_CONNECTED }` ("Real
+store search needs the local server. In the closet-advisor folder, run npm start and open the
+address it prints."), and a request the server doesn't answer is `unavailable` with
+`NO_ANSWER`. `test.js` uses `notConnectedWeb` (`providers/web.js`), which never calls `fetch`;
+tests script one with `fakeWebProvider(responses)` (`providers/test.js`, re-exported by
+`tests/helpers.mjs`) and pass it as `createTestEnv({ providers: { web } })`.
 
 Admin can switch simulations (`config.providerSimulation`): `vision: 'ok'|'timeout'|'error'`,
 `offers: 'ok'|'down'`, `ocr: 'ok'|'off'`, so the failure states can be demonstrated.
@@ -563,9 +771,13 @@ missing ones (`not_found`).
 
 **Photos**
 
-- `uploadPhoto({ blob, kind: 'original'|'label', idempotencyKey? })` (`user`) →
+- `uploadPhoto({ blob, kind: 'original'|'label'|'web', source?: { imageUrl, pageUrl? }, idempotencyKey? })` (`user`) →
   `{ photoId, processingId, width, height, mime, bytes }`. `unsupported` (not JPEG/PNG/WebP/
   HEIC by signature, or HEIC the browser can't decode), `invalid` (> 15 MB, empty, < 200 px).
+  Kind `'web'` (a store image; normally saved through `importWebImage`) needs
+  `source.imageUrl`, accepts JPEG, PNG, WebP, GIF or AVIF, is kept only once `normalize` has
+  re-encoded it to JPEG, PNG or WebP (else `unsupported`), and stores one row with
+  `processingId: null` and `source: { imageUrl, pageUrl, host }`.
 - `getPhotoUrl({ photoId })` (`any`) → `{ url, expiresAt }` (10 minutes; owner, or a stylist
   through a live request that shared photos, audited). Others → `not_found`.
 - `cleanupPhoto({ itemId, idempotencyKey? })` (`user`) → `{ photoId, itemId }`; sets
@@ -579,16 +791,17 @@ missing ones (`not_found`).
 - `addMatchEvidence({ jobId, labelPhotoId?, code?, productUrl?, idempotencyKey })` → `MatchJobView` (re-queued, attempts reset). Codes are `user_entered`; label photos are read on the device (`labelReads`); product links resolve through `importFromUrl` (`link`).
 - `retryMatchJob({ jobId, idempotencyKey })` → `MatchJobView`; only `error`/`timeout`, ≤ 3 attempts, else `conflict`.
 - `rejectMatch({ jobId })` → `MatchJobView` (`rejected`).
-- `confirmMatch({ jobId, candidateId|null, variantId|null, variantUnsure?, custom?, category?, details? | wish?, display?, allowDuplicate?, idempotencyKey })` → `{ item: OwnedView | WishlistView, job: MatchJobView }`. Identity per 4.1 (identifier_supported only when a code in `job.texts` matches the chosen version). `duplicate` with `details.duplicates`; `conflict` if already confirmed or still running.
+- `searchWebForPhoto({ jobId, idempotencyKey })` (rate limit `web`) → `MatchJobView` with `web: JobWeb` (4.3). The one place a photo leaves the device: the job's processing copy (the original when there is none) goes to `providers.web.searchImage` with the person's framing (`crop: job.crop`, rotation included; the browser provider sends only that part), bounded by config `webSearchTimeoutMs` (45000). Own jobs only (others → `not_found`); `conflict` while `queued`/`processing` and once `confirmed`. Failures are stored as `job.web.status` with a `reason`, not thrown. Listings carry a `draft` (via `'photo'`, the job's category when set). Results are never match candidates.
+- `confirmMatch({ jobId, candidateId|null, variantId|null, variantUnsure?, custom?, category?, web?, webPhotoId?, details? | wish?, display?, allowDuplicate?, idempotencyKey })` → `{ item: OwnedView | WishlistView, job: MatchJobView }`. Identity per 4.1 (identifier_supported only when a code in `job.texts` matches the chosen version). `duplicate` with `details.duplicates`; `conflict` if already confirmed or still running. Custom saves may add `web` (a WebSnapshot from `job.web`; `invalid` when it can't be cleaned) and `webPhotoId` (a kind `'web'` photo of the actor's, from `importWebImage`; others → `not_found`): the item keeps the person's photo as `photos.originalId` and shows it, gets `photos.webId`, `web` and `sourceUrl = web.url`, and its evidence adds "Found with Bing visual search from your photo on {date}; you chose it." It stays `manual`.
 
 **Inventory** (`user`; others → `not_found`)
 
 - `listOwned({ category?, q?, brandId?, color?, sort?: 'recent'|'brand'|'name'|'color', includeArchived? })` → `{ items: [OwnedView], facets: { categories: { sneaker, watch, clothing }, brands: [{ id, name, count }], colors: [{ name, label, count }] }, total, collectionTotal, archivedCount }`. Custom brands have ids `custom:<slug>`.
 - `getOwned({ itemId })` → `OwnedView`
-- `createOwned({ category, productId?, variantId?, custom?, details?, ownerChanges?, photos?, display?, source?: 'catalog_search'|'product_link'|'manual', sourceUrl?, allowDuplicate?, idempotencyKey })` → `OwnedView`; the identity is always built server side.
-- `updateOwned({ itemId, patch: { details?, ownerChanges?, custom?, display?, photos?: { originalId?, labelIds? } } })` → `OwnedView`
+- `createOwned({ category, productId?, variantId?, custom?, details?, ownerChanges?, photos?: { originalId?, labelIds?, webId? }, display?, source?: 'catalog_search'|'product_link'|'manual'|'web', sourceUrl?, web?, allowDuplicate?, idempotencyKey })` → `OwnedView`; the identity is always built server side. `source: 'web'` is a custom item like `manual` (`custom` required; a `productId` or `variantId` is `invalid`) plus a required `web` snapshot (`invalid` with `fields.web` when it can't be cleaned). Its identity is `manual` with one evidence line: "Details from nike.com on Oct 15, 2026; not checked by Rotation." (via `page`) or "Picked from a Bing Shopping listing (Walmart) on Oct 15, 2026; not checked by Rotation." (via `search`). `sourceUrl` defaults to `web.url`; `display` defaults to `'web'` when `photos.webId` is set.
+- `updateOwned({ itemId, patch: { details?, ownerChanges?, custom?, display?, photos?: { originalId?, labelIds?, webId? } } })` → `OwnedView`. A removed store image is deleted unless another record uses it, and a display without its image falls back.
 - `archiveOwned` / `restoreOwned({ itemId })` → `OwnedView`; `deleteOwned({ itemId })` → `{ ok: true }` (photos go too unless still used; removed from shares)
-- `setDisplayImage({ itemId, display })` → `OwnedView`; `invalid` with the reason when that image can't be shown
+- `setDisplayImage({ itemId, display: 'catalog'|'original'|'cleaned'|'web' })` → `OwnedView`; `invalid` with the reason when that image can't be shown (`'web'` needs `photos.webId`)
 - `correctMatch({ itemId, productId|null, variantId|null, custom? })` → `OwnedView` (the person's record only; evidence replaced)
 - `reportCatalogIssue({ productId, variantId?, field, proposedValue, note })` → correction (`field` from `correctionFieldsFor(category)` in `ops/admin.js`)
 - `checkDuplicates({ category?, productId?, variantId?, custom? })` → `{ duplicates: [OwnedView] }`
@@ -597,10 +810,10 @@ missing ones (`not_found`).
 
 - `listWishlist({ status?: 'active'|'purchased'|'removed'|'all' })` → `{ items: [WishlistView], counts: { active, purchased } }`
 - `getWishlistItem({ itemId })` → `WishlistView`
-- `createWishlist({ category, productId?, variantId?, custom?, matchPending?, reason, reasonNote?, intent?, linkedOwnedIds?, desired: { size?, condition, variantFlexible? }, targetPriceMinor?, sourceUrl?, source?, photos?, allowDuplicate?, idempotencyKey })` → `WishlistView`
+- `createWishlist({ category, productId?, variantId?, custom?, matchPending?, reason, reasonNote?, intent?, linkedOwnedIds?, desired: { size?, condition, variantFlexible? }, targetPriceMinor?, sourceUrl?, source?: 'catalog_search'|'product_link'|'web', web?, photos?: { originalId?, webId? }, allowDuplicate?, idempotencyKey })` → `WishlistView`. `source: 'web'` follows the `createOwned` rules; the store price stays in `web.price` and is never copied into `targetPriceMinor`.
 - `updateWishlist({ itemId, patch: { reason?, intent?, desired?, targetPriceMinor?, linkedOwnedIds?, reasonNote? } })` → `WishlistView`
 - `removeWishlist({ itemId })` → `{ ok: true }`
-- `markPurchased({ itemId, details: { size?, condition?, purchase? }, variantId?, allowDuplicate?, idempotencyKey })` → `{ owned: OwnedView, wish: WishlistView }`. The only way a wish becomes owned; the wished size is not assumed.
+- `markPurchased({ itemId, details: { size?, condition?, purchase? }, variantId?, allowDuplicate?, idempotencyKey })` → `{ owned: OwnedView, wish: WishlistView }`. The only way a wish becomes owned; the wished size is not assumed. A custom wish's `web` snapshot and `photos.webId` carry over (the owned item then displays `'web'`).
 
 **Recommendations** (`user`; `recommend` and `helpMeChoose` are rate-limited `recs`)
 
@@ -614,8 +827,16 @@ missing ones (`not_found`).
 
 - `getOffers({ variantId, size?: Size|string, condition?: 'new_only'|'new_or_used'|OFFER_CONDITION })` (`any`) → `OffersView` (6.1). A bare size string takes the product's system; unsized products ignore it. `unavailable` ("Retailer prices could not be checked right now. Try again shortly.") when offers are down.
 - `createClick({ offerId, idempotencyKey })` (`any`) → `{ clickRef, destination, tracked, retailer: { id, name, domain }, affiliate: { network, status } | null, disclosure, offerId, variantId, productId }`. Records a pseudonymous click; never marks anything purchased. `unavailable` for removed listings.
-- `importFromUrl({ url })` (`user`) → `{ status: 'resolved', productId, variantId, offerId, retailerId, size, sizeNote, listingStatus, url, product, variant, retailer }` | `{ status: 'unsupported_link', host, code, reason, url }` | `{ status: 'invalid_url', code, reason }`. Never fetches the URL; `reason` is a sentence to show, `code` is for logic.
+- `importFromUrl({ url })` (`user`) → `{ status: 'resolved', productId, variantId, offerId, retailerId, size, sizeNote, listingStatus, url, product, variant, retailer }` | `{ status: 'unsupported_link', host, code, reason, url }` | `{ status: 'invalid_url', code, reason }`. Resolves demo (`.example`) links against the catalog and never fetches the URL; `reason` is a sentence to show, `code` is for logic. Links to real stores go to `lookupProductPage` instead.
 - `listMarketplaces({})` → `[{ id, name, connected, demo, note, searchUrlTemplate }]`; `searchMarketplaces({ query, marketplaceId? })` → `{ query, sources: [{ id, name, demo, connected, reason, searchUrl, results }] }`; `importMarketplaceLink({ url })` → `{ ok: true, link, catalogMatches, draft: { category, custom, sourceUrl, styleCodeGuess, sizeGuess, evidence } }` | `{ ok: false, reason, message, marketplace }`. A draft never carries a catalog identity; its size is a guess for the person to confirm. See `docs/marketplaces.md`.
+
+**Web** (`user`; real stores and Bing through the local server, `ops/web.js`). Nothing here fetches by itself: `providers.web` does, and without the server every op answers `not_connected` with `reason`. Results are drafts the person confirms; metrics carry statuses and counts only.
+
+- `webStatus({})` → `{ live: boolean, reason: string | null }`
+- `lookupProductPage({ url })` (rate limit `web`, charged only for a valid link) → `{ status: 'found', page: Page, draft: WebDraft }` | `{ status: 'not_product', host, reason, page: Page | null, draft? }` (draft when the page has a name) | `{ status: 'blocked', host, reason }` (also returned for StockX and GOAT links without contacting them: their terms forbid automated access, so the screen reads the link with `importMarketplaceLink`) | `{ status: 'invalid_url', code, reason }` (checked with `validateImportUrl` first; never reaches the provider) | `{ status: 'unavailable', host?, reason }` | `{ status: 'not_connected', reason }`. Page and draft are rebuilt from the server's answer as untrusted input.
+- `searchWebProducts({ query })` (rate limit `web`, charged only for a valid query) → `{ status: 'ok', engine: 'bing', query, shopping: [Listing & { draft }], results: [WebResult] }` | `{ status: 'blocked'|'unavailable'|'invalid'|'not_connected', reason }`. Fewer than 2 or more than 200 characters throws `invalid` with `fields.query`. A listing's draft has via `'search'`; a result is opened with `lookupProductPage`.
+- `importWebImage({ imageUrl, pageUrl?, idempotencyKey })` (rate limit `webImage`; idempotent, only `ok` is kept) → `{ status: 'ok', photoId }` | `{ status: 'invalid_url'|'not_connected'|'blocked'|'unsupported'|'invalid'|'unavailable', reason }`. Downloads through `providers.web.fetchImage`, then `storePhoto` with kind `'web'`. Never throws for an image it can't fetch or keep, nor for its rate limit (`unavailable` with the limit's sentence): saving the item continues without it.
+- Saving: `createOwned` / `createWishlist` with `source: 'web'`, `custom` from the edited draft, `web: draft.web` and `photos.webId` from `importWebImage`; from a match, `confirmMatch` with `web` and `webPhotoId`.
 
 **Stylist**
 
@@ -643,7 +864,7 @@ missing ones (`not_found`).
 - `adminListImages({ status?, variantId? })` / `adminSetImageStatus({ imageId, status })` → `[image & { variantName, productName, brandName, inCollections: { ok, reason }, onProductPages: { ok, reason } }]`
 - `adminListOffers({ variantId?, freshness?, retailerId? })` → `[{ id, retailer, listingId, variantId, variantName, productName, brandName, condition, sellerType, listingStatus, price: { fromMinor, toMinor, currency }, sized, lastCheckedAt, freshness, refreshedByAdmin, url }]`; `adminRefreshOffer({ offerId })` → one of those
 - `adminListJobs({ status? })` → `{ jobs: [{ id, status, category, attempts, latencyMs, errorCode, createdAt, person: 'p-xxxxxxx' }], byStatus }`; `adminRetryJob({ jobId })` → one job view
-- `adminGetProviders({})` / `adminSetProviderSimulation({ vision?, offers?, ocr? })` → `{ simulation, providers: [{ id, name, detail, status: 'normal'|'simulated'|'demo'|'connected'|'not_connected', simulation, options }] }`
+- `adminGetProviders({})` / `adminSetProviderSimulation({ vision?, offers?, ocr? })` → `{ simulation, providers: [{ id, name, detail, status: 'normal'|'simulated'|'demo'|'connected'|'not_connected', simulation, options }] }`. The `web` entry ("Real store lookup") is read-only: `connected` when the local server answers, `simulation: null`, no options; the `simulation` object has no web key.
 - `adminGetWeights({})` / `adminSetWeights({ weights?: { key: number }, reset? })` → `{ weights, defaults, ranges: { key: { min, max, step, label, help } }, custom }`. Ranges and labels come from `WEIGHT_RANGES` in `engine/recommend.js`; stored under config `rankingWeights`.
 - `adminListAccounts({})` → `{ accounts: [{ id, displayName, role, demo, createdAt }], assignments: [AssignmentView] }`; `adminAssignStylist({ stylistId, userId })` / `adminEndAssignment({ assignmentId })` → `AssignmentView { id, stylistId, stylistName, userId, userName, assignedBy, assignedByName, createdAt, endedAt, active }`. Ending revokes the stylist's photo URLs and closes the person's requests to them.
 - `adminListClicks({ limit? })` → `{ clicks: [{ id, clickRef, analyticsId, offerId, retailerId, retailerName, networkId, destination, tracked, createdAt }], summary: { total, tracked, untracked, byRetailer } }`
@@ -669,7 +890,8 @@ missing ones (`not_found`).
 | `affiliate.js` | `buildOutboundUrl({ offer, retailer, clickRef }) -> { url, tracked, network }`, `newClickRef()`, `SUB_ID_PARAMS` |
 | `conversions.js` | `reconcileConversions(events) -> report`, `summarize({ clicks, report }) -> summary`, `demoConversionEvents(clicks, { seed, now, catalog })`, `CONVERSION_STATUSES` |
 | `duplicates.js` | `findDuplicates(items, candidate) -> items[]` |
-| `provenance.js` | `resolveDisplayImage(item, catalog, now, catalogUrl) -> DisplayImage`, `catalogImageFor`, `imagePermitted` |
+| `provenance.js` | `resolveDisplayImage(item, catalog, now, catalogUrl) -> DisplayImage` (including `'web'`, 5.2), `catalogImageFor`, `imagePermitted` |
+| `web-guess.js` | `draftFromWeb({ page?, listing?, result?, query?, via, now, category? }) -> WebDraft \| null`, `guessCategory(text)`, `guessType(category, text)`, `guessColors(text)` (only `COLORS` names, max 4), `guessBrand({ title, brand, host })`. Guesses from words only; never a size, condition or catalog id |
 
 Server-side glue that other code reuses: `analyzeAndMatch({ providers, index, blob, crop?, category?, texts?, productUrl?, link?, simulation? })` in `ops/matching.js` is the one analysis path for match jobs and the evaluation.
 
@@ -818,7 +1040,8 @@ Routes (hash based, `#/path?query`):
 | `/wishlist/compare` | help me choose `?ids=a,b,c` | Wishlist |
 | `/add` | add-item chooser `?dest=owned|wishlist` | none |
 | `/add/photo` | capture or upload, crop, or try a sample | none |
-| `/add/link` | product link entry | none |
+| `/add/link` | product link entry (demo links and real store links) | none |
+| `/add/web` | search online stores `?dest=owned|wishlist` | none |
 | `/add/search` | catalog search | none |
 | `/add/manual` | manual entry | none |
 | `/match/:jobId` | progress, candidates, confirmation | none |
@@ -850,6 +1073,8 @@ navigation. After `mount`, the router hydrates `<img data-photo-id>` elements
 (`itemTile`, `productTile`, `label`, `identityStamps`, `recCard`, `offerCard`,
 `affiliateDisclosure`, `evidenceList`, `notice`, `emptyState`, `errorState`, `loadingState`,
 form fields), `js/ui/item-forms.js` (size fields, owned details, wish fields, duplicate dialog),
+`js/ui/web-product.js` (`webResultLists`, `openWebSheet`, `webSaveForm`, `saveWebDraft`,
+`keepStoreImage`, `lookupFallback`, `loadStorePage`, `webSnapshot`, `seenParts`),
 `js/ui/catalog-picker.js`, `js/lib/ui.js` (`toast`, `openSheet`, `confirmDialog`, `withBusy`,
 `formData`, `showFieldErrors`, `toastError`, `downloadBlob`). `dev/components.html` shows them.
 
@@ -864,7 +1089,8 @@ Tokens in `css/tokens.css`, classes in `css/components.css`:
 - Identity shows as a stamp on the label: "Confirmed by you", "Code matched", "Colorway
   unsure", "Custom item", "Needs review".
 - Images sit on a neutral studio tile (`--studio`). Catalog images carry a small
-  "Catalog image" tag so they aren't mistaken for photos of the person's own item.
+  "Catalog image" tag and store images "Image from {host}", so neither is mistaken for a photo
+  of the person's own item.
 - One accent (signal orange) marks wishlist and desire. Ink (indigo) carries text and primary
   actions. Everything else stays quiet: no gradients, no decorative shadows, no all-caps.
 - Archivo variable: wide and heavy for screen titles, regular for body, condensed for codes,
@@ -898,11 +1124,23 @@ Tokens in `css/tokens.css`, classes in `css/components.css`:
   - `error` / `timeout`: show `error.message`; `retryMatchJob` when `canRetry`.
   - Confirm with `confirmMatch` (one idempotency key per confirm sequence); handle `duplicate`
     with `duplicateDialog` and `allowDuplicate`. "Not mine" is `rejectMatch`.
+  - On `done`, `rejected`, `error` and `timeout`: an "Online stores" panel. Its "Search online stores"
+    button carries the line "Sends this photo to Microsoft Bing to recognize it. Rotation's
+    server doesn't keep it." and calls `searchWebForPhoto`; nothing is sent before the tap.
+    Show "Bing recognized this as: {query}", `job.web.reason` for other statuses, and the result
+    lists. A listing opens the save form from its `draft`; a store page runs
+    `lookupProductPage` first. Saving uses `importWebImage` (when "Save the store's image with
+    it" is checked) and then `confirmMatch` with `custom`, `web` and `webPhotoId`, so the job is
+    marked saved and the person's photo stays the item's photo. Reloading shows the last
+    `job.web` without searching again.
 - **Collection / item.** `listOwned` facets drive filter chips; tiles use `itemTile` and the
   label strip. Item detail shows identity stamps and evidence, `image.label`, the display
-  switch from `image.options` (`setDisplayImage`), `image.fallbackReason` when the catalog image
-  can't be shown, `cleanupPhoto`, `correctMatch`, `reportCatalogIssue`, archive, delete, and
-  "Find similar" / "Find matching" links to `/recs`.
+  switch from `image.options` (`setDisplayImage`; `'web'` is "Store image"),
+  `image.fallbackReason` when the catalog image can't be shown, `cleanupPhoto`, `correctMatch`,
+  `reportCatalogIssue`, archive, delete, and "Find similar" / "Find matching" links to `/recs`.
+  When `item.web` exists (collection and wishlist), `webSnapshot(item.web)` shows "Seen at
+  {site} for {price}", "checked {relative time}" and a plain "View on {host}" link
+  (`target="_blank" rel="noopener noreferrer"`, not an affiliate link).
 - **Discover / recs.** `recommend({ mode: 'feed' })`; the request box calls `recommend` with
   `text` and shows `interpretation.chips` (editable; rebuild with `constraintsFromChips`),
   `applied.hard`/`soft` labels, `emptyReason`, and one button per relaxation that merges its
@@ -920,10 +1158,25 @@ Tokens in `css/tokens.css`, classes in `css/components.css`:
   interstitial (reuse it on retry); show `disclosure` and the destination host; open
   `destination` with `rel="noopener noreferrer"`. A removed listing is `unavailable`. Nothing is
   marked purchased.
-- **Add link / search / manual.** `importFromUrl` (show `reason`, never `code`; prefill size
-  from `size` and show `sizeNote`; store `url` as `sourceUrl`), `searchMarketplaces` and
-  `importMarketplaceLink` for StockX/GOAT links, `searchCatalog` with `catalog-picker.js`,
-  `createOwned` / `createWishlist`.
+- **Add chooser** (`/add`). Take a photo, Search online stores (`/add/web`), Paste a product
+  link ("From any store's product page."), Search the demo catalog, Enter it yourself.
+- **Add link** (`/add/link`). Demo `.example` links resolve with `importFromUrl` (show
+  `reason`, never `code`; prefill size from `size` and show `sizeNote`; store `url` as
+  `sourceUrl`). Any other link calls `lookupProductPage`. On `found`: the save form with the
+  store image (hot-linked, no referrer), name, store, "Seen at {site} for {price}, checked just
+  now", availability, editable category, type, brand, name, color and main colors, the
+  destination's fields, and "Save the store's image with it" (checked when there is an image).
+  Save is `importWebImage` (if checked; a failure saves without it and says so) then
+  `createOwned` / `createWishlist` with `source: 'web'`. On `blocked`, `not_product`,
+  `unavailable` or `not_connected`: `importMarketplaceLink` for StockX/GOAT links (the link-text
+  draft), else the `reason` with "Enter it yourself" prefilled from what is known and, for a
+  blocked or non-product page, "Open the page".
+- **Search online stores** (`/add/web`). `webStatus` decides whether the not-connected notice
+  shows. `searchWebProducts`; "Store listings" (thumbnail, title, price, seller) and "Store
+  pages" (title, host, snippet) from `webResultLists`. A listing opens the save form from its
+  `draft`; a store page runs `lookupProductPage` and then the save form (or the fallback above).
+- **Catalog search / manual.** `searchMarketplaces` and `importMarketplaceLink` for StockX/GOAT
+  links, `searchCatalog` with `catalog-picker.js`, `createOwned` / `createWishlist`.
 - **Profile.** `getProfile`/`updateProfile`, `listFeedback`/`removeFeedback`, privacy
   (`exportMyData` → `downloadBlob`, `deleteMyAccount` with typed `DELETE`), stylist sharing
   (`listMyStylists`, `createStylistRequest`, `listStylistRequests`, `revokeStylistRequest`,
@@ -949,14 +1202,37 @@ Tokens in `css/tokens.css`, classes in `css/components.css`:
   - `admin`: roles, weights, provider simulation, job retry, clicks vs revenue, feed import,
     corrections, image status, offer freshness.
   - `inventory`, `matching`, `recs`, `commerce`, `marketplaces`: each module's own rules.
+  - `web`: `web-guess.js`, `cleanWebSnapshot`, `money()` digits, the web ops with a scripted
+    provider (found, blocked, not connected, invalid links, rate limits, another person's job,
+    a running job), saving with `source: 'web'` (manual identity, evidence, `sourceUrl`,
+    display `'web'`, `photos.webId`), `confirmMatch` with `web`, `markPurchased`, and delete,
+    export and stylist redaction of store images.
+  - `backend-net`, `backend-extract`, `backend-bing`, `backend-server`: the backend on
+    synthetic pages through a fake transport: SSRF refusals (private and metadata addresses,
+    private DNS answers, redirects), block detection and cooldowns, spacing, caching and
+    in-flight sharing, byte and type limits, the extractor's precedence and money rules, the
+    Bing parsers (free listings only), the static allowlist and traversal, `status.json`, and
+    the `POST` / `X-Rotation` / `Host` / `Origin` / `Sec-Fetch-Site` checks.
+- The unit tests never use the network: the browser `web` provider is replaced by
+  `notConnectedWeb` or `fakeWebProvider`, and backend tests use a fake transport.
 - `tests/fixtures/scenes.mjs` draws product-like scenes (studio references and photo-like
   scenes) so the real feature extractor and matcher run in Node.
+- `tests/fixtures/web/upstream.mjs` exports `fixtureUpstream()`: a real `createUpstream()`
+  whose transport answers made-up store pages, images and Bing endpoints from memory (hosts under
+  `.fixture.alt`, resolving to a fake public address; the full list is in its header). URL
+  checks, redirects, block detection and caching run as they do live. No real store or Bing
+  page is copied into the repo.
 - `npm run test:e2e` runs `tests/e2e/run.mjs`: `smoke.mjs` (every route as each role, no console
   errors or failed requests) and `photo.mjs` (every sample photo through upload, on-device
   analysis and matching with expected outcomes, then a confirm with a typed reference, clean-up
-  and display switch). `-- --ocr` also reads a label photo with Tesseract.js (needs a
-  connection to jsDelivr). Helpers for new browser tests: `tests/e2e/helpers.mjs` (`openApp`,
-  `signInAs`, `go`, `callApi`, `hasHorizontalScroll`).
+  and display switch), then `web.mjs`: `startAppServer({ port: 0, upstream: fixtureUpstream() })`
+  in a 360 px Chromium, driving a pasted store link, an online store search and a photo search
+  to saved items (the photo flow keeps the person's photo), a store that blocks, a StockX link
+  falling back to its link text, and the not-connected state on the static server. It fails on
+  any request that would leave the machine, and checks nothing reaches `/api/lens` before the
+  tap. `-- --ocr` also reads a label photo with Tesseract.js (needs a connection to jsDelivr;
+  the only test that uses the network). Helpers for new browser tests: `tests/e2e/helpers.mjs`
+  (`openApp`, `signInAs`, `go`, `callApi`, `hasHorizontalScroll`).
 - `npm run eval` runs the synthetic evaluation in headless Chromium and writes
   `docs/evaluation.md`.
 - Matching thresholds are tuned on synthetic scenes only. Before changing `MATCH_CONFIG` or

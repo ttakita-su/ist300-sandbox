@@ -7,6 +7,7 @@ import { ownedView, wishlistView, productSummary, variantView } from '../js/serv
 import { makeIdentity, catalogIdentity } from '../js/server/records.js';
 import * as c from '../js/ui/components.js';
 import { ownedDetailsFields, wishFields } from '../js/ui/item-forms.js';
+import { webLoading, webResultLists, webSaveForm, webSnapshot } from '../js/ui/web-product.js';
 
 const theme = new URLSearchParams(location.search).get('theme');
 if (theme) document.documentElement.setAttribute('data-theme', theme);
@@ -93,6 +94,31 @@ const offerRows = [
   { offerId: 'o3', retailer: retailer('hourhand'), affiliate: false, sellerType: 'private_seller', condition: 'used_fair', includedComponents: [], size: null, stock: 'in_stock', priceMinor: 31000, currency: 'USD', shipping: { kind: 'calculated_at_checkout' }, fees: { kind: 'unknown' }, tax: { kind: 'unknown' }, totalKnownMinor: null, totalComplete: false, missing: ['shipping', 'fees', 'tax'], delivery: null, returns: null, warranty: { kind: 'none' }, lastCheckedAt: new Date(now - 52 * 3600000).toISOString(), freshness: 'stale', listingStatus: 'active', url: 'https://hourhand.example/l/55380' },
 ];
 
+// Store results as the local server returns them (made up; .example hosts, no images to fetch).
+const storeWeb = {
+  url: 'https://store.example/products/canvas-high-top-red',
+  host: 'store.example',
+  siteName: 'Example Store',
+  title: 'Canvas High Top Sneaker, Red',
+  brand: null,
+  price: { amountMinor: 6500, currency: 'USD' },
+  availability: 'in_stock',
+  identifiers: { sku: null, gtin: null, mpn: 'CHT-RED-01' },
+  color: 'Red',
+  imageUrl: null,
+  via: 'search',
+  query: 'canvas high top red',
+  fetchedAt: new Date(now - 2 * 3600000).toISOString(),
+};
+const storeDraft = { category: null, custom: { brand: '', name: 'Canvas High Top Sneaker, Red', variantName: 'Red', type: null, colors: ['red'] }, web: storeWeb, imageUrl: null };
+const storeLists = {
+  shopping: [
+    { id: 'shop_1', title: 'Canvas High Top Sneaker, Red', price: storeWeb.price, priceText: '$65.00', seller: 'Example Store', imageUrl: null, url: storeWeb.url, draft: storeDraft },
+    { id: 'shop_2', title: 'Canvas high-top in red, unisex, all sizes', price: null, priceText: null, seller: 'Second Example Shop', imageUrl: null, url: 'https://shop2.example/p/1', draft: storeDraft },
+  ],
+  results: [{ id: 'web_1', title: 'Canvas High Top Sneaker - Red | Example Store', url: storeWeb.url, host: 'store.example', snippet: 'A red canvas high-top with a rubber toe cap. Free returns.', productPage: true }],
+};
+
 const sections = [
   ['Buttons and chips', html`<div class="demo-row">
     <button class="btn btn-primary">Save to collection</button>
@@ -143,6 +169,12 @@ const sections = [
     <label class="switch"><span>Include my photos</span><input type="checkbox" checked></label>
     <label class="check"><input type="checkbox"> Show archived</label>
   </form>`],
+  ['Store results', html`<div class="stack narrow">
+    ${webLoading('Searching online stores')}
+    ${webResultLists(storeLists)}
+    ${webSnapshot(storeWeb)}
+    ${webSaveForm(storeDraft, { dest: 'wishlist' })}
+  </div>`],
   ['Progress and lists', html`<div class="stack narrow">
     <ol class="steps"><li class="is-done"><span class="step-dot">${icon('check')}</span>Checking your photo</li><li class="is-active"><span class="step-dot"></span>Searching the catalog</li><li><span class="step-dot"></span>Comparing versions</li></ol>
     <div class="progress"><span style="width:60%"></span></div>

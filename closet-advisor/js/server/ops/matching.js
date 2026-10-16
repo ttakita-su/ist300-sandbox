@@ -8,8 +8,10 @@ import { FEATURES_VERSION } from '../../engine/features.js';
 import { findDuplicates } from '../../engine/duplicates.js';
 import { ILLUSTRATION_VERSION, specFor } from '../../data/illustrations.js';
 import { CATEGORIES } from '../../data/schema.js';
-import { buildOwnedItem, buildWishlistItem, makeIdentity, iso } from '../records.js';
+import { buildOwnedItem, buildWishlistItem, cleanWebSnapshot, makeIdentity, iso, webEvidence } from '../records.js';
 import { ownedView, wishlistView, productSummary, variantView, copyCounts } from '../views.js';
+import { notConnectedWeb } from '../providers/web.js';
+import { WEB_TIMEOUT, photoSearchResult } from './web.js';
 
 /** Runs per job before retry is refused (a new label photo or code starts a fresh count). */
 export const MAX_ATTEMPTS = 3;
@@ -140,10 +142,33 @@ async function ownPhoto(ctx, photoId) {
   return photo;
 }
 
+/** A store image the actor saved with importWebImage (kind 'web'); anything else is not_found. */
+async function ownWebPhoto(ctx, photoId) {
+  const photo = await ownPhoto(ctx, photoId);
+  if (photo.kind !== 'web') throw notFound('That store image');
+  return photo.id;
+}
+
+/**
+ * The person's own photo for a match job: anything but a store image (kind 'web'), which is never
+ * matched, sent to Bing or shown as "Your photo"; that is not_found, as in checkPhotoRefs.
+ */
+async function ownMatchPhoto(ctx, photoId) {
+  const photo = await ownPhoto(ctx, photoId);
+  if (photo.kind === 'web') throw notFound('That photo');
+  return photo;
+}
+
+/** job.photoId as an item's photos.originalId; null for a store image (jobs from before the check). */
+async function jobOriginalId(ctx, job) {
+  const photo = job.photoId ? await ctx.db.get('photos', job.photoId) : null;
+  return photo?.kind === 'web' ? null : job.photoId;
+}
+
 /** The processing copy stored next to an original (see ops/photos.js uploadPhoto). */
 async function processingCopy(ctx, photo, processingId) {
   if (processingId) {
-    const p = await ownPhoto(ctx, processingId);
+    const p = await ownMatchPhoto(ctx, processingId);
     return p.id;
   }
   if (photo.kind === 'processing') return photo.id;
@@ -187,6 +212,8 @@ export function jobView(catalog, job, now) {
   const { runId: _run, ...rest } = job;
   const view = {
     ...rest,
+    // Jobs from before online store search have no field at all.
+    web: job.web ?? null,
     maxAttempts: MAX_ATTEMPTS,
     canRetry: (job.status === 'error' || job.status === 'timeout') && job.attempts < MAX_ATTEMPTS,
   };
@@ -224,12 +251,12 @@ function schedule(env, jobId, runId) {
   }, 0);
 }
 
-function withTimeout(promise, ms) {
+function withTimeout(promise, ms, message = 'Matching took too long. Try again.') {
   let timer;
   return Promise.race([
     promise,
     new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new ApiError('timeout', 'Matching took too long. Try again.')), ms);
+      timer = setTimeout(() => reject(new ApiError('timeout', message)), ms);
     }),
   ]).finally(() => clearTimeout(timer));
 }
@@ -444,7 +471,8 @@ export const ops = {
    * Starts a match job for one item in one photo. Rate limit: 'scan'.
    * args: { photoId, category, dest: 'owned'|'wishlist', crop?: {x,y,w,h,rotate}, texts?: [{text, source}],
    *         processingId?, idempotencyKey }
-   * - The photo must belong to the actor. The processing copy is found from processingId, the
+   * - The photo must belong to the actor and be the person's own (a store image, kind 'web', is
+   *   not_found). The processing copy is found from processingId, the
    *   original's processingId field, or a processing row linked by originalId.
    * - Stores a matchJob (status 'queued') and runs it in the background: 'processing' ->
    *   reference index (built once, progress in job.progress) -> OCR of label photos ->
@@ -463,7 +491,7 @@ export const ops = {
       const category = args.category ?? null;
       if (category !== null && !CATEGORIES.includes(category)) throw invalid({ category: 'Choose sneakers, a watch or clothing' });
       const crop = cleanCrop(args.crop);
-      const photo = await ownPhoto(ctx, args.photoId);
+      const photo = await ownMatchPhoto(ctx, args.photoId);
       const processingId = await processingCopy(ctx, photo, args.processingId);
       const now = ctx.now();
       const job = {
@@ -487,6 +515,8 @@ export const ops = {
         latencyMs: null,
         progress: { stage: 'queued', done: 0, total: 0 },
         result: null,
+        // Online store results, only after the person asks (searchWebForPhoto).
+        web: null,
         confirmedItemId: null,
         runId: newId('run'),
       };
@@ -530,7 +560,7 @@ export const ops = {
       const patch = {};
       const kinds = [];
       if (args.labelPhotoId != null) {
-        const label = await ownPhoto(ctx, args.labelPhotoId);
+        const label = await ownMatchPhoto(ctx, args.labelPhotoId);
         patch.labelPhotoIds = [...new Set([...(job.labelPhotoIds ?? []), label.id])];
         // A replaced label photo is read again.
         patch.labelReads = (job.labelReads ?? []).filter((r) => r.photoId !== label.id);
@@ -589,11 +619,59 @@ export const ops = {
   },
 
   /**
+   * Searches online stores for what the photo shows: Bing visual search through the local server
+   * (providers.web.searchImage). Runs only when the person asks; this is the one place a photo
+   * leaves the device, and only its 768 px processing copy (the original when there is none),
+   * already re-encoded without EXIF, cropped to the part the person framed and rotated as they
+   * rotated it (job.crop is passed as `crop`, its rotation also as `rotate`).
+   * args: { jobId, idempotencyKey } -> MatchJobView, with job.web =
+   *   { status: 'ok'|'no_match'|'not_connected'|'blocked'|'unavailable', engine, query (what Bing
+   *     recognized), shopping: [Listing & { draft }], results: [WebResult], reason, searchedAt }
+   * Rate limit 'web', charged only once the photo is about to be sent. Idempotent, but a result
+   * whose job.web.status is not 'ok' or 'no_match' isn't kept under the key, so a retry after a
+   * timeout or an outage searches again. Own jobs only (others -> not_found). Refused (conflict) while
+   * matching runs and once the job is saved. config.webSearchTimeoutMs bounds the wait. The
+   * results are guesses for the person to pick from, never match candidates; job.web stays
+   * through addMatchEvidence and retryMatchJob re-runs. Drafts use the job's category when set.
+   */
+  searchWebForPhoto: {
+    auth: 'user',
+    idempotent: true,
+    rateLimit: 'web',
+    chargeInRun: true,
+    keepResult: (view) => ['ok', 'no_match'].includes(view?.web?.status),
+    async run(ctx, { jobId }) {
+      const job = await ownJob(ctx, jobId);
+      if (job.status === 'confirmed') throw new ApiError('conflict', 'This match was already saved. Open the item to change it.', { itemId: job.confirmedItemId });
+      if (job.status === 'queued' || job.status === 'processing') throw new ApiError('conflict', 'Matching is still running. Wait for the results, then search online stores.');
+      const photo = (job.processingId && (await ctx.db.get('photos', job.processingId))) || (await ctx.db.get('photos', job.photoId));
+      if (!photo?.blob || photo.userId !== ctx.actor.id || photo.kind === 'web') throw new ApiError('not_found', 'The photo for this match is no longer available. Take or choose the photo again.');
+      ctx.rateLimit();
+
+      const timeoutMs = Number(await ctx.config.get('webSearchTimeoutMs')) || 45000;
+      const web = ctx.providers.web ?? notConnectedWeb;
+      let out;
+      try {
+        out = await withTimeout(Promise.resolve(web.searchImage({ blob: photo.blob, rotate: job.crop?.rotate ?? 0, crop: job.crop ?? null })), timeoutMs, WEB_TIMEOUT);
+      } catch (error) {
+        out = { status: 'unavailable', reason: error?.code === 'timeout' ? WEB_TIMEOUT : null };
+      }
+      const now = ctx.now();
+      const result = photoSearchResult(out, { category: job.category, now });
+      const saved = await updateJob(ctx.db, job.id, (j) => ({ ...j, web: result, updatedAt: iso(now) }));
+      if (!saved) throw notFound('That match');
+      await ctx.metric('web_search', { status: result.status, kind: 'photo', shopping: result.shopping.length, results: result.results.length });
+      return jobView(await ctx.catalog(), saved, now);
+    },
+  },
+
+  /**
    * Saves the confirmed item. Confirmation is required; a candidate never becomes an identity
    * without this call.
    * args: { jobId, candidateId | null, variantId | null, variantUnsure?: boolean,
    *         custom?: { brand, name, variantName?, type?, colors? } (saving without a catalog match),
    *         category? (custom saves when the job has none),
+   *         web?: WebSnapshot, webPhotoId? (custom saves from an online store result for this photo),
    *         details?: {...} (owned) | wish?: { reason, reasonNote, intent, desired, targetPriceMinor },
    *         display?: 'catalog'|'original', allowDuplicate?: boolean, idempotencyKey }
    * - candidateId null with a variantId: a version picked from catalog search.
@@ -605,6 +683,10 @@ export const ops = {
    * - Duplicate check (engine/duplicates.js) unless allowDuplicate -> ApiError('duplicate',
    *   ..., { duplicates: [OwnedView] }) (wishlist: [WishlistView]).
    * - The original photo is attached (photos.originalId) and kept even when display is 'catalog'.
+   * - Custom with `web` (a WebSnapshot from job.web's results): the item keeps the person's photo
+   *   as photos.originalId and still shows it, gets photos.webId (a store image the person saved
+   *   with importWebImage; others -> not_found), `web` and sourceUrl = web.url, and its evidence
+   *   says it was found with Bing visual search and chosen by the person. Still 'manual'.
    * result: { item: OwnedView | WishlistView, job }
    */
   confirmMatch: {
@@ -641,6 +723,8 @@ export const ops = {
       }
 
       let input;
+      let web = null;
+      let webPhotoId = null;
       if (productId) {
         const product = catalog.product(productId);
         if (!product) throw invalid({ candidateId: 'That product is no longer in the catalog' });
@@ -649,16 +733,26 @@ export const ops = {
       } else {
         if (!args.custom) throw invalid({ candidateId: 'Choose a match, a version from search, or save it as your own item' }, 'Choose a match, or save it as your own item.');
         const category = args.category ?? job.category;
+        // Saved from an online store result for this photo: the snapshot travels with the item.
+        if (args.web != null) {
+          web = cleanWebSnapshot(args.web, now);
+          if (!web) throw invalid({ web: 'The store details are missing. Search online stores again.' });
+        }
+        if (args.webPhotoId != null && args.webPhotoId !== '') webPhotoId = await ownWebPhoto(ctx, args.webPhotoId);
         input = {
           category,
           productId: null,
           variantId: null,
           custom: args.custom,
+          web,
           identity: makeIdentity({
             retrieval: job.result?.retrieval ?? (job.status === 'error' || job.status === 'timeout' ? 'processing_error' : 'not_run'),
             resolution: 'manual',
             variant: 'not_applicable',
-            evidence: [{ kind: 'user_selection', source: 'user_entered', detail: 'Saved as your own item without a catalog match' }],
+            evidence: [
+              ...(web ? [webEvidence(web, { photoFlow: true })] : []),
+              { kind: 'user_selection', source: 'user_entered', detail: 'Saved as your own item without a catalog match' },
+            ],
             confirmedBy: actorId,
             confirmedAt: iso(now),
             matchJobId: job.id,
@@ -668,11 +762,12 @@ export const ops = {
       }
 
       const env = { userId: actorId, now, catalog };
+      const originalId = await jobOriginalId(ctx, job);
       let item;
       let view;
       if (job.dest === 'wishlist') {
         const wish = args.wish ?? {};
-        item = buildWishlistItem({ ...wish, ...input, photos: { originalId: job.photoId }, sourceUrl: job.productUrl ?? null }, env);
+        item = buildWishlistItem({ ...wish, ...input, photos: { originalId, webId: webPhotoId }, sourceUrl: web?.url ?? job.productUrl ?? null }, env);
         const mine = await ctx.db.where('wishlistItems', 'userId', actorId);
         const dups = findDuplicates(mine, item);
         if (dups.length && !args.allowDuplicate) {
@@ -683,9 +778,10 @@ export const ops = {
       } else {
         const display = args.display === 'original' ? 'original' : input.productId && input.variantId ? 'catalog' : 'original';
         item = buildOwnedItem(
-          { ...input, details: args.details, photos: { originalId: job.photoId, cleanedId: null, labelIds: job.labelPhotoIds ?? [] }, display: args.display ?? display },
+          { ...input, details: args.details, photos: { originalId, cleanedId: null, labelIds: job.labelPhotoIds ?? [], webId: webPhotoId }, display: args.display ?? display },
           env,
         );
+        if (web) item.sourceUrl = web.url;
         const mine = await ctx.db.where('ownedItems', 'userId', actorId);
         const dups = findDuplicates(mine, item);
         if (dups.length && !args.allowDuplicate) {
@@ -706,7 +802,7 @@ export const ops = {
         retrieval: item.identity.retrieval,
         resolution: item.identity.resolution,
         variant: item.identity.variant,
-        pick: picked ?? 'custom',
+        pick: picked ?? (web ? 'web' : 'custom'),
         candidateKind: candidate?.kind ?? null,
         candidateRank: candidate ? job.result.candidates.findIndex((c) => c.id === candidate.id) + 1 : null,
       });

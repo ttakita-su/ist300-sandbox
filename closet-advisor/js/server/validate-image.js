@@ -52,6 +52,24 @@ export function sniffImageType(bytes) {
   return heifType(bytes);
 }
 
+/**
+ * Like sniffImageType, and also names AVIF, which store images often use.
+ * @param {Uint8Array} bytes
+ * @returns {'image/jpeg'|'image/png'|'image/webp'|'image/heic'|'image/heif'|'image/gif'|'image/avif'|null}
+ */
+export function sniffStoreImageType(bytes) {
+  const type = sniffImageType(bytes);
+  if (type || !(bytes instanceof Uint8Array) || bytes.length < 12 || ascii(bytes, 4, 8) !== 'ftyp') return type;
+  const boxSize = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0;
+  const end = Math.min(bytes.length, boxSize >= 16 ? boxSize : bytes.length);
+  const brands = [ascii(bytes, 8, 12)];
+  for (let i = 16; i + 4 <= end; i += 4) brands.push(ascii(bytes, i, i + 4));
+  return brands.some((b) => AVIF_BRANDS.has(b)) ? 'image/avif' : null;
+}
+
+/** What a store image may be when it arrives; it is re-encoded as JPEG before it is kept. */
+export const STORE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+
 function isBlob(value) {
   return Boolean(value) && typeof value.size === 'number' && typeof value.slice === 'function' && typeof value.arrayBuffer === 'function';
 }
@@ -77,6 +95,24 @@ export async function validateUploadBlob(blob) {
   // GIFs are sniffed so they can be named in support logs, but they are not product photos.
   if (!mime || mime === 'image/gif') {
     throw new ApiError('unsupported', 'Use a JPEG, PNG, WebP or HEIC photo.', { accepted: ACCEPTED_TYPES });
+  }
+  return { mime };
+}
+
+/**
+ * Checks a store image downloaded by the local server before it is decoded. Same size limits as
+ * uploads; AVIF and GIF are allowed because the image is re-encoded before it is kept.
+ * @param {Blob} blob
+ * @returns {Promise<{ mime: string }>}
+ */
+export async function validateStoreImageBlob(blob) {
+  if (!isBlob(blob) || blob.size === 0) throw new ApiError('invalid', "The store's image is empty. Save the item without it.");
+  if (blob.size > MAX_UPLOAD_BYTES) {
+    throw new ApiError('invalid', "The store's image is larger than 15 MB, so it wasn't saved. Save the item without it.", { maxBytes: MAX_UPLOAD_BYTES });
+  }
+  const mime = sniffStoreImageType(await leadingBytes(blob));
+  if (!mime || !STORE_IMAGE_TYPES.includes(mime)) {
+    throw new ApiError('unsupported', "The store's image isn't a JPEG, PNG, WebP, GIF or AVIF file, so it wasn't saved. Save the item without it.", { accepted: STORE_IMAGE_TYPES });
   }
   return { mime };
 }

@@ -3,7 +3,7 @@
 import { ApiError, invalid } from '../errors.js';
 import { newId } from '../../lib/ids.js';
 import { isOwner } from '../policy.js';
-import { buildOwnedItem, catalogIdentity, iso, makeIdentity, patchOwnedItem } from '../records.js';
+import { OWNED_DISPLAYS, buildOwnedItem, catalogIdentity, cleanLinkUrl, cleanWebSnapshot, iso, makeIdentity, patchOwnedItem, webIdentity } from '../records.js';
 import { copyCounts, ownedView } from '../views.js';
 import { findDuplicates } from '../../engine/duplicates.js';
 import { catalogImageFor } from '../../engine/provenance.js';
@@ -13,8 +13,9 @@ import { variantTitle } from '../../data/catalog-index.js';
 import { deletePhotos } from './photos.js';
 import { coerceCorrectionValue, correctionField } from './admin.js';
 
-const SOURCES = ['catalog_search', 'product_link', 'manual'];
-const DISPLAYS = ['catalog', 'original', 'cleaned'];
+const SOURCES = ['catalog_search', 'product_link', 'manual', 'web'];
+// Sources that never carry a catalog product: typed by hand, or read from a store page or listing.
+const CUSTOM_SOURCES = ['manual', 'web'];
 const SORTS = ['recent', 'brand', 'name', 'color'];
 // Match jobs still in flight keep their photo even if an item made from the same photo is deleted.
 const LIVE_JOB_STATUSES = ['queued', 'processing', 'done', 'error', 'timeout'];
@@ -58,48 +59,44 @@ async function viewOne(ctx, item) {
   return view;
 }
 
-/** A link stored with an item for reference. Never fetched; rendered through safeUrl. */
-export function cleanLinkUrl(value) {
-  if (typeof value !== 'string') return null;
-  const text = value.trim();
-  if (!text || text.length > 2048) return null;
-  let url;
-  try {
-    url = new URL(text);
-  } catch {
-    return null;
-  }
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
-  if (url.username || url.password) return null;
-  return url.toString();
-}
+// The rule now lives in records.js; ops that import it from here (wishlist.js) keep working.
+export { cleanLinkUrl };
 
-/** Checks that photo references belong to the actor and are the right kind. */
+/**
+ * Checks that photo references belong to the actor and are the right kind: originalId an
+ * original, cleanedId a cleaned copy, labelIds labels (or originals), webId a store image.
+ */
 export async function checkPhotoRefs(ctx, photos) {
   const originalId = photos?.originalId || null;
   const cleanedId = photos?.cleanedId || null;
   const labelIds = Array.isArray(photos?.labelIds) ? [...new Set(photos.labelIds.filter((id) => typeof id === 'string' && id))].slice(0, 6) : [];
+  const webId = photos?.webId || null;
   const wanted = [
     [originalId, ['original']],
     [cleanedId, ['cleaned']],
     ...labelIds.map((id) => [id, ['label', 'original']]),
+    [webId, ['web']],
   ];
   for (const [id, kinds] of wanted) {
     if (!id) continue;
     const photo = typeof id === 'string' ? await ctx.db.get('photos', id) : null;
     if (!photo || !isOwner(ctx.actor, photo) || !kinds.includes(photo.kind)) throw photoNotFound();
   }
-  return { originalId, cleanedId, labelIds };
+  return { originalId, cleanedId, labelIds, webId };
 }
 
 /** Throws when the chosen display image can't be shown for this item. */
 function assertDisplayAvailable(item, display, catalog, now) {
-  if (!DISPLAYS.includes(display)) {
-    throw invalid({ display: 'Choose the catalog image, your photo or the cleaned-up photo' }, 'Choose which image to show.');
+  if (!OWNED_DISPLAYS.includes(display)) {
+    throw invalid({ display: 'Choose the catalog image, your photo, the cleaned-up photo or the store image' }, 'Choose which image to show.');
   }
   const hasPhoto = Boolean(item.photos?.originalId);
   if (display === 'catalog') {
-    const insteadText = hasPhoto ? 'Keep showing your photo instead.' : 'Add a photo of your item to show instead.';
+    const insteadText = hasPhoto
+      ? 'Keep showing your photo instead.'
+      : item.photos?.webId
+        ? 'Keep showing the store image instead.'
+        : 'Add a photo of your item to show instead.';
     if (!item.productId) throw new ApiError('invalid', `Custom items have no catalog image. ${insteadText}`, { fields: { display: 'No catalog image' } });
     if (!item.variantId) {
       throw new ApiError('invalid', `Confirm the exact version first; until then there is no catalog image. ${insteadText}`, { fields: { display: 'Version not confirmed' } });
@@ -112,6 +109,9 @@ function assertDisplayAvailable(item, display, catalog, now) {
   }
   if (display === 'cleaned' && !item.photos?.cleanedId) {
     throw new ApiError('invalid', 'There is no cleaned-up photo yet. Clean up your photo first.', { fields: { display: 'No cleaned-up photo' } });
+  }
+  if (display === 'web' && !item.photos?.webId) {
+    throw new ApiError('invalid', 'No store image was saved with this item. Show your photo or the catalog image instead.', { fields: { display: 'No store image' } });
   }
 }
 
@@ -127,8 +127,8 @@ async function photosInUse(ctx, exceptItemId) {
   ]);
   const inUse = new Set();
   const add = (...ids) => ids.forEach((id) => id && inUse.add(id));
-  for (const other of owned) if (other.id !== exceptItemId) add(other.photos?.originalId, other.photos?.cleanedId, ...(other.photos?.labelIds ?? []));
-  for (const wish of wishes) add(wish.photos?.originalId);
+  for (const other of owned) if (other.id !== exceptItemId) add(other.photos?.originalId, other.photos?.cleanedId, ...(other.photos?.labelIds ?? []), other.photos?.webId);
+  for (const wish of wishes) add(wish.photos?.originalId, wish.photos?.webId);
   for (const job of jobs) if (LIVE_JOB_STATUSES.includes(job.status)) add(job.photoId, ...(job.labelPhotoIds ?? []));
   return inUse;
 }
@@ -163,6 +163,7 @@ function itemFacts(catalog, item) {
     : item.custom?.colors ?? [];
   const colors = [...new Set(colorNames)];
   const ids = variant?.identifiers ?? {};
+  const webIds = item.web?.identifiers ?? {};
   const type = product?.type ?? item.custom?.type ?? null;
   const haystack = normalizeText(
     [
@@ -172,6 +173,10 @@ function itemFacts(catalog, item) {
       ids.styleCode,
       ids.reference,
       ...(ids.gtins ?? []),
+      // Codes a store page listed for a custom item (style code, item number, barcode).
+      webIds.mpn,
+      webIds.sku,
+      webIds.gtin,
       type ? TYPE_LABEL[type] ?? type : null,
       item.details?.notes,
     ]
@@ -273,13 +278,19 @@ export const ops = {
   },
 
   /**
-   * Adds an item from catalog search, a product link or manual entry.
+   * Adds an item from catalog search, a product link, a store page or listing, or manual entry.
    * args: { category, productId?, variantId?, custom?, details?, ownerChanges?, photos?, display?,
-   *         source?: 'catalog_search'|'product_link'|'manual', sourceUrl?, allowDuplicate?, idempotencyKey }
+   *         source?: 'catalog_search'|'product_link'|'manual'|'web', sourceUrl?, web?,
+   *         allowDuplicate?, idempotencyKey }
    * - catalog_search: identity user_confirmed with 'catalog_search' evidence.
    * - product_link: identity user_confirmed with 'product_link' evidence (source 'url'); the
    *   link is stored as sourceUrl.
    * - manual: productId/variantId stay null and identity.resolution is 'manual'.
+   * - web: a custom item like manual (custom required, no catalog ids, resolution 'manual') with
+   *   the WebSnapshot `web` (records.cleanWebSnapshot) and one 'product_link' evidence line
+   *   saying where the details came from. sourceUrl defaults to web.url. photos.webId is a store
+   *   image saved with importWebImage; display defaults to 'web' when there is one. The store
+   *   price stays in the snapshot: it is never a price paid.
    * The identity is always built here; a caller can't supply one. Photo ids must be the actor's.
    * Duplicate warning: ApiError('duplicate', ..., { duplicates: [OwnedView] }) unless
    * allowDuplicate, so a deliberate second copy can be saved.
@@ -292,46 +303,56 @@ export const ops = {
       const catalog = await ctx.catalog();
       const now = ctx.now();
       const source = args.source ?? (args.productId ? 'catalog_search' : 'manual');
+      const custom = CUSTOM_SOURCES.includes(source);
       const errors = {};
       if (!SOURCES.includes(source)) errors.source = 'Choose catalog search, a product link or manual entry';
       if (source === 'manual' && (args.productId || args.variantId)) errors.productId = 'A custom item has no catalog product. Use catalog search to add this product.';
-      if (source !== 'manual' && !args.productId) errors.productId = 'Choose a product from the catalog';
+      if (source === 'web' && (args.productId || args.variantId)) errors.productId = 'An item saved from a store page has no catalog product. Use catalog search to add a catalog product.';
+      if (!custom && !args.productId) errors.productId = 'Choose a product from the catalog';
+      const web = source === 'web' ? cleanWebSnapshot(args.web, now) : null;
+      if (source === 'web' && !web) errors.web = 'The store details are missing. Look the product up again.';
       let sourceUrl = null;
       if (args.sourceUrl != null && args.sourceUrl !== '') {
         sourceUrl = cleanLinkUrl(args.sourceUrl);
         if (!sourceUrl) errors.sourceUrl = 'Enter a link that starts with https://';
       } else if (source === 'product_link') {
         errors.sourceUrl = 'Add the product link';
+      } else if (web) {
+        sourceUrl = web.url;
       }
       if (Object.keys(errors).length) throw invalid(errors);
 
       const photos = await checkPhotoRefs(ctx, args.photos);
-      const identity =
-        source === 'manual'
-          ? makeIdentity()
-          : catalogIdentity({
-              userId: ctx.actor.id,
-              now,
-              variantId: args.variantId || null,
-              source,
-              detail: source === 'product_link' ? `Added from a link on ${new URL(sourceUrl).hostname}` : undefined,
-            });
+      let identity;
+      if (source === 'manual') identity = makeIdentity();
+      else if (source === 'web') identity = webIdentity(web);
+      else {
+        identity = catalogIdentity({
+          userId: ctx.actor.id,
+          now,
+          variantId: args.variantId || null,
+          source,
+          detail: source === 'product_link' ? `Added from a link on ${new URL(sourceUrl).hostname}` : undefined,
+        });
+      }
       const record = buildOwnedItem(
         {
           category: args.category,
-          productId: source === 'manual' ? null : args.productId,
-          variantId: source === 'manual' ? null : args.variantId || null,
-          custom: source === 'manual' ? args.custom : null,
+          productId: custom ? null : args.productId,
+          variantId: custom ? null : args.variantId || null,
+          custom: custom ? args.custom : null,
           details: args.details,
           ownerChanges: args.ownerChanges,
           photos,
-          display: args.display,
+          // Saved from a store page or listing: the store's image shows until the person adds a photo.
+          display: args.display ?? (web && photos.webId ? 'web' : undefined),
           identity,
+          web,
         },
         { userId: ctx.actor.id, now, catalog },
       );
       record.sourceUrl = sourceUrl;
-      if (args.display === 'original' || args.display === 'cleaned') assertDisplayAvailable(record, args.display, catalog, now);
+      if (['original', 'cleaned', 'web'].includes(args.display)) assertDisplayAvailable(record, args.display, catalog, now);
 
       const all = await ctx.db.where('ownedItems', 'userId', ctx.actor.id);
       if (!args.allowDuplicate) {
@@ -347,12 +368,13 @@ export const ops = {
   },
 
   /**
-   * args: { itemId, patch: { details?, ownerChanges?, custom?, display?, photos?: { originalId?, labelIds? } } }
+   * args: { itemId, patch: { details?, ownerChanges?, custom?, display?, photos?: { originalId?, labelIds?, webId? } } }
    * -> OwnedView. details merge into the existing details. Identity changes go through
    * correctMatch.
    * photos attaches, replaces or (with originalId null) removes the person's own photo of the
-   * item. A replaced or removed photo is deleted with its cleaned-up copy unless another record
-   * still uses it, and a display choice that no longer has an image falls back.
+   * item; webId does the same for a store image saved with importWebImage. A replaced or removed
+   * photo is deleted with its cleaned-up copy unless another record still uses it, and a display
+   * choice that no longer has an image falls back.
    */
   updateOwned: {
     auth: 'user',
@@ -369,15 +391,18 @@ export const ops = {
       if (photosPatch) {
         const originalId = photosPatch.originalId !== undefined ? photosPatch.originalId || null : item.photos.originalId;
         const labelIds = photosPatch.labelIds !== undefined ? photosPatch.labelIds : item.photos.labelIds;
-        const refs = await checkPhotoRefs(ctx, { originalId, labelIds });
+        const webId = photosPatch.webId !== undefined ? photosPatch.webId || null : item.photos.webId ?? null;
+        const refs = await checkPhotoRefs(ctx, { originalId, labelIds, webId });
         // A cleaned-up copy belongs to the photo it was made from.
         const cleanedId = refs.originalId === item.photos.originalId ? item.photos.cleanedId : null;
-        next.photos = { originalId: refs.originalId, cleanedId, labelIds: refs.labelIds };
-        released = [item.photos.originalId, item.photos.cleanedId, ...(item.photos.labelIds ?? [])].filter(
-          (id) => id && id !== next.photos.originalId && id !== next.photos.cleanedId && !next.photos.labelIds.includes(id),
-        );
-        if (next.display === 'cleaned' && !cleanedId) next.display = refs.originalId ? 'original' : 'catalog';
-        if (next.display === 'original' && !refs.originalId) next.display = 'catalog';
+        next.photos = { originalId: refs.originalId, cleanedId, labelIds: refs.labelIds, webId: refs.webId };
+        const kept = [next.photos.originalId, next.photos.cleanedId, ...next.photos.labelIds, next.photos.webId];
+        released = [item.photos.originalId, item.photos.cleanedId, ...(item.photos.labelIds ?? []), item.photos.webId].filter((id) => id && !kept.includes(id));
+        // Without the image it showed, the item shows the next one it has.
+        const fallback = refs.webId ? 'web' : 'catalog';
+        if (next.display === 'cleaned' && !cleanedId) next.display = refs.originalId ? 'original' : fallback;
+        if (next.display === 'original' && !refs.originalId) next.display = fallback;
+        if (next.display === 'web' && !refs.webId) next.display = refs.originalId ? 'original' : 'catalog';
       }
       if (allowed.display) assertDisplayAvailable(next, allowed.display, await ctx.catalog(), now);
       await ctx.db.put('ownedItems', next);
@@ -417,7 +442,7 @@ export const ops = {
   },
 
   /**
-   * Deletes the item and its private photos (original, processing, cleaned, label) and removes
+   * Deletes the item and its private photos (original, processing, cleaned, label, store image) and removes
    * it from the person's stylist shares, snapshots and wishlist links. A photo another of the
    * person's records or an unfinished match job still uses is kept.
    * args: { itemId } -> { ok: true }
@@ -428,7 +453,7 @@ export const ops = {
       const item = await loadOwned(ctx, itemId);
       const userId = ctx.actor.id;
       const inUse = await photosInUse(ctx, item.id);
-      const mine = [item.photos?.originalId, item.photos?.cleanedId, ...(item.photos?.labelIds ?? [])].filter(Boolean);
+      const mine = [item.photos?.originalId, item.photos?.cleanedId, ...(item.photos?.labelIds ?? []), item.photos?.webId].filter(Boolean);
       const deletedPhotos = await deletePhotos(ctx, userId, mine.filter((id) => !inUse.has(id)));
 
       await ctx.db.delete('ownedItems', item.id);
@@ -451,9 +476,10 @@ export const ops = {
   },
 
   /**
-   * args: { itemId, display: 'catalog'|'original'|'cleaned' } -> OwnedView.
+   * args: { itemId, display: 'catalog'|'original'|'cleaned'|'web' } -> OwnedView.
    * The choice must be available: 'catalog' needs a catalog image whose source terms allow
-   * collection display, 'cleaned' needs a cleaned-up photo. The original photo is never deleted.
+   * collection display, 'cleaned' needs a cleaned-up photo, 'web' a store image saved with the
+   * item. The original photo is never deleted.
    */
   setDisplayImage: {
     auth: 'user',

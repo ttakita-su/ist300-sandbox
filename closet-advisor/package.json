@@ -5,6 +5,7 @@
   "description": "Rotation: AI closet and shopping advisor prototype. Static site, no build step.",
   "type": "module",
   "scripts": {
+    "start": "node backend/server.mjs",
     "serve": "node tests/serve.mjs",
     "test": "node --test tests/unit/*.test.mjs",
     "test:e2e": "node tests/e2e/run.mjs",

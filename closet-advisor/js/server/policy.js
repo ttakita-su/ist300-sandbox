@@ -51,7 +51,10 @@ export function stylistCanReadItem(actor, item, requests, assignments) {
   );
 }
 
-/** Photos are only visible to a stylist when the request shared both the item and its photos. */
+/**
+ * Photos are only visible to a stylist when the request shared both the item and its photos.
+ * A store image saved with an item (photos.webId) follows the same rule as the person's photos.
+ */
 export function stylistCanReadPhoto(actor, photo, items, requests, assignments) {
   if (!photo) return false;
   return requests.some((r) => {
@@ -59,7 +62,7 @@ export function stylistCanReadPhoto(actor, photo, items, requests, assignments) 
     if (!stylistCanReadRequest(actor, r, assignments)) return false;
     const ids = sharedItemIds(r);
     return items.some(
-      (item) => ids.has(item.id) && (item.photos?.originalId === photo.id || item.photos?.cleanedId === photo.id),
+      (item) => ids.has(item.id) && [item.photos?.originalId, item.photos?.cleanedId, item.photos?.webId].includes(photo.id),
     );
   });
 }
@@ -73,7 +76,8 @@ export const STYLIST_HIDDEN = ['details.purchase', 'details.serialNumber', 'deta
 
 /**
  * Builds the stylist's copy of an owned-item view from an allowlist, so new private fields
- * stay hidden by default.
+ * stay hidden by default. Without shared photos only a catalog image or the placeholder shows:
+ * the person's photos and store images saved with their items ('web') are hidden alike.
  * @param {any} view OwnedView (server/views.js)
  * @param {{ includePhotos: boolean, includeNotes: boolean }} share
  */

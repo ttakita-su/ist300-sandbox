@@ -7,7 +7,7 @@ import { startServer } from '../serve.mjs';
 
 const shotDir = process.argv[2] ?? null;
 const ROUTES = {
-  usr_demo_alex: ['/discover', '/collection', '/wishlist', '/profile', '/add', '/add/photo', '/add/search', '/add/manual', '/add/link', '/profile/preferences', '/profile/feedback', '/profile/privacy', '/profile/stylist', '/wishlist/compare', '/product/kestrel-runner-2', '/recs?mode=matching'],
+  usr_demo_alex: ['/discover', '/collection', '/wishlist', '/profile', '/add', '/add/photo', '/add/search', '/add/manual', '/add/link', '/add/web', '/add/web?q=court%20classic', '/profile/preferences', '/profile/feedback', '/profile/privacy', '/profile/stylist', '/wishlist/compare', '/product/kestrel-runner-2', '/recs?mode=matching'],
   usr_demo_jordan: ['/stylist'],
   usr_demo_morgan: ['/admin'],
 };

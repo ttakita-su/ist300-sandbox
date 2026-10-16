@@ -18,6 +18,7 @@ import {
   WISH_INTENTS,
 } from '../data/schema.js';
 import { field, selectField, thumb } from './components.js';
+import { hydratePhotos } from './hydrate.js';
 
 const WAISTS = ['28', '29', '30', '31', '32', '33', '34', '36', '38', '40'];
 const INSEAMS = ['28', '30', '32', '34', '36'];
@@ -286,6 +287,8 @@ export function duplicateDialog(duplicates, { dest }) {
       </div>
     </div>`,
     onMount(el, close) {
+      // Thumbnails of photos and saved store images kept on this device.
+      hydratePhotos(el);
       el.querySelector('[data-dup-add]')?.addEventListener('click', () => close('add'));
       el.querySelector('[data-dup-view]').addEventListener('click', () => close({ view: `/${where}/${first.id}` }));
       el.addEventListener('click', (event) => {

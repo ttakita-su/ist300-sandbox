@@ -175,7 +175,9 @@ loading twice replaces rather than adds. Every event has `demo: true`.
 ## Product-link import safety
 
 `importFromUrl({ url })` validates the link, then resolves it against the demo retailers. It
-never fetches the URL.
+never fetches the URL. Links to real stores are read by a different operation,
+`lookupProductPage`, which sends them to the prototype's local server (`npm start`); that
+server is the fetcher described below.
 
 `validateImportUrl(input)` trims the input and rejects, in plain words:
 
@@ -211,7 +213,12 @@ actually comes in; any other size is ignored with a `sizeNote`. Everything else 
 
 ### What a server implementation must add before fetching
 
-The prototype never fetches imported URLs. A server that does must also:
+`importFromUrl` never fetches. The prototype's local server (`backend/net.mjs`) does fetch real
+store pages and implements most of this list: DNS answers checked and the connection pinned to
+the checked address, every redirect re-checked (at most five), a 12-second timeout, size caps
+after decompression (pages 8 MB, JSON 2 MB, images 10 MB), content-type allowlists, no cookies,
+per-person rate limits (`web`, 60 an hour) and page text treated as untrusted data. It has no
+egress proxy and calls no AI model. A production server must also:
 
 - resolve DNS itself and validate every resolved address (A and AAAA) with the same ranges,
   rejecting the request if any address is blocked;

@@ -1,7 +1,7 @@
 {
   "name": "Rotation (prototype)",
   "short_name": "Rotation",
-  "description": "Photograph what you own, see what to buy next, and compare retailer offers. Demo catalog with fictional brands and prices.",
+  "description": "Photograph what you own, look up real products from online stores, and see what to buy next. Demo catalog with fictional brands and prices.",
   "start_url": "./#/discover",
   "scope": "./",
   "display": "standalone",

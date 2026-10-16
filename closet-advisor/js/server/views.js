@@ -75,13 +75,15 @@ function labelText(catalog, record) {
       code: primaryCode(variant),
     };
   }
+  // A store page's style code (mpn) or item number (sku) labels a custom item saved from the web.
+  const ids = record.web?.identifiers;
   return {
     product: null,
     variant: null,
     brandName: record.custom?.brand ?? '',
     title: record.custom?.name ?? 'Untitled item',
     subtitle: record.custom?.variantName ?? (record.matchPending ? 'Matching in progress' : 'Custom item'),
-    code: null,
+    code: ids?.mpn ?? ids?.sku ?? null,
   };
 }
 
@@ -94,6 +96,8 @@ export function ownedView(catalog, item, env) {
   return {
     ...item,
     ...labelText(catalog, item),
+    // Records saved before web snapshots existed have no field at all.
+    web: item.web ?? null,
     image: resolveDisplayImage(item, catalog, env.now, (id) => catalogUrlFor(catalog, id)),
     copies: env.copies ?? 1,
   };
@@ -105,11 +109,14 @@ export function ownedView(catalog, item, env) {
  * @param {{ now: number }} env
  */
 export function wishlistView(catalog, item, env) {
-  // Wishlist items have no "display" preference: catalog image when permitted, else the photo.
-  const record = { ...item, display: item.variantId ? 'catalog' : 'original', photos: { ...item.photos, cleanedId: null } };
+  // Wishlist items have no "display" preference: catalog image when permitted, else the person's
+  // photo, else the store image saved with it.
+  const display = item.variantId ? 'catalog' : !item.photos?.originalId && item.photos?.webId ? 'web' : 'original';
+  const record = { ...item, display, photos: { ...item.photos, cleanedId: null } };
   return {
     ...item,
     ...labelText(catalog, item),
+    web: item.web ?? null,
     image: resolveDisplayImage(record, catalog, env.now, (id) => catalogUrlFor(catalog, id)),
   };
 }

@@ -22,10 +22,11 @@ import {
 } from '../ui/components.js';
 import { ownedDetailsFields, readOwnedDetails, bindUsualSize, profileSizeFor } from '../ui/item-forms.js';
 import { openCatalogPicker } from '../ui/catalog-picker.js';
+import { webSnapshot } from '../ui/web-product.js';
 import { pill } from '../ui/screen-kit.js';
 import { confirmDialog, toast, toastError, withBusy, showFieldErrors } from '../lib/ui.js';
 
-const DISPLAY_LABEL = { catalog: 'Catalog image', original: 'Your photo', cleaned: 'Cleaned up' };
+const DISPLAY_LABEL = { catalog: 'Catalog image', original: 'Your photo', cleaned: 'Cleaned up', web: 'Store image' };
 const SORTS = [
   { value: 'recent', label: 'Recently added' },
   { value: 'brand', label: 'Brand' },
@@ -145,6 +146,7 @@ export default [
           <div class="stack stack-lg">
             ${label({ brand: item.brandName, name: item.title, variant: item.subtitle, code: item.code, block: ownedBlock(item), state: 'owned', stamps: identityStamps(item.identity, item.category), archived: Boolean(item.archivedAt) })}
             ${item.copies > 1 ? html`<p class="small">You have ${item.copies} of this version.</p>` : ''}
+            ${webSnapshot(item.web)}
             <div class="button-row">
               <a class="btn btn-primary" href="#/recs?mode=matching&seed=${id}&seedType=owned">${icon('sparkle')}Find matching</a>
               <a class="btn btn-secondary" href="#/recs?mode=similar&seed=${id}&seedType=owned">${icon('layers')}Find similar</a>

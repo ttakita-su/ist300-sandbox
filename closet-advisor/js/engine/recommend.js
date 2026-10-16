@@ -1099,7 +1099,7 @@ function relatedEntry(ctx, relations) {
     title: view?.title ?? subject.title,
     brandName: view?.brandName ?? subject.brandName,
     imageUrl: image?.kind === 'catalog' ? image.url ?? null : null,
-    photoId: image && (image.kind === 'original' || image.kind === 'cleaned') ? image.photoId ?? null : null,
+    photoId: image && ['original', 'cleaned', 'web'].includes(image.kind) ? image.photoId ?? null : null,
     relation: detail.relation,
     detail: detail.detail,
   };

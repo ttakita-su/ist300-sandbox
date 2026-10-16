@@ -31,6 +31,7 @@ import {
   profileSizeFor,
   createWithDuplicateCheck,
 } from '../ui/item-forms.js';
+import { webSnapshot } from '../ui/web-product.js';
 import { pill } from '../ui/screen-kit.js';
 import { confirmDialog, openSheet, toast, toastError, withBusy, showFieldErrors } from '../lib/ui.js';
 
@@ -173,10 +174,12 @@ export default [
           <div class="stack">
             ${media(item.image, { alt: ctx.itemTitle, category: item.category, wide: true })}
             ${item.image?.fallbackReason ? html`<p class="small muted">${item.image.fallbackReason}</p>` : ''}
+            ${item.image?.attribution ? html`<p class="xsmall muted">${item.image.attribution}</p>` : ''}
           </div>
           <div class="stack stack-lg">
             ${label({ brand: item.brandName, name: item.title, variant: item.subtitle, code: item.code, block: wishBlock(item), state: 'wishlist', stamps: identityStamps(item.identity, item.category) })}
             ${item.ownedCopies ? notice({ tone: 'warn', body: `You already own ${fmt.plural(item.ownedCopies, 'copy', 'copies')} of this version.` }) : ''}
+            ${webSnapshot(item.web)}
             <div class="button-row">
               ${item.productId && item.variantId ? html`<a class="btn btn-primary" href="#/product/${encodeURIComponent(item.productId)}?variant=${encodeURIComponent(item.variantId)}${item.desired?.size ? `&size=${encodeURIComponent(item.desired.size.value)}` : ''}&condition=${item.desired?.condition ?? 'new_only'}">${icon('store')}View offers</a>` : ''}
               <a class="btn btn-secondary" href="#/recs?mode=alternatives&seed=${id}&seedType=wishlist">${icon('swap')}Find alternatives</a>

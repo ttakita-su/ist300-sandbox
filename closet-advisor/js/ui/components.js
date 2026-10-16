@@ -8,21 +8,28 @@ import { CATEGORY_SINGULAR, OFFER_CONDITION_LABEL, SELLER_TYPE_LABEL } from '../
 
 // ---------- Images ----------
 
+// Images kept on this device: the person's photos and store images saved with an item ('web').
+// They render with data-photo-id and are hydrated after render with an expiring URL.
+const DEVICE_KINDS = ['original', 'cleaned', 'web'];
+const onDevice = (image) => DEVICE_KINDS.includes(image?.kind) && Boolean(image.photoId);
+
 /**
- * Product image on the studio tile. Photos render with data-photo-id and are hydrated after
- * render with an expiring URL; catalog images carry a "Catalog image" tag.
+ * Product image on the studio tile. Images kept on this device render with data-photo-id and are
+ * hydrated after render; catalog images carry a "Catalog image" tag and a saved store image says
+ * where it came from ("Image from nike.com"). URL images never send a referrer.
  * @param {any} image DisplayImage or variant image { url, label }
  * @param {{ alt: string, category?: string, tag?: boolean, wide?: boolean, className?: string }} opts
  */
 export function media(image, opts) {
   const kind = image?.kind ?? (image?.url ? 'catalog' : 'placeholder');
+  // The person's own photos fill the tile; product shots (catalog or store) sit inside it.
   const isPhoto = kind === 'original' || kind === 'cleaned';
   const showTag = opts.tag !== false && image?.label;
   let inner;
-  if (isPhoto && image.photoId) {
+  if (onDevice(image)) {
     inner = html`<img data-photo-id="${image.photoId}" alt="${opts.alt}" decoding="async">`;
   } else if (image?.url) {
-    inner = html`<img src="${safeUrl(image.url)}" alt="${opts.alt}" decoding="async" loading="lazy">`;
+    inner = html`<img src="${safeUrl(image.url)}" alt="${opts.alt}" decoding="async" loading="lazy" referrerpolicy="no-referrer">`;
   } else {
     inner = html`<div class="media-placeholder" role="img" aria-label="${opts.alt}">${categoryIcon(opts.category)}</div>`;
   }
@@ -33,9 +40,8 @@ export function media(image, opts) {
 
 /** Small square thumbnail for lists and related-item chips. */
 export function thumb(image, alt, category) {
-  const isPhoto = image?.kind === 'original' || image?.kind === 'cleaned';
-  if (isPhoto && image.photoId) return html`<img data-photo-id="${image.photoId}" alt="${alt}">`;
-  if (image?.url) return html`<img src="${safeUrl(image.url)}" alt="${alt}" loading="lazy">`;
+  if (onDevice(image)) return html`<img data-photo-id="${image.photoId}" alt="${alt}">`;
+  if (image?.url) return html`<img src="${safeUrl(image.url)}" alt="${alt}" loading="lazy" referrerpolicy="no-referrer">`;
   return html`<span class="media-placeholder" role="img" aria-label="${alt}">${categoryIcon(category)}</span>`;
 }
 
@@ -169,7 +175,7 @@ export function relatedChips(related = []) {
   if (!related.length) return '';
   return html`<div class="rec-related">${related.map(
     (r) => html`<a class="related-chip" href="#/${r.itemType === 'wishlist' ? 'wishlist' : 'collection'}/${encodeURIComponent(r.itemId)}" title="${r.detail ?? ''}">
-      ${r.imageUrl ? html`<img src="${safeUrl(r.imageUrl)}" alt="">` : r.photoId ? html`<img data-photo-id="${r.photoId}" alt="">` : html`<span class="dot"></span>`}
+      ${r.imageUrl ? html`<img src="${safeUrl(r.imageUrl)}" alt="" referrerpolicy="no-referrer">` : r.photoId ? html`<img data-photo-id="${r.photoId}" alt="">` : html`<span class="dot"></span>`}
       <span>${r.title}</span>
     </a>`,
   )}</div>`;

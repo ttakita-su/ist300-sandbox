@@ -42,8 +42,10 @@ export function catalogImageFor(catalog, variantId, { context, now }) {
 }
 
 /**
- * Resolves the display image for an owned or wishlist item.
- * @param {any} item record with category, variantId, photos, display
+ * Resolves the display image for an owned or wishlist item. The wanted image comes first; then
+ * the person's own photo, then a store image saved on this device ('web', photos.webId), then the
+ * catalog image, then a placeholder.
+ * @param {any} item record with category, variantId, photos, display, web
  * @param {any} catalog
  * @param {number} now
  * @param {(variantId: string) => string} catalogUrl returns the image URL for a permitted variant
@@ -52,10 +54,12 @@ export function resolveDisplayImage(item, catalog, now, catalogUrl) {
   const { image, reason } = catalogImageFor(catalog, item.variantId, { context: 'inventory', now });
   const originalId = item.photos?.originalId ?? null;
   const cleanedId = item.photos?.cleanedId ?? null;
+  const webId = item.photos?.webId ?? null;
   const options = [];
   if (image) options.push('catalog');
   if (originalId) options.push('original');
   if (cleanedId) options.push('cleaned');
+  if (webId) options.push('web');
 
   const catalogView = () => ({
     kind: 'catalog',
@@ -76,14 +80,28 @@ export function resolveDisplayImage(item, catalog, now, catalogUrl) {
     options,
   });
 
+  // Says where the store image came from; it is never presented as the person's photo.
+  const webView = (fallbackReason = null) => ({
+    kind: 'web',
+    url: null,
+    photoId: webId,
+    label: item.web?.host ? `Image from ${item.web.host}` : 'Store image',
+    attribution: null,
+    fallbackReason,
+    options,
+  });
+
   const wanted = item.display ?? (item.variantId ? 'catalog' : 'original');
   if (wanted === 'catalog') {
     if (image) return catalogView();
     const why = item.variantId ? reason : null;
     if (originalId) return photoView('original', originalId, why);
+    if (webId) return webView(why);
   }
+  if (wanted === 'web' && webId) return webView();
   if (wanted === 'cleaned' && cleanedId) return photoView('cleaned', cleanedId);
-  if ((wanted === 'original' || wanted === 'cleaned') && originalId) return photoView('original', originalId);
+  if ((wanted === 'original' || wanted === 'cleaned' || wanted === 'web') && originalId) return photoView('original', originalId);
+  if (webId) return webView();
   if (image) return catalogView();
   return {
     kind: 'placeholder',

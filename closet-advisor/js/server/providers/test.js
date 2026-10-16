@@ -3,6 +3,7 @@
 import { offersProvider } from './offers.js';
 import { conversionsProvider } from './conversions.js';
 import { marketplacesProvider } from './marketplaces.js';
+import { NOT_CONNECTED, notConnectedWeb } from './web.js';
 import { ApiError } from '../errors.js';
 
 /**
@@ -12,6 +13,7 @@ import { ApiError } from '../errors.js';
  *   ocrText?: string | ((blob: Blob) => string),
  *   normalize?: (blob: Blob) => any,
  *   visionDelayMs?: number,
+ *   web?: any,                                       // e.g. fakeWebProvider({...}); default not connected
  * }} [overrides]
  */
 export function createTestProviders(overrides = {}) {
@@ -51,6 +53,7 @@ export function createTestProviders(overrides = {}) {
     offers: offersProvider,
     conversions: overrides.conversions ?? conversionsProvider,
     marketplaces: overrides.marketplaces ?? marketplacesProvider,
+    web: overrides.web ?? notConnectedWeb,
     urls: {
       objectUrl(blob, id) {
         urlCounter += 1;
@@ -58,5 +61,36 @@ export function createTestProviders(overrides = {}) {
       },
       revoke() {},
     },
+  };
+}
+
+/**
+ * A scripted `web` provider for unit tests: no network. Each response is a value or a function of
+ * the call's arguments (it may return a promise); a call with no response configured answers
+ * 'unavailable'. With live: false it behaves like no local server. `calls` records every call,
+ * so a test can check that nothing reached the provider.
+ * @param {{ live?: boolean, lookup?: any, search?: any, searchImage?: any, fetchImage?: any }} [responses]
+ */
+export function fakeWebProvider(responses = {}) {
+  const live = responses.live ?? true;
+  const calls = { status: 0, lookup: [], search: [], searchImage: [], fetchImage: [] };
+  const reply = async (name, args) => {
+    calls[name].push(args);
+    if (!live) return { status: 'not_connected', reason: NOT_CONNECTED };
+    const response = responses[name];
+    if (response === undefined) return { status: 'unavailable', reason: `No fake ${name} response is set up.` };
+    return typeof response === 'function' ? response(args) : response;
+  };
+  return {
+    name: 'web',
+    calls,
+    async status() {
+      calls.status += 1;
+      return live ? { live: true, reason: null } : { live: false, reason: NOT_CONNECTED };
+    },
+    lookup: (args) => reply('lookup', args),
+    search: (args) => reply('search', args),
+    searchImage: (args) => reply('searchImage', args),
+    fetchImage: (args) => reply('fetchImage', args),
   };
 }

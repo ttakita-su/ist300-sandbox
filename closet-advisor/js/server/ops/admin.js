@@ -27,6 +27,7 @@ import { FRESH_HOURS, freshness } from '../../engine/offers.js';
 import { DEFAULT_WEIGHTS, WEIGHT_RANGES, normalizeWeights, validateWeights } from '../../engine/recommend.js';
 import { demoConversionEvents, reconcileConversions, summarize } from '../../engine/conversions.js';
 import { revokePhotoUrls } from './photos.js';
+import { notConnectedWeb } from '../providers/web.js';
 import { requeueMatchJob } from './matching.js';
 
 const isObj = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
@@ -634,9 +635,20 @@ async function conversionReport(ctx) {
   }
 }
 
+/** Whether the local server for real store lookups is running. Read-only: it has no simulation. */
+async function webStatusOf(ctx) {
+  try {
+    const status = await (ctx.providers.web ?? notConnectedWeb).status();
+    return { live: status?.live === true };
+  } catch {
+    return { live: false };
+  }
+}
+
 async function providersView(ctx) {
   const simulation = await simulationOf(ctx);
   const report = await conversionReport(ctx);
+  const web = await webStatusOf(ctx);
   const catalog = await ctx.catalog();
   const cached = await ctx.db.count('catalogFeatures');
   const status = (key) => (simulation[key] === 'ok' ? 'normal' : 'simulated');
@@ -646,7 +658,7 @@ async function providersView(ctx) {
       {
         id: 'vision',
         name: 'On-device photo analysis',
-        detail: 'Colors and shapes are measured in this browser. Photos are not uploaded anywhere.',
+        detail: 'Colors and shapes are measured in this browser. A photo is sent to Microsoft Bing only when the person asks to search online stores.',
         status: status('vision'),
         simulation: simulation.vision,
         options: SIMULATION_OPTIONS.vision,
@@ -673,6 +685,16 @@ async function providersView(ctx) {
         name: 'Demo affiliate network',
         detail: 'Outbound links get the parameters each demo program allows. No network receives the clicks.',
         status: 'demo',
+        simulation: null,
+        options: [],
+      },
+      {
+        id: 'web',
+        name: 'Real store lookup',
+        detail: web.live
+          ? 'The local server reads store pages and searches Bing when someone asks. Results are guesses the person confirms.'
+          : 'Needs the local server (npm start). Without it, only the demo stores can be looked up.',
+        status: web.live ? 'connected' : 'not_connected',
         simulation: null,
         options: [],
       },

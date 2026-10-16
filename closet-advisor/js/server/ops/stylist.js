@@ -76,7 +76,7 @@ async function liveSharedItems(ctx, request) {
     .map((item) => {
       const visible = request.share.includePhotos
         ? item
-        : { ...item, display: 'catalog', photos: { originalId: null, cleanedId: null, labelIds: [] } };
+        : { ...item, display: 'catalog', photos: { originalId: null, cleanedId: null, labelIds: [], webId: null } };
       const copies = item.archivedAt || !item.variantId ? 1 : counts.get(item.variantId) ?? 1;
       return redactForStylist(ownedView(catalog, visible, { now, copies }), request.share);
     });

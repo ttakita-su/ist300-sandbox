@@ -19,6 +19,7 @@ GitHub Pages serves the `main` branch from the repository root, so anything push
 ├── prd/             Free Bet PRD, published as a web page
 ├── blackjack/       Blackjack 101 — four pages
 ├── ist400-blogsite/ Post-Credits — movie and TV blog template
+├── closet-advisor/  Rotation — closet and shopping advisor prototype (plus a local Node server)
 ├── prd/             Free Bet trainer PRD as a web page
 ├── docs/            lab write-ups
 └── archive/         old scratch files
@@ -63,6 +64,32 @@ The extension asks only for the `sidePanel` and `storage` permissions. It has no
 #### The regular blackjack chart
 
 It assumes six decks, a dealer who hits soft 17 and peeks for blackjack, 3 to 2 blackjacks, doubling on any first two cards (after splits too), splits up to four hands with aces resplittable, and no surrender. The chart is the [Wizard of Odds 4–8 deck chart](https://wizardofodds.com/games/blackjack/strategy/4-decks/) for a dealer who hits soft 17, checked on 6 October 2026 three ways: against Wizard of Odds' own six-deck tables, against independent charts (Ken Smith's Blackjack Info engine and others), and against an exact six-deck calculation. All three agree on every cell. Where the chart's double isn't possible (three or more cards), the panel shows its printed fallback: hit, or stand for a soft 18 or 19. A pair that can't split because four hands are in play is played as its total, so this game never leaves a gap. The trainer page stays Free Bet only. Details are in [`free-bet/STRATEGY.md`](free-bet/STRATEGY.md).
+
+## Closet Advisor: Rotation ([`closet-advisor/`](closet-advisor/))
+
+A mobile-first prototype of an AI closet and shopping advisor: photograph what you own, confirm
+what it is, get picks that go with it, keep a wishlist and compare retailer offers. The photo
+pipeline and matching run in the browser against a fictional demo catalog (brands, retailers and
+prices are made up and labeled as demo). Live at
+[/closet-advisor/](https://ttakita-su.github.io/ist300-sandbox/closet-advisor/), in demo mode.
+
+It also has three live features that look up **real products**: paste a store's product link,
+search online stores by name (Bing Shopping and Bing web results), and search with a photo
+(Bing visual search, only when you press the button). These need the small local Node server in
+the folder:
+
+```bash
+cd closet-advisor
+npm start          # prints the address to open, usually http://127.0.0.1:8130/
+```
+
+GitHub Pages and `python3 -m http.server` can't run that server, so there the live features say
+they need it, and everything else works in demo mode. How to run it, what is real, privacy, the
+stores that block automated lookups, and troubleshooting are in
+[`closet-advisor/README.md`](closet-advisor/README.md); the design contract is
+[`closet-advisor/ARCHITECTURE.md`](closet-advisor/ARCHITECTURE.md). Run `npm test` in the
+folder for the unit tests and `npm run test:e2e` for the browser checks (neither uses the
+network).
 
 ## Sites
 
@@ -123,7 +150,19 @@ cd ist300-sandbox
 python3 -m http.server 8000
 ```
 
-Then visit <http://localhost:8000>.
+Then visit <http://localhost:8000>. That serves every site, including Closet Advisor in demo
+mode.
+
+Closet Advisor's live features (real product links, online store search and photo search) need
+its own Node server instead (Node 24 or newer, no install step):
+
+```bash
+cd closet-advisor
+npm start
+```
+
+It uses port 8130, or the next free port up to 8139, and prints the address to open. See
+[`closet-advisor/README.md`](closet-advisor/README.md).
 
 ## Publishing a change
 

@@ -3,6 +3,9 @@ import { createApi } from '../js/server/api.js';
 import { createMemoryDb } from '../js/server/db.js';
 import { createTestProviders } from '../js/server/providers/test.js';
 
+// A scripted `web` provider (no network): createTestEnv({ providers: { web: fakeWebProvider({...}) } }).
+export { fakeWebProvider } from '../js/server/providers/test.js';
+
 export const NOW = Date.parse('2026-10-14T12:00:00Z');
 
 export const ALEX = 'usr_demo_alex';

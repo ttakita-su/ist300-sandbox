@@ -149,7 +149,9 @@ shows as missing.
 StockX's API license is "for your internal use only", so it can't power a consumer app; GOAT
 and Chrono24 publish no API we could find; scraping any of them is against their terms and not
 part of this plan ([providers.md](providers.md#sneaker-and-watch-marketplaces),
-[marketplaces.md](marketplaces.md)).
+[marketplaces.md](marketplaces.md)). The prototype's local lookup server (section 8) reads public
+store pages and Bing for a class demo; it is not a production data source and nothing in this
+plan depends on it.
 
 ## 4. Milestone 1: feasibility of exact identification and approved images
 
@@ -373,7 +375,8 @@ cashback would pay out.
 ## 8. What the prototype in this folder demonstrates, and what it fakes
 
 The prototype is a static site that runs the whole journey in the browser
-([ARCHITECTURE.md](../ARCHITECTURE.md)). Its unit tests (`npm test`) and browser checks cover
+([ARCHITECTURE.md](../ARCHITECTURE.md)), plus an optional local Node server (`npm start`,
+[README.md](../README.md)) that looks up real products for a class demo. Its unit tests (`npm test`) and browser checks cover
 the behaviors below.
 
 **What it demonstrates for real:**
@@ -396,6 +399,11 @@ the behaviors below.
 - Catalog image provenance with fallback to the person's photo when a source's terms don't allow
   display.
 - Data export and account deletion.
+- With the local server: real product lookups from a pasted store link (structured data read
+  from the page), Bing Shopping and Bing web results for typed words, and Bing visual search for
+  a photo the person chooses to send. Results are saved only as custom items the person
+  confirms, with where and when the details were seen. The server sends an honest User-Agent,
+  stops at the first block, spaces and caches requests, and stores nothing.
 - The production schema in `supabase/migrations/`, executed in PGlite (Postgres 18 in
   WebAssembly) with stand-ins for Supabase's `auth` and `storage` schemas, and 46 behavioral
   tests of its policies passing. It has not been run on a Supabase project.
@@ -413,7 +421,11 @@ the behaviors below.
 - No affiliate network is connected. Conversions appear only when an admin loads labeled demo
   data, and "last checked" times are simulated.
 - Provider failures are simulated with admin switches.
-- StockX and GOAT links are parsed as text and never fetched.
+- Real products have no catalog identity, offers or recommendations: they are custom items with
+  a "seen at" price snapshot. Bing is read from its public pages without an API or agreement, and
+  stores that block automated lookups (adidas, New Balance, Levi's, Casio, eBay, StockX, GOAT,
+  Patagonia in testing) fall back to manual entry; StockX and GOAT links then fall back to the
+  words in the link.
 
 **What it can't tell us:** real-photo accuracy, catalog coverage, whether image permissions and
 affiliate approvals will come through, and cost and latency with real network calls. Milestone

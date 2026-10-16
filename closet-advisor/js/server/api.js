@@ -18,12 +18,20 @@ import * as stylist from './ops/stylist.js';
 import * as privacy from './ops/privacy.js';
 import * as admin from './ops/admin.js';
 import * as marketplaces from './ops/marketplaces.js';
+import * as web from './ops/web.js';
 
-const MODULES = { account, profile, catalog: catalogOps, photos, matching, inventory, wishlist, recs, offers, stylist, privacy, admin, marketplaces };
+const MODULES = { account, profile, catalog: catalogOps, photos, matching, inventory, wishlist, recs, offers, stylist, privacy, admin, marketplaces, web };
 
 export const RATE_LIMITS = {
   scan: { limit: 30, windowMs: 3600000, label: 'scans' },
   recs: { limit: 120, windowMs: 3600000, label: 'recommendation requests' },
+  // Every lookup and search goes to a real site through the local server.
+  web: { limit: 60, windowMs: 3600000, label: 'web searches' },
+  // Saving a store's image (importWebImage) has its own, larger limit: it only follows a lookup or
+  // search the person already made (each charged to 'web'), it is one download from the store's
+  // image host, and it is part of saving an item, which must not fail because searches ran out.
+  // importWebImage returns its limit as a result ('unavailable' with a reason), never throws it.
+  webImage: { limit: 240, windowMs: 3600000, label: 'store images' },
 };
 
 const IDEMPOTENCY_TTL_MS = 24 * 3600000;
@@ -33,9 +41,18 @@ export const DEFAULT_CONFIG = {
   providerSimulation: { vision: 'ok', offers: 'ok', ocr: 'ok' },
   offerFreshnessHours: 24,
   matchTimeoutMs: 15000,
+  // searchWebForPhoto stops waiting after this; the provider's own request limit is 40 s.
+  webSearchTimeoutMs: 45000,
 };
 
 /**
+ * Operation definitions (ops/*.js `ops`) may set, besides auth/idempotent/rateLimit/run:
+ * - chargeInRun: true: the dispatcher doesn't charge `rateLimit` before run(); the op calls
+ *   ctx.rateLimit() itself once its input is valid, right before it asks a provider, so a
+ *   request refused by validation costs nothing.
+ * - keepResult(result) -> boolean: for idempotent ops, whether this result is stored under the
+ *   idempotency key. A failure a retry could fix (a store that didn't answer) is not kept, so
+ *   the same key asks again instead of replaying it for 24 h.
  * @param {{ db: import('./db.js').Db, clock?: { now: () => number }, providers: any,
  *   config?: object, rateLimits?: typeof RATE_LIMITS }} deps
  */
@@ -108,7 +125,7 @@ export function createApi(deps) {
       if (inflight.has(idemKey)) return structuredClone(await inflight.get(idemKey));
     }
 
-    if (def.rateLimit) checkRate(actor, def.rateLimit);
+    if (def.rateLimit && !def.chargeInRun) checkRate(actor, def.rateLimit);
 
     const ctx = {
       actor,
@@ -132,6 +149,8 @@ export function createApi(deps) {
         }
       },
       call: (op, a = {}) => invoke(op, call, a, actor),
+      /** Charges one use of a rate limit (the op's own by default); throws ApiError('rate_limited'). */
+      rateLimit: (kind = def.rateLimit) => checkRate(actor, kind),
     };
 
     const started = clock.now();
@@ -139,7 +158,7 @@ export function createApi(deps) {
     if (idemKey) inflight.set(idemKey, run);
     try {
       const result = await run;
-      if (idemKey) {
+      if (idemKey && (!def.keepResult || def.keepResult(result))) {
         await db.put('idempotency', { id: idemKey, result: result ?? null, createdAt: new Date(clock.now()).toISOString() });
       }
       return structuredClone(result);

@@ -2,7 +2,7 @@
 // the person marks it bought (markPurchased); following a retailer link never does.
 import { ApiError, invalid } from '../errors.js';
 import { isOwner } from '../policy.js';
-import { buildOwnedItem, buildWishlistItem, catalogIdentity, iso, makeIdentity } from '../records.js';
+import { buildOwnedItem, buildWishlistItem, catalogIdentity, cleanWebSnapshot, iso, makeIdentity, webIdentity } from '../records.js';
 import { copyCounts, wishlistView } from '../views.js';
 import { findDuplicates } from '../../engine/duplicates.js';
 import { WISH_INTENT_FOR_REASON } from '../../data/schema.js';
@@ -91,10 +91,14 @@ export const ops = {
   /**
    * args: { category, productId?, variantId?, custom?, matchPending?, reason, reasonNote?, intent?,
    *         linkedOwnedIds?, desired: { size?, condition, variantFlexible }, targetPriceMinor?,
-   *         sourceUrl?, source?: 'catalog_search'|'product_link', photos?, allowDuplicate?, idempotencyKey }
+   *         sourceUrl?, source?: 'catalog_search'|'product_link'|'web', web?, photos?: { originalId?, webId? },
+   *         allowDuplicate?, idempotencyKey }
    * - The identity is built here: catalog items are user_confirmed with catalog_search evidence,
    *   or product_link evidence when saved from a link (sourceUrl); custom items are manual; an
    *   item still being matched is unconfirmed.
+   * - source 'web': a custom item (custom required, no catalog ids) with the WebSnapshot `web`
+   *   and one 'product_link' evidence line; sourceUrl defaults to web.url. The store price stays
+   *   in the snapshot and is never copied into targetPriceMinor.
    * - linkedOwnedIds and photos must be the actor's own (others -> not_found).
    * - Duplicate active entries of the same variant -> ApiError('duplicate', ..., { duplicates })
    *   unless allowDuplicate.
@@ -106,16 +110,29 @@ export const ops = {
     async run(ctx, args) {
       const catalog = await ctx.catalog();
       const now = ctx.now();
+      const fromWeb = args.source === 'web';
+      const web = fromWeb ? cleanWebSnapshot(args.web, now) : null;
+      if (fromWeb) {
+        const errors = {};
+        if (args.productId || args.variantId) errors.productId = 'An item saved from a store page has no catalog product. Use catalog search to add a catalog product.';
+        if (!args.custom) Object.assign(errors, { 'custom.brand': 'Enter the brand', 'custom.name': 'Enter a name' });
+        if (!web) errors.web = 'The store details are missing. Look the product up again.';
+        if (Object.keys(errors).length) throw invalid(errors);
+      }
       let sourceUrl = null;
       if (args.sourceUrl != null && args.sourceUrl !== '') {
         sourceUrl = cleanLinkUrl(args.sourceUrl);
         if (!sourceUrl) throw invalid({ sourceUrl: 'Enter a link that starts with https://' });
+      } else if (web) {
+        sourceUrl = web.url;
       }
-      const photos = await checkPhotoRefs(ctx, { originalId: args.photos?.originalId });
+      const photos = await checkPhotoRefs(ctx, { originalId: args.photos?.originalId, webId: args.photos?.webId });
       const linkedOwnedIds = await checkLinked(ctx, args.linkedOwnedIds);
       const fromLink = args.productId && (args.source === 'product_link' || (args.source == null && sourceUrl));
       let identity;
-      if (args.productId) {
+      if (web) {
+        identity = webIdentity(web);
+      } else if (args.productId) {
         identity = catalogIdentity({
           userId: ctx.actor.id,
           now,
@@ -143,8 +160,9 @@ export const ops = {
           desired: args.desired,
           targetPriceMinor: args.targetPriceMinor,
           sourceUrl,
-          photos: { originalId: photos.originalId },
+          photos: { originalId: photos.originalId, webId: photos.webId },
           identity,
+          web,
         },
         { userId: ctx.actor.id, now, catalog },
       );
@@ -228,7 +246,10 @@ export const ops = {
    * Creates an owned item with the same catalog identity (or, when the person bought a
    * different version of the same product, variantId with a user_selection evidence entry),
    * sets wishlist status 'purchased' and purchasedOwnedId. Sizes come only from details; the
-   * wished-for size is not assumed. Duplicate check as in createOwned.
+   * wished-for size is not assumed. The person's own photo (photos.originalId) comes along. An
+   * item saved from the web keeps its WebSnapshot and store image (photos.webId); it shows the
+   * person's photo when there is one (the photo flow), else the store image. Duplicate check as
+   * in createOwned.
    * result: { owned: OwnedView, wish: WishlistView }
    */
   markPurchased: {
@@ -258,6 +279,8 @@ export const ops = {
           matchJobId: wish.identity?.matchJobId ?? null,
         });
       }
+      const originalId = wish.photos?.originalId ?? null;
+      const webId = wish.productId ? null : wish.photos?.webId ?? null;
       const owned = buildOwnedItem(
         {
           category: wish.category,
@@ -266,7 +289,9 @@ export const ops = {
           custom: wish.custom,
           details: args.details,
           identity,
-          display: wish.productId ? 'catalog' : 'original',
+          photos: { originalId, webId },
+          display: wish.productId ? 'catalog' : originalId ? 'original' : webId ? 'web' : 'original',
+          web: wish.web ?? null,
         },
         { userId: ctx.actor.id, now, catalog },
       );

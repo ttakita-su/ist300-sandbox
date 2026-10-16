@@ -1,15 +1,32 @@
 // Display formatting. Unknown values render as words, never as zero.
 
 const moneyFormats = new Map();
+const minorDigits = new Map();
+
+/** Digits after the decimal point in a currency's minor unit: 2 for USD, 0 for JPY, 3 for KWD. */
+export function currencyDigits(currency = 'USD') {
+  if (!minorDigits.has(currency)) {
+    let digits = 2;
+    try {
+      digits = new Intl.NumberFormat('en-US', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits;
+    } catch {
+      // Not a currency Intl knows; formatting below reports the same problem.
+    }
+    minorDigits.set(currency, digits);
+  }
+  return minorDigits.get(currency);
+}
 
 /**
- * @param {number|null|undefined} minor amount in minor units (cents)
+ * @param {number|null|undefined} minor amount in the currency's minor units (cents for USD, yen for JPY)
  * @param {string} [currency]
- * @param {{ whole?: boolean }} [opts] whole: drop cents when they are zero
+ * @param {{ whole?: boolean }} [opts] whole: drop the minor part when it is zero
  */
 export function money(minor, currency = 'USD', opts = {}) {
   if (minor == null || Number.isNaN(minor)) return 'Unknown';
-  const whole = opts.whole !== false && minor % 100 === 0;
+  const digits = currencyDigits(currency);
+  const scale = 10 ** digits;
+  const whole = opts.whole !== false && minor % scale === 0;
   const key = `${currency}:${whole}`;
   if (!moneyFormats.has(key)) {
     moneyFormats.set(
@@ -17,12 +34,12 @@ export function money(minor, currency = 'USD', opts = {}) {
       new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency,
-        minimumFractionDigits: whole ? 0 : 2,
-        maximumFractionDigits: whole ? 0 : 2,
+        minimumFractionDigits: whole ? 0 : digits,
+        maximumFractionDigits: whole ? 0 : digits,
       }),
     );
   }
-  return moneyFormats.get(key).format(minor / 100);
+  return moneyFormats.get(key).format(minor / scale);
 }
 
 /** Parses "$1,250.50" or "1250.5" into minor units; returns null when empty or invalid. */

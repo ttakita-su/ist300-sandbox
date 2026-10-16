@@ -1,7 +1,9 @@
 // App-shell service worker: same-origin files are served from cache and refreshed in the
 // background (stale-while-revalidate), so the prototype opens offline after one visit.
-// Cross-origin requests (the optional OCR engine) are never cached here.
-const CACHE = 'rotation-v1';
+// Cross-origin requests (the optional OCR engine) and the local server's api/ answers (live
+// status, store lookups) are never cached or replayed here.
+const CACHE = 'rotation-v2';
+const API_PATH = new URL('./api/', self.location).pathname;
 const SHELL = ['./', './index.html', './css/tokens.css', './css/base.css', './css/components.css', './css/screens/account.css', './css/screens/add.css', './css/screens/collection.css', './css/screens/discover.css', './css/screens/workspace.css', './js/app.js', './fonts/archivo-latin-wdth.woff2', './icons/icon.svg', './manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
@@ -19,7 +21,8 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith(API_PATH)) return;
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(request, { ignoreSearch: request.mode === 'navigate' });

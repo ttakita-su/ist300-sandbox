@@ -663,6 +663,15 @@ input:focus-visible + .chip {
 .badge-warn { background: var(--warn-soft); color: var(--warn); }
 .badge-danger { background: var(--danger-soft); color: var(--danger); }
 .badge-muted { background: var(--sunken); color: var(--ink-muted); }
+
+/* A long badge wraps instead of widening the page on a narrow phone, which would also push
+   fixed sheets past the screen edge. */
+.badge-wrap {
+  max-width: 100%;
+  white-space: normal;
+  padding-block: 2px;
+  line-height: 1.35;
+}
 .badge-human { background: var(--accent-soft); color: var(--accent-ink); }
 
 /* ---------- Notices and states ---------- */
@@ -955,6 +964,11 @@ input:focus-visible + .chip {
   accent-color: var(--ink);
 }
 
+.check:has(input:disabled) {
+  color: var(--ink-muted);
+  cursor: not-allowed;
+}
+
 .switch {
   display: flex;
   align-items: center;
@@ -1059,6 +1073,8 @@ button.list-item {
 }
 
 .list-thumb {
+  display: grid;
+  place-items: center;
   width: 48px;
   height: 48px;
   flex: 0 0 auto;
@@ -1625,4 +1641,171 @@ body.hide-tabs .toasts {
 .field > .chip,
 .field > .link-btn {
   align-self: flex-start;
+}
+
+/* ---------- Store results (online stores through the local server) ---------- */
+
+/* A hot-linked store image over a placeholder: if the image fails, it is hidden and the
+   placeholder shows (ui/web-product.js bindRemoteImages). */
+.web-img {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--ink-faint);
+}
+
+.web-img > .icon {
+  width: 44%;
+  height: 44%;
+  stroke-width: 1.3;
+}
+
+.web-img > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--studio);
+}
+
+.web-thumb {
+  width: 56px;
+  height: 56px;
+  color: var(--ink-muted);
+}
+
+.web-thumb > .icon {
+  width: 24px;
+  height: 24px;
+}
+
+.web-row {
+  align-items: center;
+}
+
+.web-row-title {
+  overflow-wrap: anywhere;
+}
+
+.web-row .web-row-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.web-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--s3);
+}
+
+.web-price {
+  color: var(--ink);
+  font-weight: 680;
+  font-stretch: 84%;
+  font-variant-numeric: tabular-nums;
+}
+
+.web-host,
+.web-snippet {
+  overflow-wrap: anywhere;
+}
+
+.web-snippet {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.web-list-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Result lists inside a panel (the match screen) need an edge of their own. */
+.panel .web-lists .list {
+  border: 1px solid var(--line);
+}
+
+.web-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s4);
+  border-radius: var(--r-tile);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  font-weight: 560;
+}
+
+.web-spinner {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  border-color: var(--ink) var(--ink) transparent transparent;
+  animation: spin 0.7s linear infinite;
+}
+
+.web-preview {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--s4);
+  align-items: start;
+  padding: var(--s3);
+  border-radius: var(--r-tile);
+  background: var(--surface);
+}
+
+.web-preview-img {
+  border-radius: 10px;
+}
+
+.web-preview-text {
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .web-preview {
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+}
+
+/* Radio chips (the save form's "What is it?"); the form's own wide gap isn't inherited. */
+.web-category {
+  --gap: var(--s2);
+}
+
+.chip-choice {
+  position: relative;
+}
+
+.web-seen {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s1);
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-control);
+  background: var(--surface);
+}
+
+.web-seen p {
+  overflow-wrap: anywhere;
+}
+
+.web-seen .link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  overflow-wrap: anywhere;
 }

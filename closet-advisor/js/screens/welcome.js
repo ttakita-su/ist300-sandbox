@@ -40,7 +40,7 @@ export default [
             <p class="lede">Photograph what you own, find what goes with it, and compare offers before you buy.</p>
           </div>
         </header>
-        ${notice({ tone: 'info', title: 'This is a prototype', body: 'Everything stays in this browser. Brands, retailers and prices are fictional demo data.' })}
+        ${notice({ tone: 'info', title: 'This is a prototype', body: "Your items and photos are kept in this browser. The catalog's brands, retailers and prices are fictional demo data. Real products can be looked up online while Rotation's local server is running." })}
 
         <section class="stack">
           <h2>Try a demo account</h2>

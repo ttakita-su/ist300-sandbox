@@ -189,7 +189,8 @@ function itemImage(view) {
   const image = view?.image ?? null;
   return {
     imageUrl: image?.kind === 'catalog' ? image.url ?? null : null,
-    photoId: image && (image.kind === 'original' || image.kind === 'cleaned') ? image.photoId ?? null : null,
+    // Photos and store images saved on this device are hydrated by id (getPhotoUrl).
+    photoId: image && ['original', 'cleaned', 'web'].includes(image.kind) ? image.photoId ?? null : null,
   };
 }
 

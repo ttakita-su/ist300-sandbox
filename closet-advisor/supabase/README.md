@@ -10,6 +10,22 @@ are the starting point for the production build in [docs/PLAN.md](../docs/PLAN.m
 | `migrations/0001_init.sql` | Extensions, enums and domains, every table, triggers, access helpers in the `private` schema, the functions exposed over the Data API, row-level security, grants and indexes |
 | `migrations/0002_storage.sql` | Storage buckets (`user-photos`, `catalog-assets`, `catalog-restricted`) and the policies on `storage.objects` |
 
+**Not mirrored yet: saving real products from the web.** The prototype now saves items found
+through its local server (README.md, ARCHITECTURE.md 4.3), and these migrations don't have that
+yet:
+
+- `item.web` (the WebSnapshot on owned and wishlist items: store URL, site, title, price,
+  availability, identifiers, `via`, `fetchedAt`) has no column;
+- photo kind `'web'` (a store image kept with the item, with its `source` URLs) is missing from
+  `photo_kind`, and `photos.webId` has no column;
+- display `'web'` is missing from `display_choice`;
+- the `source: 'web'` value that `createOwned` and `createWishlist` accept isn't handled by the
+  write functions, and owned items have no `source_url` column (web items always carry one).
+
+Add these (with row-level security unchanged: the snapshot and the store image are the
+person's private data, and a stylist sees the store image only when photos are shared) before
+the production build saves web items.
+
 ## How these were checked
 
 **The migrations parse, but they have not been run against a Supabase project or any

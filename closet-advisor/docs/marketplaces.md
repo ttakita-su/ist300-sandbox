@@ -1,17 +1,22 @@
 # StockX and GOAT in Rotation
 
-Rotation can't search StockX or GOAT directly, and it never scrapes them, opens their pages, or
-copies their product images. What it does instead:
+Rotation has no StockX or GOAT connection: no API, feed or agreement. It doesn't crawl or search
+them, and it doesn't get around their bot protection. What it does instead:
 
 - **Search with honest sources.** Search covers the demo marketplace (the fictional catalog) plus
   StockX and GOAT. StockX and GOAT show as "not connected" with the reason, and a button opens
   each marketplace's own search page for the same words, in a new tab. That button is a plain
   link with no tracking.
-- **Paste a product link.** The app reads the brand, model, style code, category and size from the
-  text of a StockX or GOAT link. It never fetches the page. Everything it reads is a guess the
-  person confirms, and the saved item says "Name taken from your GOAT link; not checked with GOAT".
-  If the guess matches a Rotation catalog product, the app offers that match first. Otherwise the
-  item is saved as a custom item with the link, plus the person's own photo if they add one.
+- **Paste a product link.** Rotation never requests a StockX or GOAT page, even with the local
+  server running: both sites' terms forbid automated access, and both blocked it in testing on
+  2026-10-15 (StockX answered 403 "Please login to continue", GOAT 403 "Sorry, you have been
+  blocked"). `lookupProductPage` answers `blocked` for their hosts without contacting them and
+  without using the hourly lookup allowance. The app then reads the brand, model, style code,
+  category and size from the words of the link instead. Everything it reads is a guess the
+  person confirms, and the saved item says "Name taken from your GOAT link; not checked with
+  GOAT". If the guess matches a Rotation catalog product, the app offers that match first.
+  Otherwise the item is saved as a custom item with the link, plus the person's own photo if they
+  add one.
 
 Source research checked on 2026-10-14.
 
@@ -23,7 +28,7 @@ Source research checked on 2026-10-14.
 | StockX affiliate | Runs on Impact, with a product feed of every product and its lowest ask in USD, AUD, GBP, EUR and CAD, plus deep links, after acceptance ([FAQ](https://stockx.com/news/affiliate-faq/)). | Needs an approved application. Image-use terms for the feed weren't published where we looked. |
 | GOAT API | No official public or partner API found. alias is GOAT Group's selling app ([alias](https://alias.org/faq)). | Nothing to connect to. Unofficial scrapers exist; Rotation won't use them. |
 | GOAT affiliate | Impact ([affilitizer](https://www.affilitizer.com/programs/goat.com)), about 2% commission ([linkclicky](https://linkclicky.com/affiliate-program/goat/)). | Needs approval. No product-feed or image terms confirmed. |
-| Scraping | StockX bans "any robot, spider, scraper, or other automated or manual means" without written permission ([terms](https://conductatlas.com/platform/stockx/stockx-terms-of-use/provision/CA-P-058140/prohibition-on-automated-scraping-without-permission/)). GOAT bans spiders, crawlers and data mining tools ([terms](https://conductatlas.com/platform/goat/goat-terms-of-use/provision/CA-P-062899/prohibition-on-automated-scraping-or-crawling-tools/)). | Not allowed, and both sites block bots. |
+| Reading their pages | StockX bans "any robot, spider, scraper, or other automated or manual means" without written permission ([terms](https://conductatlas.com/platform/stockx/stockx-terms-of-use/provision/CA-P-058140/prohibition-on-automated-scraping-without-permission/)). GOAT bans spiders, crawlers and data mining tools ([terms](https://conductatlas.com/platform/goat/goat-terms-of-use/provision/CA-P-062899/prohibition-on-automated-scraping-or-crawling-tools/)). | Not allowed, and both sites block bots. The prototype never requests their pages; it reads the pasted link's words instead. |
 
 ## What connecting them for real would take
 
@@ -40,6 +45,9 @@ Source research checked on 2026-10-14.
 - `listMarketplaces()` → `[{ id, name, connected, demo, note, searchUrlTemplate }]`
 - `searchMarketplaces({ query, marketplaceId? })` → `{ query, sources: [{ id, name, demo, connected,
   reason, searchUrl, results: [{ product, variants, matchedVariantIds }] }] }`. Rate limit: `recs`.
+- `lookupProductPage({ url })` (ARCHITECTURE.md 5.4) is tried first for every pasted link when the
+  local server is running; the screen calls `importMarketplaceLink` when it returns `blocked`,
+  `not_product`, `unavailable` or `not_connected`.
 - `importMarketplaceLink({ url })` → `{ ok: true, link, catalogMatches, draft }` or `{ ok: false,
   reason: 'unsupported_marketplace' | 'not_a_product_page', message, marketplace }`. Malformed or
   unsafe links throw `invalid` with `fields.url`. Save the draft with `createOwned` (source

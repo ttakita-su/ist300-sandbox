@@ -14,12 +14,124 @@ import {
   VARIANT_STATE,
 } from '../data/schema.js';
 import { COLOR_BY_NAME } from '../data/colors.js';
+import { date as formatDate } from '../lib/format.js';
 
 const MAX_NOTES = 2000;
 const MAX_TEXT = 120;
 
+/** Images an owned item can show. 'web' is a store image saved on this device (photos.webId). */
+export const OWNED_DISPLAYS = ['catalog', 'original', 'cleaned', 'web'];
+
+/** How a web snapshot was found: a store page, a Bing Shopping listing, or Bing visual search. */
+export const WEB_VIA = ['page', 'search', 'photo'];
+export const WEB_AVAILABILITY = ['in_stock', 'out_of_stock', 'preorder', 'backorder', 'discontinued', 'limited'];
+const MAX_PRICE_MINOR = 1e9;
+
 export function iso(ms) {
   return new Date(ms).toISOString();
+}
+
+/** A link stored with an item for reference. Never fetched; rendered through safeUrl. */
+export function cleanLinkUrl(value) {
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  if (!text || text.length > 2048) return null;
+  let url;
+  try {
+    url = new URL(text);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+  if (url.username || url.password) return null;
+  return url.toString();
+}
+
+/** The host people recognize: lowercase, without "www.". */
+export function displayHost(url) {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, '') || null;
+  } catch {
+    return null;
+  }
+}
+
+// C0 and C1 controls, DEL, zero-width characters, and the bidi marks, embeddings, overrides and
+// isolates a page could use to make text read in a different order than it is stored.
+const UNSAFE_TEXT = /[\u0000-\u001F\u007F-\u009F\u061C\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/g;
+
+/**
+ * Page text is untrusted: control, zero-width and bidi control characters go, whitespace
+ * collapses; '' is null.
+ * @param {unknown} value
+ * @param {number} max
+ * @returns {string|null}
+ */
+export function cleanWebText(value, max) {
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
+  const text = String(value)
+    .replace(UNSAFE_TEXT, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max)
+    .trim();
+  return text || null;
+}
+
+/** { amountMinor, currency } with an integer amount and an ISO currency code, else null. */
+export function cleanWebPrice(price) {
+  if (!price || typeof price !== 'object') return null;
+  const amountMinor = price.amountMinor;
+  if (!Number.isInteger(amountMinor) || amountMinor < 0 || amountMinor > MAX_PRICE_MINOR) return null;
+  if (typeof price.currency !== 'string' || !/^[A-Z]{3}$/.test(price.currency)) return null;
+  return { amountMinor, currency: price.currency };
+}
+
+const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+/**
+ * When a page was read, as an ISO string: `value` when it is an ISO 8601 date-time with a time
+ * zone and no later than a day from now, else now. "0" or "Oct 14 2026" are not dates here.
+ * @param {unknown} value
+ * @param {number} nowMs
+ * @returns {string}
+ */
+export function webFetchedAt(value, nowMs) {
+  const at = typeof value === 'string' && ISO_TIME.test(value) ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(at) && at <= nowMs + 86400000 ? iso(at) : iso(nowMs);
+}
+
+/**
+ * Validates and rebuilds a WebSnapshot (ARCHITECTURE.md 4.3: what a store page, listing or
+ * visual search said about an item when it was saved). Strings are trimmed and capped, the host
+ * is derived from the URL (never taken from input), unknown enum values become null, query is
+ * kept only for via 'search' or 'photo', and a fetchedAt that isn't a possible ISO time becomes now. Without a usable http(s) URL there is no snapshot: null.
+ * @param {any} input
+ * @param {number} nowMs
+ * @returns {null | { url, host, siteName, title, brand, price, availability, identifiers: { sku, gtin, mpn },
+ *   color, imageUrl, via, query, fetchedAt }}
+ */
+export function cleanWebSnapshot(input, nowMs) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+  const url = cleanLinkUrl(input.url);
+  if (!url) return null;
+  const ids = input.identifiers && typeof input.identifiers === 'object' ? input.identifiers : {};
+  const via = WEB_VIA.includes(input.via) ? input.via : null;
+  return {
+    url,
+    host: displayHost(url),
+    siteName: cleanWebText(input.siteName, 120),
+    title: cleanWebText(input.title, 200),
+    brand: cleanWebText(input.brand, 120),
+    price: cleanWebPrice(input.price),
+    availability: WEB_AVAILABILITY.includes(input.availability) ? input.availability : null,
+    identifiers: { sku: cleanWebText(ids.sku, 64), gtin: cleanWebText(ids.gtin, 64), mpn: cleanWebText(ids.mpn, 64) },
+    color: cleanWebText(input.color, 120),
+    imageUrl: cleanLinkUrl(input.imageUrl),
+    via,
+    query: via === 'search' || via === 'photo' ? cleanWebText(input.query, 200) : null,
+    fetchedAt: webFetchedAt(input.fetchedAt, nowMs),
+  };
 }
 
 /** Identity block (ARCHITECTURE.md 4.3). Defaults describe a manual record. */
@@ -61,6 +173,25 @@ export function validateIdentity(identity) {
   if (!IDENTITY.includes(identity.resolution)) problems.resolution = 'Unknown identity resolution';
   if (!VARIANT_STATE.includes(identity.variant)) problems.variant = 'Unknown variant state';
   return problems;
+}
+
+/**
+ * The evidence line for an item saved from the web: where the details came from and that
+ * Rotation didn't check them. `photoFlow`: saved from a photo match (confirmMatch).
+ * @param {{ host: string|null, siteName: string|null, via: string|null, fetchedAt: string }} web cleaned snapshot
+ */
+export function webEvidence(web, { photoFlow = false } = {}) {
+  const on = formatDate(web.fetchedAt);
+  let detail;
+  if (photoFlow || web.via === 'photo') detail = `Found with Bing visual search from your photo on ${on}; you chose it.`;
+  else if (web.via === 'search') detail = `Picked from a Bing Shopping listing${web.siteName ? ` (${web.siteName})` : ''} on ${on}; not checked by Rotation.`;
+  else detail = `Details from ${web.host ?? 'a store page'} on ${on}; not checked by Rotation.`;
+  return { kind: 'product_link', source: 'url', detail };
+}
+
+/** Identity of an item saved from a store page or listing: a custom item, never a catalog match. */
+export function webIdentity(web) {
+  return makeIdentity({ evidence: [webEvidence(web)] });
 }
 
 function cleanText(value, max = MAX_TEXT) {
@@ -164,8 +295,9 @@ export function buildOwnedItem(input, env) {
     originalId: input.photos?.originalId ?? null,
     cleanedId: input.photos?.cleanedId ?? null,
     labelIds: Array.isArray(input.photos?.labelIds) ? input.photos.labelIds : [],
+    webId: input.photos?.webId ?? null,
   };
-  const display = ['catalog', 'original', 'cleaned'].includes(input.display)
+  const display = OWNED_DISPLAYS.includes(input.display)
     ? input.display
     : input.productId ? 'catalog' : 'original';
 
@@ -192,6 +324,8 @@ export function buildOwnedItem(input, env) {
     ownerChanges,
     photos,
     display,
+    // What a store page or listing said when it was saved; only custom items carry one.
+    web: input.productId ? null : cleanWebSnapshot(input.web, env.now),
   };
 }
 
@@ -214,7 +348,7 @@ export function patchOwnedItem(item, patch, env) {
     };
   }
   if (patch.display) {
-    if (!['catalog', 'original', 'cleaned'].includes(patch.display)) errors.display = 'Unknown image choice';
+    if (!OWNED_DISPLAYS.includes(patch.display)) errors.display = 'Unknown image choice';
     next.display = patch.display;
   }
   if (Object.keys(errors).length) throw invalid(errors);
@@ -280,8 +414,9 @@ export function buildWishlistItem(input, env) {
     currency: 'USD',
     sourceUrl: input.sourceUrl ?? null,
     matchPending: Boolean(input.matchPending),
-    photos: { originalId: input.photos?.originalId ?? null },
+    photos: { originalId: input.photos?.originalId ?? null, webId: input.photos?.webId ?? null },
     purchasedOwnedId: null,
+    web: input.productId || !input.custom ? null : cleanWebSnapshot(input.web, env.now),
   };
 }
 
