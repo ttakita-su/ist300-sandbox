@@ -19,7 +19,6 @@ GitHub Pages serves the `main` branch from the repository root, so anything push
 ├── prd/             Free Bet PRD, published as a web page
 ├── blackjack/       Blackjack 101 — four pages
 ├── ist400-blogsite/ Post-Credits — movie and TV blog template
-├── twisted-takes/   Twisted Takes — team review blog (Jekyll; meant for its own repository)
 ├── closet-advisor/  Rotation — closet and shopping advisor prototype (plus a local Node server)
 ├── prd/             Free Bet trainer PRD as a web page
 ├── docs/            lab write-ups
@@ -115,16 +114,7 @@ CSS, a reviews archive filterable by movies, shows, and lists, and six sample po
 [`ist400-blogsite/README.md`](ist400-blogsite/README.md).
 Live at [/ist400-blogsite/](https://ttakita-su.github.io/ist300-sandbox/ist400-blogsite/).
 
-### Twisted Takes ([`twisted-takes/`](twisted-takes/))
-
-The student team's movie and TV review community: 20 launch movie reviews across five genres,
-genre hubs, Watch Next collections, a searchable catalog and optional Google Analytics 4. Unlike
-the other folders it is a **Jekyll** site, built to be the root of its own repository (for
-example `twisted-takes`, published at `https://ttakita-su.github.io/twisted-takes/`). It is not
-published from this repository: the root [`_config.yml`](_config.yml) excludes the folder so
-GitHub Pages keeps serving the sandbox exactly as before. Setup, preview and publishing steps are
-in [`twisted-takes/README.md`](twisted-takes/README.md); day-to-day editing is in
-[`twisted-takes/EDITOR_GUIDE.md`](twisted-takes/EDITOR_GUIDE.md).
+The Twisted Takes team blog now lives in the [ist444 repository](https://github.com/ttakita-su/ist444).
 
 ## Coursework ([`docs/`](docs/))
 
@@ -195,8 +185,6 @@ GitHub Pages rebuilds automatically from `main`. Build status is visible under t
   pages keep their styles inline.
 - Internal links are relative to the current folder, which keeps each site movable.
 - Commit messages say what changed and why in one line.
-- [`_config.yml`](_config.yml) only tells GitHub Pages to skip `twisted-takes/`; every other
-  site is still published as plain files.
 - [`.gitignore`](.gitignore) excludes `.claude/settings.local.json` (machine-specific) and
   `.DS_Store`.
 

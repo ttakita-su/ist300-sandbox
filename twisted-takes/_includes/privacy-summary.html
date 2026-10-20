@@ -1,4 +1,0 @@
-{%- include analytics-status.html -%}
-{%- assign ps_form = site.community_form.url | default: "" | strip -%}
-{%- if tt_analytics_on -%}This site uses Google Analytics to count visits and clicks; it does not collect names, emails or messages.{%- else -%}This site does not use analytics, advertising or tracking cookies.{%- endif -%}
-{%- if ps_form != "" %} The optional community form is run by {{ site.community_form.provider | default: "an outside service" }}, under its own privacy terms.{%- endif -%}
