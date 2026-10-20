@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 750" width="1200" height="750" role="img" aria-label="Abstract artwork: a dial divided into four mood segments labeled thoughtful, cozy, romantic and tense">
+<rect width="1200" height="750" fill="#FAF9F6"/>
+<defs><path id="m0" d="M278 590A322 322 0 0 1 372.3 362.3"/><path id="m1" d="M372.3 362.3A322 322 0 0 1 600 268"/><path id="m2" d="M600 268A322 322 0 0 1 827.7 362.3"/><path id="m3" d="M827.7 362.3A322 322 0 0 1 922 590"/></defs>
+<path d="M150 591H1050" stroke="#2B2A28" stroke-width="2" opacity=".3"/>
+<path d="M314 590A286 286 0 0 1 886 590Z" fill="#F1ECE4"/>
+<g><path d="M220 590A380 380 0 0 1 327.1 325.6L394.6 391A286 286 0 0 0 314 590Z" fill="#275A8C"/><path d="M335.6 317.1A380 380 0 0 1 594 210L595.5 304A286 286 0 0 0 401 384.6Z" fill="#2E6B4F"/><path d="M606 210A380 380 0 0 1 864.4 317.1L799 384.6A286 286 0 0 0 604.5 304Z" fill="#A3325A"/><path d="M872.9 325.6A380 380 0 0 1 980 590L886 590A286 286 0 0 0 805.4 391Z" fill="#4B3F72"/></g>
+<path d="M988.6 538.8L998.6 537.5M978.6 488.5L988.3 486M962.2 440L971.4 436.2M939.5 394L948.1 389M911 351.4L918.9 345.3M877.2 312.8L892.7 297.3M838.6 279L844.7 271.1M796 250.5L801 241.9M750 227.8L753.8 218.6M701.5 211.4L704 201.7M651.2 201.4L652.5 191.4M600 198L600 176M548.8 201.4L547.5 191.4M498.5 211.4L496 201.7M450 227.8L446.2 218.6M404 250.5L399 241.9M361.4 279L355.3 271.1M322.8 312.8L307.3 297.3M289 351.4L281.1 345.3M260.5 394L251.9 389M237.8 440L228.6 436.2M221.4 488.5L211.7 486M211.4 538.8L201.4 537.5" stroke="#2B2A28" stroke-width="3" stroke-linecap="round" opacity=".45"/>
+<g font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="42" fill="#FFFFFF" text-anchor="middle"><text><textPath href="#m0" xlink:href="#m0" startOffset="50%">thoughtful</textPath></text><text><textPath href="#m1" xlink:href="#m1" startOffset="50%">cozy</textPath></text><text><textPath href="#m2" xlink:href="#m2" startOffset="50%">romantic</textPath></text><text><textPath href="#m3" xlink:href="#m3" startOffset="50%">tense</textPath></text></g>
+<path d="M490.4 365.3L587.4 596.1L611.4 613.4L612.6 583.9Z" fill="#7A2944"/>
+<circle cx="600" cy="590" r="34" fill="#7A2944"/><circle cx="600" cy="590" r="10" fill="#FAF9F6"/>
+</svg>

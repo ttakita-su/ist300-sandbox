@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="1200" height="750" role="img" aria-label="Abstract artwork: five side-by-side panels with simple genre symbols">
+<rect width="1200" height="750" fill="#FAF9F6"/>
+<g><rect x="60" y="110" width="200" height="530" rx="6" fill="#DDE6F0"/><rect x="280" y="110" width="200" height="530" rx="6" fill="#ECE6DD"/><rect x="500" y="110" width="200" height="530" rx="6" fill="#E3EBDD"/><rect x="720" y="110" width="200" height="530" rx="6" fill="#F7E4E1"/><rect x="940" y="110" width="200" height="530" rx="6" fill="#E5E1EC"/></g>
+<g><rect x="142" y="572" width="36" height="4" fill="#275A8C"/><rect x="362" y="572" width="36" height="4" fill="#7A4E1D"/><rect x="582" y="572" width="36" height="4" fill="#2E6B4F"/><rect x="802" y="572" width="36" height="4" fill="#A3325A"/><rect x="1022" y="572" width="36" height="4" fill="#4B3F72"/></g>
+<g transform="translate(160 350) rotate(-18)" fill="none" stroke="#275A8C">
+<ellipse rx="84" ry="22" stroke-width="4"/><ellipse rx="62" ry="40" stroke-width="2" transform="rotate(52)" opacity=".55"/>
+<circle r="36" fill="#8FB3DA" stroke="none"/><path d="M-84 0A84 22 0 0 0 84 0" stroke-width="4"/>
+<circle cx="70" cy="12.2" r="9" fill="#7A2944" stroke="#DDE6F0" stroke-width="3"/></g>
+<g fill="#275A8C"><circle cx="112" cy="232" r="3"/><circle cx="212" cy="262" r="2.5"/><circle cx="196" cy="452" r="3"/><circle cx="104" cy="430" r="2"/></g>
+<defs><clipPath id="lens"><circle cx="402" cy="342" r="46"/></clipPath></defs>
+<g><rect x="300" y="268" width="150" height="16" rx="2" fill="#2B2A28"/><rect x="300" y="300" width="112" height="16" rx="2" fill="#2B2A28"/><rect x="300" y="332" width="160" height="16" rx="2" fill="#2B2A28"/><rect x="300" y="364" width="96" height="16" rx="2" fill="#2B2A28"/><rect x="300" y="396" width="140" height="16" rx="2" fill="#2B2A28"/><rect x="300" y="428" width="120" height="16" rx="2" fill="#2B2A28"/></g>
+<circle cx="402" cy="342" r="46" fill="#ECE6DD"/>
+<g clip-path="url(#lens)" fill="#7A4E1D"><rect x="352" y="308.5" width="96" height="3" rx="1.5"/><rect x="352" y="320.5" width="70" height="3" rx="1.5"/><rect x="352" y="332.5" width="104" height="3" rx="1.5"/><rect x="352" y="344.5" width="84" height="3" rx="1.5"/><rect x="352" y="356.5" width="100" height="3" rx="1.5"/><rect x="352" y="368.5" width="62" height="3" rx="1.5"/><rect x="352" y="380.5" width="92" height="3" rx="1.5"/></g>
+<circle cx="402" cy="342" r="46" fill="none" stroke="#7A4E1D" stroke-width="9"/>
+<path d="M436 376L478 418" stroke="#7A2944" stroke-width="16" stroke-linecap="round"/>
+<g><path d="M508 470L570 372L606 418L640 330L696 470Z" fill="#2E6B4F"/>
+<path d="M508 470L570 372L630 470Z" fill="#23443A" opacity=".55"/>
+<path d="M640 330L651 358L645 352L639 362L633 351L629 358Z" fill="#FAF9F6"/>
+<path d="M600 206L610 240L644 250L610 260L600 294L590 260L556 250L590 240Z" fill="#7A2944"/>
+<path d="M508 470H696" stroke="#23443A" stroke-width="3"/></g>
+<g><path d="M0 40C-20 22-52 2-52-20C-52-38-38-50-24-50C-12-50-4-42 0-34C4-42 12-50 24-50C38-50 52-38 52-20C52-4 44 8 32 20L48 46L18 33C10 37 4 39 0 40Z" transform="translate(794 330) scale(-1.05 1.05)" fill="#A3325A"/>
+<path d="M0 40C-20 22-52 2-52-20C-52-38-38-50-24-50C-12-50-4-42 0-34C4-42 12-50 24-50C38-50 52-38 52-20C52-4 44 8 32 20L48 46L18 33C10 37 4 39 0 40Z" transform="translate(846 380)" fill="none" stroke="#7A2944" stroke-width="7" stroke-linejoin="round"/></g>
+<g><path d="M1068 470L1086 470L1116 546L1056 546Z" fill="#F1DDA4"/>
+<rect x="994" y="250" width="92" height="220" fill="#F1DDA4"/>
+<path d="M994 250L1068 262V458L994 470Z" fill="#4B3F72"/>
+<rect x="994" y="250" width="92" height="220" fill="none" stroke="#2A2528" stroke-width="7"/>
+<circle cx="1056" cy="364" r="6" fill="#7A2944"/>
+<path d="M960 470H1120" stroke="#2A2528" stroke-width="3"/></g>
+</svg>

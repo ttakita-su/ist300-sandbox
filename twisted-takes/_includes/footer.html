@@ -1,0 +1,42 @@
+<footer class="site-footer">
+  <div class="wrap site-footer__grid">
+    <div class="site-footer__brand">
+      <a class="wordmark wordmark--small" href="{{ '/' | relative_url }}"><span class="wordmark__twisted">Twisted</span> <span class="wordmark__takes">Takes</span></a>
+      <p class="site-footer__tagline">{{ site.tagline }}</p>
+      <p>A student team's movie and TV review community. Reviews are opinions; disagree with us respectfully.</p>
+    </div>
+    <nav class="site-footer__nav" aria-label="Footer">
+      <h2 class="site-footer__heading">Explore</h2>
+      <ul>
+        <li><a href="{{ '/reviews/' | relative_url }}">All reviews</a></li>
+        <li><a href="{{ '/genres/' | relative_url }}">Genres</a></li>
+        <li><a href="{{ '/watch-next/' | relative_url }}">Watch Next</a></li>
+        <li><a href="{{ '/articles/' | relative_url }}">Articles</a></li>
+        <li><a href="{{ '/about/' | relative_url }}">About</a></li>
+        <li><a href="{{ '/community/' | relative_url }}">Community</a></li>
+      </ul>
+    </nav>
+    <nav class="site-footer__nav" aria-label="Genres">
+      <h2 class="site-footer__heading">Genres</h2>
+      <ul>
+        {%- for genre in site.data.genres %}
+        <li><a href="{{ '/genres/' | append: genre.key | append: '/' | relative_url }}">{{ genre.name }}</a></li>
+        {%- endfor %}
+      </ul>
+    </nav>
+    <div class="site-footer__follow">
+      <h2 class="site-footer__heading">Follow</h2>
+      {%- capture footer_social -%}{% include social-links.html class="social-links--stacked" %}{%- endcapture -%}
+      {%- if footer_social contains "<a" %}
+      {{ footer_social }}
+      {%- else %}
+      <p>Short takes on Instagram, TikTok and YouTube; the full reviews live here.</p>
+      {%- endif %}
+      <p><a href="{{ '/feed.xml' | relative_url }}">Article feed (Atom)</a></p>
+    </div>
+  </div>
+  <div class="wrap site-footer__base">
+    <p>{% include privacy-summary.html %} <a href="{{ '/privacy/' | relative_url }}">Privacy notice</a></p>
+    <p>&copy; {{ site.time | date: "%Y" }} {{ site.title }}. Cover art is original Twisted Takes artwork, not official posters. Film and series titles belong to their owners.</p>
+  </div>
+</footer>

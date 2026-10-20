@@ -1,0 +1,104 @@
+---
+layout: default
+body_class: home
+---
+{%- comment -%}
+  Home page. The featured story is chosen in _config.yml (featured:).
+  Genre sections list every movie review in that genre, oldest film first.
+{%- endcomment -%}
+{%- assign featured = nil -%}
+{%- if site.featured.collection == "posts" -%}
+  {%- assign featured = site.posts | where: "slug", site.featured.slug | first -%}
+{%- elsif site.featured.collection -%}
+  {%- assign featured = site[site.featured.collection] | where: "slug", site.featured.slug | first -%}
+{%- endif -%}
+{%- unless featured -%}{%- assign featured = site.posts | first -%}{%- endunless -%}
+{%- assign welcome = site.posts | where: "slug", "welcome-to-twisted-takes" | first -%}
+
+<section class="intro wrap" aria-labelledby="intro-heading">
+  <h1 class="intro__tagline" id="intro-heading"><span class="visually-hidden">{{ site.title }}: </span>Strong opinions. <em>Better watchlists.</em></h1>
+  <p class="intro__text">Twisted Takes is a student-run movie and TV review community. The short takes live on Instagram, TikTok and YouTube; this is where we slow down for the full review, the genre guide and the answer to “what should I watch next?”{% if welcome %} <a href="{{ welcome.url | relative_url }}">Read our mission</a>.{% endif %}</p>
+</section>
+
+{%- if featured %}
+<section class="featured wrap" aria-label="Featured article">
+  <article class="featured__story">
+    {%- if featured.image %}
+    <div class="featured__media">
+      <img src="{{ featured.image | relative_url }}" alt="{{ featured.image_alt | default: '' | escape }}" width="1200" height="750" fetchpriority="high" decoding="async">
+    </div>
+    {%- endif %}
+    <div class="featured__body">
+      <p class="kicker">Featured{% if featured.kicker %} · {{ featured.kicker }}{% endif %}</p>
+      <h2 class="featured__title"><a href="{{ featured.url | relative_url }}">{{ featured.title }}</a></h2>
+      <p class="featured__excerpt">{{ featured.excerpt | strip_html | normalize_whitespace }}</p>
+      <p class="byline">By {{ featured.author | default: site.author }} · <time datetime="{{ featured.date | date_to_xmlschema }}">{{ featured.date | date: "%B %-d, %Y" }}</time>{% unless featured.editorial_status == "approved" %} · Sample article{% endunless %}</p>
+      <p><a class="text-link" href="{{ featured.url | relative_url }}">Read the article<span class="visually-hidden">: {{ featured.title }}</span></a></p>
+    </div>
+  </article>
+</section>
+{%- endif %}
+
+<section class="genre-strip wrap" aria-labelledby="genre-strip-heading">
+  <h2 class="section-heading" id="genre-strip-heading">Pick a genre</h2>
+  <ul class="genre-strip__list">
+    {%- for genre in site.data.genres %}
+      {%- assign genre_all = site.reviews | where: "primary_genre", genre.key -%}
+      {%- assign genre_count = genre_all | where: "media_type", "movie" | size -%}
+      {%- assign genre_tv_count = genre_all | where: "media_type", "tv" | size %}
+    <li class="genre-strip__item" style="--genre-accent: {{ genre.accent }}">
+      <a class="genre-strip__link" href="{{ '/genres/' | append: genre.key | append: '/' | relative_url }}">{{ genre.name }}</a>
+      <p class="genre-strip__desc">{{ genre.short_description }}</p>
+      <p class="genre-strip__count">{{ genre_count }} movie {% if genre_count == 1 %}review{% else %}reviews{% endif %}{% if genre_tv_count > 0 %}, {{ genre_tv_count }} TV{% endif %} · <a href="#genre-{{ genre.key }}">Jump to the list<span class="visually-hidden"> of {{ genre.name }} reviews</span></a></p>
+    </li>
+    {%- endfor %}
+  </ul>
+</section>
+
+{%- for genre in site.data.genres %}
+  {%- assign genre_movies = site.reviews | where: "primary_genre", genre.key | where: "media_type", "movie" | sort: "year" %}
+<section class="home-genre wrap" id="genre-{{ genre.key }}" aria-labelledby="home-genre-{{ genre.key }}" style="--genre-accent: {{ genre.accent }}">
+  <div class="section-head">
+    <h2 class="section-heading section-heading--genre" id="home-genre-{{ genre.key }}">{{ genre.name }}</h2>
+    <a class="section-head__more" href="{{ '/genres/' | append: genre.key | append: '/' | relative_url }}">{{ genre.name }} hub<span aria-hidden="true"> →</span></a>
+  </div>
+  {%- if genre_movies.size > 0 %}
+  <ul class="card-grid">
+    {%- for review in genre_movies %}
+    <li>{% include review-card.html review=review %}</li>
+    {%- endfor %}
+  </ul>
+  {%- else %}
+  <p class="empty-state empty-state--quiet">No {{ genre.name }} reviews yet.</p>
+  {%- endif %}
+</section>
+{%- endfor %}
+
+{%- assign recent = site.posts | concat: site.watch_next | sort: "date" | reverse %}
+<section class="recent wrap" aria-labelledby="recent-heading">
+  <div class="section-head">
+    <h2 class="section-heading" id="recent-heading">Recent articles</h2>
+    <a class="section-head__more" href="{{ '/articles/' | relative_url }}">All articles<span aria-hidden="true"> →</span></a>
+  </div>
+  <ul class="article-grid">
+    {%- for item in recent limit: 6 %}
+    <li>{% include article-card.html item=item %}</li>
+    {%- endfor %}
+  </ul>
+</section>
+
+<section class="join wrap" aria-labelledby="join-heading">
+  <div class="join__text">
+    <h2 class="join__heading" id="join-heading">Join the conversation</h2>
+    <p>Our short videos and visuals go out on Instagram, TikTok and YouTube. The blog is where those takes get the room to explain themselves: every review ends with a question, and you can bring your answer to our social posts. Disagree with us; just do it kindly and label your spoilers.</p>
+    {%- capture join_social -%}{% include social-links.html verb="Follow on" class="social-links--buttons" %}{%- endcapture -%}
+    {%- if join_social contains "<a" %}
+    {{ join_social }}
+    {%- endif %}
+  </div>
+  <div class="join__prompt">
+    <p class="kicker">This week's question</p>
+    <p class="join__question">{{ site.data.weekly_prompt.question }}</p>
+    <p><a class="text-link" href="{{ '/community/' | relative_url }}">Go to the Community page</a></p>
+  </div>
+</section>

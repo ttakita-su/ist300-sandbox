@@ -1,0 +1,18 @@
+{%- comment -%}
+  Copy-link and native share controls. Without JavaScript, readers see the
+  page address in a read-only field. Parameter: type (review | article |
+  collection | page), used for the analytics share event.
+{%- endcomment -%}
+{%- capture share_url -%}{{ page.url | absolute_url }}{%- endcapture -%}
+<section class="share" aria-labelledby="share-heading" data-share data-share-url="{{ share_url }}" data-share-title="{{ page.headline | default: page.title | escape }}" data-share-type="{{ include.type | default: 'page' }}" data-share-id="{{ page.slug | default: page.url | escape }}">
+  <h2 class="share__heading" id="share-heading">Share</h2>
+  <div class="share__actions" data-share-actions hidden>
+    <button class="button" type="button" data-share-copy>Copy link</button>
+    <button class="button button--quiet" type="button" data-share-native hidden>Share…</button>
+  </div>
+  <p class="share__fallback" data-share-fallback>
+    <label class="share__label" for="share-url">Link to this page</label>
+    <input class="share__input" id="share-url" type="text" readonly value="{{ share_url }}">
+  </p>
+  <p class="share__status" role="status" aria-live="polite" data-share-status></p>
+</section>

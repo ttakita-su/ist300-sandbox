@@ -1,0 +1,17 @@
+{%- comment -%}
+  Related reviews from a document's related_reviews list (slug + reason).
+  Slugs that do not match a review are skipped.
+{%- endcomment -%}
+{%- if include.items and include.items.size > 0 -%}
+<section class="related" aria-labelledby="related-heading">
+  <h2 class="section-heading" id="related-heading">If this sounds like your kind of {% if page.media_type == "tv" %}show{% else %}movie{% endif %}</h2>
+  <ul class="card-grid card-grid--two">
+    {%- for rel in include.items %}
+      {%- assign rel_doc = site.reviews | where: "slug", rel.slug | first -%}
+      {%- if rel_doc %}
+    <li>{% include review-card.html review=rel_doc reason=rel.reason heading="h3" %}</li>
+      {%- endif %}
+    {%- endfor %}
+  </ul>
+</section>
+{%- endif -%}

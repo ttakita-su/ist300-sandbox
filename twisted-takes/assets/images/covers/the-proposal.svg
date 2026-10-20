@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
+  <defs><clipPath id="m"><rect width="800" height="640"/></clipPath></defs>
+  <rect width="800" height="1000" fill="#FDF3EC"/>
+  <g clip-path="url(#m)">
+    <circle cx="630" cy="150" r="58" fill="#E9A23B"/>
+    <path d="M0 470L120 330L190 390L300 250L410 380L470 330L560 410L680 280L800 400V640H0Z" fill="#F4D6DA"/>
+    <path d="M680 280L717 320L702 313L688 326L674 314L654 312Z" fill="#FFFDFB"/>
+    <path d="M0 560L90 470L170 520L260 430L360 540L450 470L540 530L640 440L740 520L800 480V640H0Z" fill="#EBBDC8"/>
+    <g fill="#5E2A3E">
+      <path d="M555 380L590.8 492.5H519.3Z"/>
+      <path d="M555 447.5L605.4 560H504.6Z"/>
+      <path d="M555 515L620 627.5H490Z"/>
+      <rect x="549" y="622" width="12" height="20"/>
+      <path d="M745 420L775.3 514.5H714.8Z"/>
+      <path d="M745 476.7L787.6 571.2H702.4Z"/>
+      <path d="M745 533.4L800 627.9H690Z"/>
+      <rect x="739" y="622" width="12" height="20"/>
+    </g>
+    <g fill="#3A1F2B">
+      <path d="M655 295L701.8 443.5H608.3Z"/>
+      <path d="M655 384L720.9 532.5H589.1Z"/>
+      <path d="M655 473L740 621.5H570Z"/>
+      <rect x="647" y="616" width="16" height="26"/>
+    </g>
+    <g transform="rotate(-5 290 360)">
+      <path d="M172 134H402L442 174V514H172Z" fill="#3A1F2B" fill-opacity=".12"/>
+      <path d="M160 120H390L430 160V500H160Z" fill="#FFFDFB"/>
+      <path d="M390 120V160H430Z" fill="#F2D7DE"/>
+      <rect x="192" y="156" width="132" height="10" rx="3" fill="#3A1F2B"/>
+      <rect x="192" y="178" width="86" height="6" rx="3" fill="#3A1F2B" fill-opacity=".4"/>
+      <path d="M192 216H398M192 236H392M192 256H398M192 276H340M192 312H398M192 332H386M192 352H398M192 372H312" stroke="#3A1F2B" stroke-opacity=".22" stroke-width="5" stroke-linecap="round"/>
+      <path d="M198 440C208 400 224 400 216 432C212 448 234 416 242 426C248 434 254 416 264 420C272 424 272 436 282 428C294 418 306 424 334 414" fill="none" stroke="#3A1F2B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M192 452H352" stroke="#A3325A" stroke-width="3"/>
+      <circle cx="392" cy="462" r="22" fill="#E9A23B"/>
+      <circle cx="392" cy="462" r="14" fill="none" stroke="#FFFDFB" stroke-opacity=".7" stroke-width="2"/>
+    </g>
+  </g>
+  <rect x="0" y="640" width="800" height="360" fill="#FFF9F6"/>
+  <rect x="60" y="676" width="56" height="4" fill="#A3325A"/>
+  <text x="60" y="722" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" letter-spacing="4" fill="#A3325A">ROM-COM · 2009</text>
+  <text font-family="Georgia, 'Times New Roman', serif" font-size="64" fill="#3A1F2B">
+    <tspan x="60" y="800">The Proposal</tspan>
+  </text>
+  <text x="740" y="952" text-anchor="end" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="22" fill="#5F6368">Twisted Takes</text>
+</svg>

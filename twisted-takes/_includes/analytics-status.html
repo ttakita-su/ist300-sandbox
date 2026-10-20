@@ -1,0 +1,11 @@
+{%- comment -%}
+  Sets `tt_ga_id` and `tt_analytics_on` for the tag, the event helper and the
+  privacy notice. Analytics is on only when a real Measurement ID is configured
+  and the build is a production build (GitHub Pages always is).
+{%- endcomment -%}
+{%- assign tt_ga_id = site.analytics.ga4_measurement_id | default: "" | strip -%}
+{%- assign tt_ga_prefix = tt_ga_id | slice: 0, 2 -%}
+{%- assign tt_analytics_on = false -%}
+{%- if tt_ga_prefix == "G-" and tt_ga_id != "G-XXXXXXXXXX" and jekyll.environment == "production" -%}
+  {%- assign tt_analytics_on = true -%}
+{%- endif -%}

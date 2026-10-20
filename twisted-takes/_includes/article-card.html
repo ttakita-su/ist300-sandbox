@@ -1,0 +1,20 @@
+{%- comment -%}
+  A card for a blog post or Watch Next collection. Parameters:
+    item     the document (required)
+    heading  heading tag, default h3
+{%- endcomment -%}
+{%- assign ac = include.item -%}
+{%- assign ac_h = include.heading | default: "h3" -%}
+<article class="article-card">
+  {%- if ac.image %}
+  <div class="article-card__media">
+    <img src="{{ ac.image | relative_url }}" alt="" width="1200" height="750" loading="lazy" decoding="async">
+  </div>
+  {%- endif %}
+  <div class="article-card__body">
+    <p class="article-card__kicker">{{ ac.kicker | default: "Article" }}</p>
+    <{{ ac_h }} class="article-card__title"><a class="card__link" href="{{ ac.url | relative_url }}">{{ ac.title }}</a></{{ ac_h }}>
+    <p class="article-card__excerpt">{{ ac.excerpt | strip_html | normalize_whitespace }}</p>
+    <p class="article-card__meta"><time datetime="{{ ac.date | date_to_xmlschema }}">{{ ac.date | date: "%B %-d, %Y" }}</time>{% unless ac.editorial_status == "approved" %} · <span class="article-card__status">Sample article</span>{% endunless %}</p>
+  </div>
+</article>

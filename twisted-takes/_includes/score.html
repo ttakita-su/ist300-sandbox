@@ -1,0 +1,12 @@
+{%- comment -%}
+  Editorial rating, 1 to 5. Parameter: score (a whole number, or nil).
+  nil or an out-of-range value shows "Not yet rated". This is the team's own
+  rating, never an audience vote or a score from another site.
+{%- endcomment -%}
+{%- assign sc = include.score | plus: 0 -%}
+{%- if include.score == nil or include.score == "" or sc < 1 or sc > 5 -%}
+<span class="score score--none">Not yet rated</span>
+{%- else -%}
+{%- assign sc_empty = 5 | minus: sc -%}
+<span class="score"><span class="score__stars" aria-hidden="true">{% for i in (1..sc) %}★{% endfor %}{% if sc_empty > 0 %}<span class="score__off">{% for i in (1..sc_empty) %}☆{% endfor %}</span>{% endif %}</span> <span class="score__text">{{ sc }} out of 5</span></span>
+{%- endif -%}

@@ -1,0 +1,36 @@
+---
+title: "Genres"
+description: "Five genre hubs to start with: Sci-Fi, True Crime, Fantasy, Rom-Com and Horror, each with launch reviews, mood labels and a discussion question."
+permalink: /genres/
+layout: default
+body_class: genres
+---
+<div class="wrap">
+  <header class="page-header page-header--wide">
+    <h1 class="page-title">Genres</h1>
+    <p class="lede">Five places to start. Each hub collects its reviews, the moods and subgenres to look for, and a question worth arguing about.</p>
+  </header>
+
+  <ul class="genre-index">
+    {%- for genre in site.data.genres %}
+      {%- assign genre_reviews = site.reviews | where: "primary_genre", genre.key | sort: "year" %}
+    <li class="genre-index__item" style="--genre-accent: {{ genre.accent }}">
+      <div class="genre-index__text">
+        <h2 class="genre-index__name"><a href="{{ '/genres/' | append: genre.key | append: '/' | relative_url }}">{{ genre.name }}</a></h2>
+        <p class="genre-index__desc">{{ genre.short_description }}</p>
+        {%- if genre.labels %}
+        <ul class="label-list label-list--compact" aria-label="{{ genre.name }} moods and subgenres">
+          {%- for label in genre.labels %}<li>{{ label }}</li>{% endfor %}
+        </ul>
+        {%- endif %}
+        <p class="genre-index__titles"><span class="visually-hidden">Includes: </span>{% for review in genre_reviews %}<a href="{{ review.url | relative_url }}">{{ review.title }}</a>{% unless forloop.last %}<span aria-hidden="true"> · </span>{% endunless %}{% endfor %}</p>
+      </div>
+      <div class="genre-index__covers" aria-hidden="true">
+        {%- for review in genre_reviews limit: 4 %}
+        <img src="{{ review.image | default: '/assets/images/covers/placeholder.svg' | relative_url }}" alt="" width="800" height="1000" loading="lazy" decoding="async">
+        {%- endfor %}
+      </div>
+    </li>
+    {%- endfor %}
+  </ul>
+</div>

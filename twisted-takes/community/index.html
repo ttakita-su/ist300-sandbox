@@ -1,0 +1,73 @@
+---
+title: "Community"
+description: "This week's Twisted Takes discussion question, how to join the conversation on Instagram, TikTok and YouTube, and our participation guidelines."
+permalink: /community/
+layout: default
+body_class: community
+---
+{%- assign prompt = site.data.weekly_prompt -%}
+{%- assign form_url = site.community_form.url | default: "" | strip -%}
+{%- assign form_embed = site.community_form.embed_url | default: "" | strip -%}
+<div class="wrap wrap--reading community">
+  <header class="page-header">
+    <h1 class="page-title">Community</h1>
+    <p class="lede">Twisted Takes is built for conversation. Here is this week's question, where to answer it, and the few ground rules that keep it fun.</p>
+  </header>
+
+  <section class="weekly" aria-labelledby="weekly-heading">
+    <p class="kicker">This week's question{% if prompt.week_of %} · <time datetime="{{ prompt.week_of | date: '%Y-%m-%d' }}">Week of {{ prompt.week_of | date: "%B %-d, %Y" }}</time>{% endif %}</p>
+    <h2 class="weekly__question" id="weekly-heading">{{ prompt.question }}</h2>
+    {%- if prompt.context %}
+    <p class="weekly__context">{{ prompt.context }}</p>
+    {%- endif %}
+    {%- if prompt.related and prompt.related.size > 0 %}
+    <p class="weekly__related">Need a starting point?
+      {%- for slug in prompt.related %}
+        {%- assign rel_doc = site.reviews | where: "slug", slug | first -%}
+        {%- if rel_doc %} <a href="{{ rel_doc.url | relative_url }}">{{ rel_doc.title }}</a>{% unless forloop.last %},{% endunless %}{% endif %}
+      {%- endfor %}
+    </p>
+    {%- endif %}
+    {%- capture weekly_social -%}{% include social-links.html links=prompt.discussion_links verb="Answer on" class="social-links--buttons" %}{%- endcapture -%}
+    {%- if weekly_social contains "<a" %}
+    {{ weekly_social }}
+    {%- else %}
+    <p class="weekly__where">Bring your answer to the Twisted Takes posts on Instagram, TikTok and YouTube, or talk it over with the people you watch with.</p>
+    {%- endif %}
+  </section>
+
+  {%- if form_url != "" %}
+  <section class="community-form" aria-labelledby="form-heading">
+    <h2 id="form-heading">Suggest a movie or vote</h2>
+    <p>Our poll and recommendation form is hosted by {{ site.community_form.provider | default: "an outside service" }}. Your answer goes straight to that service; this site does not see or store it.</p>
+    <p><a class="button" href="{{ form_url | escape }}" rel="noopener">{{ site.community_form.label | default: "Open the form" }}</a> <span class="facts__note">(opens {{ site.community_form.provider | default: "the form" }})</span></p>
+    {%- if form_embed != "" %}
+    <div class="community-form__embed">
+      <iframe src="{{ form_embed | escape }}" title="{{ site.community_form.label | default: 'Community form' | escape }} ({{ site.community_form.provider | default: 'external form' | escape }})" loading="lazy" width="100%" height="720"></iframe>
+    </div>
+    {%- endif %}
+  </section>
+  {%- endif %}
+
+  <section class="guidelines" aria-labelledby="guidelines-heading">
+    <h2 id="guidelines-heading">Ground rules</h2>
+    <ol class="guidelines__list">
+      <li><strong>Discuss the work.</strong> Talk about the story, the craft and how it made you feel. Critique the movie, not the person who liked it.</li>
+      <li><strong>Respect other viewers.</strong> Taste is personal. No insults, slurs, pile-ons or gatekeeping about who is a “real” fan.</li>
+      <li><strong>Label spoilers.</strong> Put “Spoilers for [title]” before anything about endings, twists or late reveals, and give newer releases extra room.</li>
+      <li><strong>Keep it relevant.</strong> Stay on the movie, show or question at hand. No spam, self-promotion or sharing anyone’s personal information.</li>
+    </ol>
+    <p>True crime titles involve real people and real losses. Please keep those conversations especially respectful of victims and their families.</p>
+  </section>
+
+  <section class="channels" aria-labelledby="channels-heading">
+    <h2 id="channels-heading">Where to find us</h2>
+    <p>The short takes live on social; the long ones live here. Every review and article on this site ends with a question you can take to our channels.</p>
+    {%- capture channel_social -%}{% include social-links.html verb="Twisted Takes on" class="social-links--buttons" %}{%- endcapture -%}
+    {%- if channel_social contains "<a" %}
+    {{ channel_social }}
+    {%- else %}
+    <p>Look for Twisted Takes on Instagram, TikTok and YouTube.</p>
+    {%- endif %}
+  </section>
+</div>

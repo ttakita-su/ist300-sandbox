@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
+<rect width="800" height="1000" fill="#23443A"/>
+<g><path d="M70 250h0M160 330h0M40 420h0M300 300h0M230 420h0M600 430h0M742 250h0M770 380h0M96 520h0M560 560h0M700 590h0M650 500h0M440 560h0M520 330h0M30 140h0M330 40h0" stroke="#F1E8D2" stroke-width="5" stroke-linecap="round" opacity=".5"/>
+<path d="M190 262h0M720 470h0M380 450h0M610 300h0" stroke="#F1E8D2" stroke-width="8" stroke-linecap="round" opacity=".8"/>
+<path transform="translate(250 360) scale(0.9)" d="M0-14L3-3L14 0L3 3L0 14L-3 3L-14 0L-3-3Z" fill="#B8892E"/>
+<path transform="translate(680 380) scale(1)" d="M0-14L3-3L14 0L3 3L0 14L-3 3L-14 0L-3-3Z" fill="#B8892E"/>
+<path transform="translate(214 604) scale(0.7)" d="M0-14L3-3L14 0L3 3L0 14L-3 3L-14 0L-3-3Z" fill="#B8892E"/>
+<path transform="translate(560 470) scale(0.6)" d="M0-14L3-3L14 0L3 3L0 14L-3 3L-14 0L-3-3Z" fill="#B8892E"/>
+<g transform="rotate(0 30 610)"><path d="M30 610h46v10h-46ZM66 580h46v10h-46ZM102 550h46v10h-46ZM138 520h46v10h-46Z" fill="#B8892E"/><path d="M30 620h46v7h-46ZM66 590h46v7h-46ZM102 560h46v7h-46ZM138 530h46v7h-46Z" fill="#7A5D22"/></g>
+<path d="M186 506h46v10h-46ZM222 476h46v10h-46ZM258 446h46v10h-46ZM294 416h46v10h-46Z" fill="none" stroke="#F1E8D2" stroke-width="2" stroke-dasharray="5 5" opacity=".35"/>
+<g transform="rotate(-14 186 506)"><path d="M186 506h46v10h-46ZM222 476h46v10h-46ZM258 446h46v10h-46ZM294 416h46v10h-46Z" fill="#B8892E"/><path d="M186 516h46v7h-46ZM222 486h46v7h-46ZM258 456h46v7h-46ZM294 426h46v7h-46Z" fill="#7A5D22"/></g>
+<g transform="rotate(6 330 382)"><path d="M330 382h46v10h-46ZM366 352h46v10h-46ZM402 322h46v10h-46Z" fill="#B8892E"/><path d="M330 392h46v7h-46ZM366 362h46v7h-46ZM402 332h46v7h-46Z" fill="#7A5D22"/></g>
+<circle cx="452" cy="266" r="64" fill="#2A5044"/><circle cx="452" cy="266" r="42" fill="#325E50"/>
+<path d="M426 258L440 240H464L478 258L452 298Z" fill="#B8392E"/>
+<path d="M426 258H478M440 240L447 258L452 298M464 240L457 258" fill="none" stroke="#E58A70" stroke-width="2" stroke-linejoin="round"/>
+<path transform="translate(484 232) scale(0.55)" d="M0-14L3-3L14 0L3 3L0 14L-3 3L-14 0L-3-3Z" fill="#B8892E"/>
+<g transform="translate(712 118) rotate(14)"><rect x="-82" y="-54" width="164" height="108" rx="3" fill="#F1E8D2"/><path d="M-82 -54L0 10.8L82 -54" fill="none" stroke="#C9B994" stroke-width="3.3"/><circle cx="0" cy="10.8" r="12.3" fill="#B8892E"/></g>
+<g transform="translate(546 186) rotate(-12)"><rect x="-59" y="-39" width="118" height="78" rx="3" fill="#F1E8D2"/><path d="M-59 -39L0 7.8L59 -39" fill="none" stroke="#C9B994" stroke-width="2.4"/><circle cx="0" cy="7.8" r="8.9" fill="#B8892E"/></g>
+<g transform="translate(392 138) rotate(18)"><rect x="-45" y="-29.5" width="90" height="59" rx="3" fill="#F1E8D2"/><path d="M-45 -29.5L0 5.9L45 -29.5" fill="none" stroke="#C9B994" stroke-width="2"/><circle cx="0" cy="5.9" r="6.8" fill="#B8892E"/></g>
+<g transform="translate(262 96) rotate(-16)"><rect x="-35" y="-23" width="70" height="46" rx="3" fill="#F1E8D2"/><path d="M-35 -23L0 4.6L35 -23" fill="none" stroke="#C9B994" stroke-width="2"/><circle cx="0" cy="4.6" r="5.3" fill="#B8892E"/></g>
+<g transform="translate(156 58) rotate(22)"><rect x="-27" y="-18" width="54" height="36" rx="3" fill="#F1E8D2"/><path d="M-27 -18L0 3.6L27 -18" fill="none" stroke="#C9B994" stroke-width="2"/><circle cx="0" cy="3.6" r="4.1" fill="#B8892E"/></g>
+<g transform="translate(70 34) rotate(-10)"><rect x="-20" y="-13" width="40" height="26" rx="3" fill="#F1E8D2"/><path d="M-20 -13L0 2.6L20 -13" fill="none" stroke="#C9B994" stroke-width="2"/><circle cx="0" cy="2.6" r="3" fill="#B8892E"/></g></g>
+<rect x="0" y="640" width="800" height="360" fill="#F7F4EA"/>
+<rect x="60" y="676" width="56" height="4" fill="#2E6B4F"/>
+<text x="60" y="722" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" letter-spacing="4" fill="#2E6B4F">FANTASY &#183; 2001</text>
+<text font-family="Georgia, 'Times New Roman', serif" font-size="62" fill="#1F3B33"><tspan x="60" y="800">Harry Potter and</tspan><tspan x="60" y="870">the Sorcerer's Stone</tspan></text>
+<text x="740" y="952" text-anchor="end" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="22" fill="#5F6368">Twisted Takes</text>
+</svg>

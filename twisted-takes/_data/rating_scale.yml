@@ -1,0 +1,18 @@
+# The optional 1–5 editorial rating scale, explained on the About page.
+# A review shows its rating only when the team sets `score:` in that review's
+# front matter. `score: null` displays "Not yet rated".
+- stars: 5
+  label: "Essential"
+  meaning: "One we would recommend to almost anyone who asks."
+- stars: 4
+  label: "Strongly recommended"
+  meaning: "Clearly worth your time, with small reservations."
+- stars: 3
+  label: "Worth it for the right viewer"
+  meaning: "Real strengths and real tradeoffs; the review explains who it suits."
+- stars: 2
+  label: "Mixed"
+  meaning: "Some parts land, but we would point most people elsewhere."
+- stars: 1
+  label: "Not for us"
+  meaning: "We would not recommend it, and the review explains why."

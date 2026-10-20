@@ -1,0 +1,10 @@
+{%- comment -%}
+  Shown on any review or article whose front matter does not say
+  editorial_status: "approved". Parameter: item (the document).
+{%- endcomment -%}
+{%- unless include.item.editorial_status == "approved" -%}
+{%- if include.item.collection == "reviews" -%}{%- assign sn_label = "Sample review" -%}{%- else -%}{%- assign sn_label = "Sample article" -%}{%- endif -%}
+<aside class="sample-notice" aria-label="{{ sn_label }}">
+  <p><strong class="sample-notice__label">{{ sn_label }}.</strong> This is starter text written to launch Twisted Takes. The team has not yet reviewed it or approved it as its own opinion.</p>
+</aside>
+{%- endunless -%}

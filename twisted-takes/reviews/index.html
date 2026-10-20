@@ -1,0 +1,101 @@
+---
+title: "Reviews"
+description: "Every Twisted Takes review in one place. Search by title, tag or mood, filter by genre and format, and sort by title or release year."
+permalink: /reviews/
+layout: default
+body_class: catalog
+scripts:
+  - catalog.js
+---
+{%- assign all_reviews = site.reviews | sort: "title" -%}
+{%- assign movie_count = site.reviews | where: "media_type", "movie" | size -%}
+{%- assign tv_count = site.reviews | where: "media_type", "tv" | size -%}
+<div class="wrap catalog" data-catalog data-index-url="{{ '/search.json' | relative_url }}" data-tv-total="{{ tv_count }}">
+  <header class="page-header page-header--wide">
+    <h1 class="page-title">Reviews</h1>
+    <p class="lede">Every Twisted Takes review in one place: {{ movie_count }} movies across five genres{% if tv_count > 0 %} and {{ tv_count }} TV {% if tv_count == 1 %}review{% else %}reviews{% endif %}{% else %}, with TV reviews on the way{% endif %}.</p>
+  </header>
+
+  <form class="catalog-controls" role="search" aria-label="Filter reviews" action="{{ '/reviews/' | relative_url }}" method="get" data-catalog-controls hidden>
+    <div class="catalog-controls__row">
+      <div class="field field--grow">
+        <label class="field__label" for="catalog-q">Search reviews</label>
+        <input class="field__input" id="catalog-q" type="search" name="q" placeholder="Title, tag, mood or director" autocomplete="off" enterkeyhint="search" aria-describedby="catalog-q-hint">
+        <p class="field__hint" id="catalog-q-hint">Try “heist”, “cozy”, “documentary” or a director’s name.</p>
+      </div>
+      <div class="field">
+        <label class="field__label" for="catalog-sort">Sort by</label>
+        <select class="field__input" id="catalog-sort" name="sort">
+          <option value="title">Title (A–Z)</option>
+          <option value="title-desc">Title (Z–A)</option>
+          <option value="year-desc">Release year (newest first)</option>
+          <option value="year">Release year (oldest first)</option>
+        </select>
+      </div>
+    </div>
+    <div class="catalog-controls__row">
+      <fieldset class="filter-group">
+        <legend class="field__label">Format</legend>
+        <div class="filter-group__options">
+          <label class="choice"><input type="radio" name="type" value="all" checked> <span>All</span></label>
+          <label class="choice"><input type="radio" name="type" value="movie"> <span>Movies</span></label>
+          <label class="choice"><input type="radio" name="type" value="tv"> <span>TV</span></label>
+        </div>
+      </fieldset>
+      <fieldset class="filter-group filter-group--grow">
+        <legend class="field__label">Genre</legend>
+        <div class="filter-group__options">
+          {%- for genre in site.data.genres %}
+          <label class="choice" style="--genre-accent: {{ genre.accent }}"><input type="checkbox" name="genre" value="{{ genre.key }}"> <span>{{ genre.name }}</span></label>
+          {%- endfor %}
+        </div>
+      </fieldset>
+    </div>
+    <div class="catalog-status">
+      <p class="catalog-count" id="catalog-count" role="status" aria-live="polite" aria-atomic="true">Showing all {{ all_reviews.size }} reviews</p>
+      <button class="button button--quiet" type="button" data-catalog-clear>Clear filters</button>
+    </div>
+  </form>
+
+  <noscript>
+    <p class="notice">Search, filters and sorting need JavaScript. Every review is listed below, and each genre page groups them by category.</p>
+  </noscript>
+
+  <nav class="genre-jump" aria-label="Browse reviews by genre">
+    <span class="genre-jump__label">Browse by genre:</span>
+    <ul>
+      {%- for genre in site.data.genres %}
+      <li><a href="{{ '/genres/' | append: genre.key | append: '/' | relative_url }}">{{ genre.name }}</a></li>
+      {%- endfor %}
+    </ul>
+  </nav>
+
+  <h2 class="visually-hidden" id="catalog-results-heading">Results</h2>
+  <ul class="card-grid catalog-results" id="catalog-results" aria-labelledby="catalog-results-heading" data-catalog-list>
+    {%- for review in all_reviews %}
+      {%- assign genre = site.data.genres | where: "key", review.primary_genre | first -%}
+      {%- capture haystack -%}{{ review.title }} {{ review.headline }} {{ review.subgenre }} {{ genre.name }} {{ review.primary_genre }} {{ review.tags | join: " " | replace: "-", " " }} {{ review.moods | join: " " }} {{ review.director }} {{ review.creator }} {{ review.year }} {{ review.media_type }}{%- endcapture %}
+    <li data-catalog-item data-title="{{ review.title | escape }}" data-year="{{ review.year }}" data-genre="{{ review.primary_genre }}" data-type="{{ review.media_type | default: 'movie' }}" data-search="{{ haystack | downcase | normalize_whitespace | escape }}">
+      {% include review-card.html review=review eager=forloop.first %}
+    </li>
+    {%- endfor %}
+  </ul>
+
+  <div class="empty-state empty-state--panel" data-catalog-empty hidden>
+    <h2 class="empty-state__heading">No reviews match those filters</h2>
+    <p data-catalog-empty-detail>Try a shorter search, another genre, or clear the filters.</p>
+    <p><button class="button" type="button" data-catalog-clear>Clear filters</button></p>
+  </div>
+
+  <div class="empty-state empty-state--panel" data-catalog-tv-empty hidden>
+    <h2 class="empty-state__heading">TV reviews are on the way</h2>
+    <p>We launched Twisted Takes with movies. TV reviews will appear here, in the same five genres, as soon as the team publishes them.</p>
+    <p>Until then, browse the movie reviews or pick something from <a href="{{ '/watch-next/' | relative_url }}">Watch Next</a>.</p>
+    <p><button class="button" type="button" data-catalog-show-movies>Show movie reviews</button></p>
+  </div>
+
+  <section class="catalog-articles" aria-labelledby="catalog-articles-heading" data-catalog-articles hidden>
+    <h2 class="section-heading" id="catalog-articles-heading">Articles that mention “<span data-catalog-articles-term></span>”</h2>
+    <ul class="link-list" data-catalog-articles-list></ul>
+  </section>
+</div>

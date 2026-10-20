@@ -1,0 +1,59 @@
+# Genre hubs, in display order.
+# discussion_links hold the URLs of specific Instagram, TikTok and YouTube posts where the
+# conversation about that genre is happening. They stay empty ("") until the team publishes
+# those posts.
+
+- key: "sci-fi"
+  name: "Sci-Fi"
+  accent: "#275A8C"
+  short_description: "Dream heists, black holes and alien grammar. Big ideas that still care about the people inside them."
+  labels: ["Mind-bending", "Space epic", "First contact", "Simulated worlds", "Dream heist"]
+  discussion_question: "Should a sci-fi film explain its big idea all the way, or is it better when you leave still arguing about the rules?"
+  discussion_links:
+    instagram: ""
+    tiktok: ""
+    youtube: ""
+
+- key: "true-crime"
+  name: "True Crime"
+  accent: "#7A4E1D"
+  short_description: "Feature documentaries about real cases. We look at how each film tells its story, and how carefully."
+  labels: ["Feature documentary", "Online deception", "Archival footage", "Interrogation tapes", "Viral fame"]
+  discussion_question: "What does a true crime documentary owe the families of the people it covers, and which storytelling choices cross the line?"
+  discussion_links:
+    instagram: ""
+    tiktok: ""
+    youtube: ""
+
+- key: "fantasy"
+  name: "Fantasy"
+  accent: "#2E6B4F"
+  short_description: "Long quests, magic schools and spirit bathhouses. Worlds built so well you want to move in."
+  labels: ["Epic quest", "Magic school", "Spirit worlds", "Curses and spells", "Hand-drawn animation", "Coming-of-age"]
+  discussion_question: "What makes a fantasy world stay with you longer: detailed lore and maps, or a sense of wonder nobody bothers to explain?"
+  discussion_links:
+    instagram: ""
+    tiktok: ""
+    youtube: ""
+
+- key: "rom-com"
+  name: "Rom-Com"
+  accent: "#A3325A"
+  short_description: "Bets, fake engagements and very loud families. Love stories where the banter does the heavy lifting."
+  labels: ["Enemies to lovers", "Fake relationship", "Bets and schemes", "Meet the family", "Teen comedy", "Workplace sparks"]
+  discussion_question: "Do rom-com plots built on a lie or a bet still feel romantic today, or would they need a rewrite to work now?"
+  discussion_links:
+    instagram: ""
+    tiktok: ""
+    youtube: ""
+
+- key: "horror"
+  name: "Horror"
+  accent: "#4B3F72"
+  short_description: "Haunted houses, silent monsters and uneasy family visits. Fear that hits close to home."
+  labels: ["Social thriller", "Haunted house", "Paranormal investigators", "Creature survival", "Family dread", "Slow burn"]
+  discussion_question: "Which stays with you longer after the credits: a jump scare that gets you in the moment, or slow dread that follows you to bed?"
+  discussion_links:
+    instagram: ""
+    tiktok: ""
+    youtube: ""

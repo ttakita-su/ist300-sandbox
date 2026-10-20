@@ -1,0 +1,19 @@
+{%- comment -%}
+  The discussion question at the end of a review or article.
+  Parameters: question (required), links (optional hash of specific social
+  post URLs; falls back to the profiles in _config.yml).
+{%- endcomment -%}
+{%- if include.question -%}
+<section class="discuss" aria-labelledby="discuss-heading">
+  <h2 class="discuss__heading" id="discuss-heading">Your take</h2>
+  <p class="discuss__question">{{ include.question }}</p>
+  {%- capture discuss_social -%}{% include social-links.html links=include.links verb="Answer on" class="social-links--buttons" %}{%- endcapture -%}
+  {%- if discuss_social contains "<a" %}
+  <p>Tell us on our channels. Disagree respectfully, and label spoilers.</p>
+  {{ discuss_social }}
+  <p class="discuss__more">More prompts on the <a href="{{ '/community/' | relative_url }}">Community page</a>.</p>
+  {%- else %}
+  <p>Talk it over, then bring your answer to the Twisted Takes conversation on Instagram, TikTok and YouTube. Disagree respectfully, and label spoilers. This week's question is on the <a href="{{ '/community/' | relative_url }}">Community page</a>.</p>
+  {%- endif %}
+</section>
+{%- endif -%}

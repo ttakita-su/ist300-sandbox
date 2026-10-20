@@ -1,0 +1,11 @@
+{%- include analytics-status.html -%}
+{%- if tt_analytics_on -%}
+<!-- Google Analytics 4: loaded because analytics.ga4_measurement_id is set in _config.yml -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ tt_ga_id | uri_escape }}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', {{ tt_ga_id | jsonify }});
+</script>
+{%- endif -%}

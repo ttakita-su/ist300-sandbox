@@ -1,0 +1,104 @@
+---
+layout: default
+---
+{%- assign genre = site.data.genres | where: "key", page.primary_genre | first -%}
+{%- if page.media_type == "tv" -%}{%- assign media_label = "TV review" -%}{%- else -%}{%- assign media_label = "Movie review" -%}{%- endif -%}
+<article class="review wrap wrap--reading" style="--genre-accent: {{ genre.accent | default: '#7A2944' }}">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <ol>
+      <li><a href="{{ '/reviews/' | relative_url }}">Reviews</a></li>
+      {%- if genre %}
+      <li><a href="{{ '/genres/' | append: genre.key | append: '/' | relative_url }}">{{ genre.name }}</a></li>
+      {%- endif %}
+      <li><span aria-current="page">{{ page.title }}</span></li>
+    </ol>
+  </nav>
+
+  <header class="review-header">
+    <p class="kicker kicker--genre">{{ genre.name | default: page.primary_genre }} · {{ media_label }}</p>
+    <h1 class="review-title">{{ page.headline | default: page.title }}</h1>
+    <p class="review-subject">
+      <cite class="review-subject__title">{{ page.title }}</cite> ({{ page.year }}){% if page.media_type == "tv" and page.season %}, season {{ page.season }}{% endif %}
+    </p>
+    <p class="byline">
+      By {{ page.author | default: site.author }}
+      · <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%B %-d, %Y" }}</time>
+      {%- if page.spoiler_status == "contains-spoilers" %}
+      · <span class="spoiler-flag spoiler-flag--warn">Spoilers are hidden below and labeled</span>
+      {%- else %}
+      · <span class="spoiler-flag">Spoiler-free</span>
+      {%- endif %}
+    </p>
+  </header>
+
+  {% include sample-notice.html item=page %}
+
+  <div class="review-facts">
+    <figure class="review-facts__cover">
+      <img src="{{ page.image | default: '/assets/images/covers/placeholder.svg' | relative_url }}" alt="{{ page.image_alt | default: page.title | escape }}" width="800" height="1000" fetchpriority="high" decoding="async">
+      {%- if page.image_credit %}
+      <figcaption>{{ page.image_credit }}</figcaption>
+      {%- endif %}
+    </figure>
+    <dl class="facts">
+      {%- if page.media_type == "tv" %}
+        {%- if page.creator %}<div class="facts__row"><dt>Created by</dt><dd>{{ page.creator }}</dd></div>{% endif %}
+        {%- if page.network %}<div class="facts__row"><dt>Network</dt><dd>{{ page.network }}</dd></div>{% endif %}
+        {%- if page.season %}<div class="facts__row"><dt>Season</dt><dd>{{ page.season }}{% if page.episodes %} ({{ page.episodes }} episodes){% endif %}</dd></div>{% endif %}
+      {%- endif %}
+      {%- if page.director %}<div class="facts__row"><dt>Director</dt><dd>{{ page.director }}</dd></div>{% endif %}
+      {%- if page.runtime_minutes %}
+        {%- assign rt_h = page.runtime_minutes | divided_by: 60 -%}
+        {%- assign rt_m = page.runtime_minutes | modulo: 60 -%}
+      <div class="facts__row"><dt>Runtime</dt><dd>{% if page.media_type == "tv" %}About {% endif %}{% if rt_h > 0 %}{{ rt_h }} hr {% endif %}{% if rt_m > 0 %}{{ rt_m }} min{% endif %}{% if page.media_type == "tv" %} per episode{% endif %}</dd></div>
+      {%- endif %}
+      {%- if page.content_rating %}
+      <div class="facts__row"><dt>Rated</dt><dd>{{ page.content_rating }}{% if page.content_rating_system == "MPA" %} <span class="facts__note">(MPA)</span>{% elsif page.content_rating_system == "TV" %} <span class="facts__note">(US TV rating)</span>{% endif %}</dd></div>
+      {%- endif %}
+      <div class="facts__row"><dt>Genre</dt><dd>{% if genre %}<a href="{{ '/genres/' | append: genre.key | append: '/' | relative_url }}">{{ genre.name }}</a>{% else %}{{ page.primary_genre }}{% endif %}{% if page.subgenre %} · {{ page.subgenre }}{% endif %}</dd></div>
+      {%- if page.moods and page.moods.size > 0 %}
+      <div class="facts__row"><dt>Mood</dt><dd>{{ page.moods | join: ", " }}</dd></div>
+      {%- endif %}
+      {%- if page.tags and page.tags.size > 0 %}
+      <div class="facts__row"><dt>Tags</dt><dd><ul class="tag-list">{% for tag in page.tags %}<li><a href="{{ '/reviews/' | relative_url }}?q={{ tag | url_encode }}">{{ tag | replace: "-", " " }}</a></li>{% endfor %}</ul></dd></div>
+      {%- endif %}
+      <div class="facts__row"><dt>Our rating</dt><dd>{% include score.html score=page.score %}</dd></div>
+    </dl>
+  </div>
+
+  {%- if page.advisory %}
+  <p class="advisory"><strong>Content advisory:</strong> {{ page.advisory }}</p>
+  {%- endif %}
+
+  <div class="prose review-body">
+    {{ content }}
+  </div>
+
+  {%- if page.trailer_url %}
+  <p class="trailer"><a href="{{ page.trailer_url | escape }}" rel="noopener">Watch the official trailer</a> <span class="facts__note">(opens an external site)</span></p>
+  {%- endif %}
+
+  {% include discussion.html question=page.discussion_question links=genre.discussion_links %}
+
+  {% include share.html type="review" %}
+
+  {% include related-reviews.html items=page.related_reviews %}
+
+  {%- if page.image_credit or page.sources.size > 0 %}
+  <section class="sources" aria-labelledby="sources-heading">
+    <h2 class="sources__heading" id="sources-heading">Sources and credits</h2>
+    <ul>
+      {%- for source in page.sources %}
+      <li><a href="{{ source.url | escape }}" rel="noopener">{{ source.label }}</a></li>
+      {%- endfor %}
+      {%- if page.image_credit %}
+      <li>{{ page.image_credit }}</li>
+      {%- endif %}
+    </ul>
+  </section>
+  {%- endif %}
+
+  {%- if genre %}
+  <p class="review-back"><a href="{{ '/genres/' | append: genre.key | append: '/' | relative_url }}">More {{ genre.name }} reviews</a> · <a href="{{ '/reviews/' | relative_url }}">All reviews</a></p>
+  {%- endif %}
+</article>

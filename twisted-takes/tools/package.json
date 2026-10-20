@@ -1,0 +1,12 @@
+{
+  "name": "twisted-takes-tools",
+  "private": true,
+  "description": "Optional helpers for Twisted Takes editors. Not needed to build or publish the site.",
+  "type": "module",
+  "scripts": {
+    "social-cards": "node social-cards.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  }
+}

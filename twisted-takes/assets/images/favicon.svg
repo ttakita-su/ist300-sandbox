@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Twisted Takes</title>
+  <rect width="64" height="64" rx="12" fill="#7A2944"/>
+  <g fill="#F2C2D0" transform="rotate(14 40 36)">
+    <rect x="27" y="20" width="26" height="7" rx="1"/>
+    <rect x="36.5" y="20" width="7" height="30" rx="1"/>
+  </g>
+  <g fill="#FAF9F6">
+    <rect x="10" y="13" width="28" height="8" rx="1"/>
+    <rect x="20" y="13" width="8" height="38" rx="1"/>
+  </g>
+</svg>

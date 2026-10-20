@@ -1,0 +1,59 @@
+---
+layout: default
+---
+<article class="article wrap wrap--reading">
+  <header class="article-header">
+    <p class="kicker">{{ page.kicker | default: "Article" }}</p>
+    <h1 class="article-title">{{ page.title }}</h1>
+    {%- if page.excerpt %}
+    <p class="lede">{{ page.excerpt | strip_html | normalize_whitespace }}</p>
+    {%- endif %}
+    <p class="byline">By {{ page.author | default: site.author }} · <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%B %-d, %Y" }}</time></p>
+  </header>
+
+  {% include sample-notice.html item=page %}
+
+  {%- if page.image %}
+  <figure class="article-hero">
+    <img src="{{ page.image | relative_url }}" alt="{{ page.image_alt | default: '' | escape }}" width="1200" height="750" fetchpriority="high" decoding="async">
+    {%- if page.image_credit %}<figcaption>{{ page.image_credit }}</figcaption>{% endif %}
+  </figure>
+  {%- endif %}
+
+  <div class="prose article-body">
+    {{ content }}
+  </div>
+
+  {%- if page.picks and page.picks.size > 0 %}
+  <section class="picks" aria-labelledby="picks-heading">
+    <h2 class="section-heading" id="picks-heading">In this collection</h2>
+    <ul class="card-grid card-grid--picks">
+      {%- for pick in page.picks %}
+        {%- assign pick_doc = site.reviews | where: "slug", pick.slug | first -%}
+        {%- if pick_doc %}
+      <li>{% include review-card.html review=pick_doc %}</li>
+        {%- endif %}
+      {%- endfor %}
+    </ul>
+  </section>
+  {%- endif %}
+
+  {% include discussion.html question=page.discussion_question %}
+
+  {%- if page.collection == "watch_next" -%}{%- assign share_type = "collection" -%}{%- else -%}{%- assign share_type = "article" -%}{%- endif %}
+  {% include share.html type=share_type %}
+
+  {%- assign more = site.posts | concat: site.watch_next | sort: "date" | reverse -%}
+  {%- assign more_count = 0 %}
+  <section class="more-articles" aria-labelledby="more-heading">
+    <h2 class="section-heading" id="more-heading">More from Twisted Takes</h2>
+    <ul class="article-grid">
+      {%- for item in more %}
+        {%- if item.url != page.url and more_count < 3 %}
+          {%- assign more_count = more_count | plus: 1 %}
+      <li>{% include article-card.html item=item %}</li>
+        {%- endif %}
+      {%- endfor %}
+    </ul>
+  </section>
+</article>

@@ -1,0 +1,20 @@
+# Main navigation, in order. `url` is relative to the site root (the base path
+# is added automatically). `match` marks a link as the current page for every
+# URL that starts with it; Home only matches the home page itself.
+- title: "Home"
+  url: "/"
+- title: "Reviews"
+  url: "/reviews/"
+  match: "/reviews/"
+- title: "Genres"
+  url: "/genres/"
+  match: "/genres/"
+- title: "Watch Next"
+  url: "/watch-next/"
+  match: "/watch-next/"
+- title: "About"
+  url: "/about/"
+  match: "/about/"
+- title: "Community"
+  url: "/community/"
+  match: "/community/"

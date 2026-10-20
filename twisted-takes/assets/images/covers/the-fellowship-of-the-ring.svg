@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
+<rect width="800" height="1000" fill="#E3EBDD"/>
+<g><circle cx="540" cy="292" r="166" fill="#F3F2E2"/>
+<path d="M70 150h180M128 176h84M600 96h130M640 120h62" stroke="#F6F8F2" stroke-width="7" stroke-linecap="round"/>
+<circle cx="540" cy="292" r="112" fill="none" stroke="#B8892E" stroke-width="22"/>
+<path d="M-20 640V410L50 372L110 396L190 316L262 368L322 336L392 384L452 352L540 398L622 334L690 366L752 306L820 346V640Z" fill="#B0C7B5"/>
+<path d="M-20 640V480L70 440L140 462L232 410L318 456L404 428L486 466L580 430L668 470L748 440L820 462V640Z" fill="#7FA58F"/>
+<path d="M-20 640V590C170 566 360 474 560 468C680 465 760 500 820 512V640Z" fill="#2E6B4F"/>
+<path d="M-20 640V612C150 592 300 604 460 624C600 642 700 612 820 602V640Z" fill="#1F3B33"/>
+<path d="M150 640C150 622 330 628 320 604C310 584 170 596 190 572C206 554 262 560 290 515.7" fill="none" stroke="#F1E8D2" stroke-width="6" stroke-linecap="round"/>
+<g fill="#1F3B33"><circle cx="300" cy="506" r="7"/><circle cx="325" cy="499.4" r="7"/><circle cx="350" cy="493.1" r="7"/><circle cx="375" cy="487.1" r="7"/><circle cx="400" cy="481.6" r="7"/><circle cx="425" cy="476.6" r="7"/><circle cx="450" cy="472.2" r="7"/><circle cx="475" cy="468.4" r="7"/><circle cx="500" cy="465.3" r="7"/></g></g>
+<rect x="0" y="640" width="800" height="360" fill="#F7F4EA"/>
+<rect x="60" y="676" width="56" height="4" fill="#2E6B4F"/>
+<text x="60" y="722" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" letter-spacing="4" fill="#2E6B4F">FANTASY &#183; 2001</text>
+<text font-family="Georgia, 'Times New Roman', serif" font-size="54" fill="#1F3B33"><tspan x="60" y="776">The Lord of the Rings:</tspan><tspan x="60" y="846">The Fellowship</tspan><tspan x="60" y="916">of the Ring</tspan></text>
+<text x="740" y="952" text-anchor="end" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="22" fill="#5F6368">Twisted Takes</text>
+</svg>
