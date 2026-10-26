@@ -23,7 +23,7 @@ import {
 import { ownedDetailsFields, readOwnedDetails, bindUsualSize, profileSizeFor } from '../ui/item-forms.js';
 import { openCatalogPicker } from '../ui/catalog-picker.js';
 import { webSnapshot } from '../ui/web-product.js';
-import { pill } from '../ui/screen-kit.js';
+import { pill, collectionTabs } from '../ui/screen-kit.js';
 import { confirmDialog, toast, toastError, withBusy, showFieldErrors } from '../lib/ui.js';
 
 const DISPLAY_LABEL = { catalog: 'Catalog image', original: 'Your photo', cleaned: 'Cleaned up', web: 'Store image' };
@@ -50,14 +50,17 @@ export default [
     roles: ['user'],
     async render(ctx) {
       const q = ctx.query;
-      const data = await ctx.api.listOwned({
-        category: q.category || undefined,
-        brandId: q.brand || undefined,
-        color: q.color || undefined,
-        q: q.q || undefined,
-        sort: q.sort || 'recent',
-        includeArchived: q.archived === '1',
-      });
+      const [data, outfits] = await Promise.all([
+        ctx.api.listOwned({
+          category: q.category || undefined,
+          brandId: q.brand || undefined,
+          color: q.color || undefined,
+          q: q.q || undefined,
+          sort: q.sort || 'recent',
+          includeArchived: q.archived === '1',
+        }),
+        ctx.api.listOutfits({}),
+      ]);
       const { facets } = data;
       const filtered = Boolean(q.category || q.brand || q.color || q.q);
       return html`<div class="stack stack-lg">
@@ -66,6 +69,7 @@ export default [
           lede: data.collectionTotal ? `${fmt.plural(data.collectionTotal, 'item')} you own` : null,
           actions: html`<a class="btn btn-primary" href="#/add?dest=owned">${icon('plus')}Add</a>`,
         })}
+        ${collectionTabs('items', { items: data.collectionTotal, outfits: outfits.total })}
         ${data.collectionTotal || data.archivedCount
           ? html`<div class="stack stack-sm">
               <form class="search-field" data-search role="search">
@@ -120,8 +124,9 @@ export default [
     tab: 'collection',
     roles: ['user'],
     async render(ctx) {
-      const item = await ctx.api.getOwned({ itemId: ctx.params.id });
+      const [item, { outfits }] = await Promise.all([ctx.api.getOwned({ itemId: ctx.params.id }), ctx.api.listOutfits({ itemId: ctx.params.id })]);
       ctx.item = item;
+      ctx.outfits = outfits;
       ctx.itemTitle = `${item.brandName} ${item.title}`;
       const d = item.details ?? {};
       const alt = `${item.brandName} ${item.title}${item.subtitle ? `, ${item.subtitle}` : ''}`;
@@ -174,6 +179,19 @@ export default [
                 <button type="button" class="btn btn-secondary btn-sm" data-correct>${icon('swap')}Change product</button>
                 ${item.photos?.originalId && !item.photos?.cleanedId ? html`<button type="button" class="btn btn-secondary btn-sm" data-cleanup>${icon('wand')}Clean up my photo</button>` : ''}
               </div>
+            </section>
+            <section class="stack stack-sm">
+              <h2>Outfits</h2>
+              ${outfits.length
+                ? html`<ul class="list outfit-list">${outfits.map(
+                    (o) => html`<li><a class="list-item" href="#/outfits/${encodeURIComponent(o.id)}">
+                      <span class="list-thumb">${icon('layers')}</span>
+                      <span class="grow"><span>${o.name}</span><span>${fmt.plural(o.itemCount, 'item')}</span></span>
+                      ${icon('chevron-right')}
+                    </a></li>`,
+                  )}</ul>`
+                : html`<p class="muted small">Not in any outfit yet.</p>`}
+              ${item.archivedAt ? '' : html`<div class="button-row"><a class="btn btn-secondary btn-sm" href="#/outfits/new?item=${id}">${icon('layers')}Build an outfit with this</a></div>`}
             </section>
             <section class="stack stack-sm">
               <h2>Manage</h2>
@@ -236,7 +254,8 @@ export default [
       );
       ctx.on('click', '[data-delete]', (event, button) =>
         run(button, async () => {
-          const ok = await confirmDialog({ title: 'Delete this item?', message: 'It and its photos are removed from this browser. This cannot be undone.', confirmLabel: 'Delete', tone: 'danger' });
+          const inOutfits = ctx.outfits.length ? ` It's also taken out of ${fmt.plural(ctx.outfits.length, 'outfit')}.` : '';
+          const ok = await confirmDialog({ title: 'Delete this item?', message: `It and its photos are removed from this browser.${inOutfits} This cannot be undone.`, confirmLabel: 'Delete', tone: 'danger' });
           if (!ok) return;
           await ctx.api.deleteOwned({ itemId: item.id });
           toast('Deleted');

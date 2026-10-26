@@ -8,6 +8,7 @@ import {
   WISH_REASONS,
   WISH_INTENTS,
   WISH_INTENT_FOR_REASON,
+  OUTFIT_LIMITS,
   validateSize,
   RETRIEVAL,
   IDENTITY,
@@ -418,6 +419,69 @@ export function buildWishlistItem(input, env) {
     purchasedOwnedId: null,
     web: input.productId || !input.custom ? null : cleanWebSnapshot(input.web, env.now),
   };
+}
+
+export const OUTFIT_FIELDS = ['name', 'itemIds', 'notes'];
+
+// Like UNSAFE_TEXT, but keeps the zero-width joiner and non-joiner that emoji and Persian need.
+const NAME_STRIP = /[\u0000-\u001F\u007F-\u009F؜​‎‏‪-‮⁠-⁩﻿]/g;
+
+/** An outfit name as stored: spaces collapsed, then control, zero-width and bidi characters removed. */
+export function cleanOutfitName(value) {
+  return typeof value === 'string' ? value.replace(/\s+/g, ' ').replace(NAME_STRIP, '').replace(/\s+/g, ' ').trim() : '';
+}
+
+// Characters that draw nothing on their own: controls, format characters, spaces, combining
+// marks, default-ignorable characters (joiners, soft hyphen, variation selectors, Hangul
+// fillers) and the blank braille cell. A name made only of these is empty.
+const INVISIBLE = /[\p{Cc}\p{Cf}\p{Z}\p{M}\p{Default_Ignorable_Code_Point}⠀]/gu;
+// What comparing names ignores. Combining marks still count: in many scripts they change the word.
+const IGNORED_IN_NAMES = /\p{Default_Ignorable_Code_Point}/gu;
+
+/** What two outfit names are compared by: "Weekend  Look", "weekend look" and "Week­end look" match. */
+export function outfitNameKey(name) {
+  return cleanOutfitName(name)
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(IGNORED_IN_NAMES, '')
+    .replace(/⠀/g, ' ') // the blank braille cell looks like a space
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Cleans the outfit fields in `input` (name, itemIds, notes). Without `partial`, all three are
+ * checked; with it, only the ones given. Ownership and name clashes need the database, so the
+ * caller checks those and adds to `errors` before throwing.
+ * @param {any} input
+ * @param {{ partial?: boolean }} [opts]
+ * @returns {{ fields: { name?: string, itemIds?: string[], notes?: string }, errors: Record<string, string> }}
+ */
+export function checkOutfitFields(input, { partial = false } = {}) {
+  const fields = {};
+  const errors = {};
+  const has = (key) => !partial || input?.[key] !== undefined;
+  if (has('name')) {
+    const name = cleanOutfitName(input?.name);
+    // A name has to show something: one made only of invisible characters is empty.
+    if (!name.replace(INVISIBLE, '')) errors.name = 'Enter a name for this outfit';
+    else if (name.length > OUTFIT_LIMITS.nameMax) errors.name = `Use ${OUTFIT_LIMITS.nameMax} characters or fewer`;
+    fields.name = name;
+  }
+  if (has('itemIds')) {
+    const ids = input?.itemIds;
+    if (!Array.isArray(ids)) errors.itemIds = 'Choose items from your collection';
+    const unique = Array.isArray(ids) ? [...new Set(ids.filter((id) => typeof id === 'string' && id))] : [];
+    if (!errors.itemIds && unique.length < OUTFIT_LIMITS.minItems) errors.itemIds = 'Choose at least two items';
+    else if (unique.length > OUTFIT_LIMITS.maxItems) errors.itemIds = `Choose up to ${OUTFIT_LIMITS.maxItems} items`;
+    fields.itemIds = unique;
+  }
+  if (has('notes')) {
+    const notes = cleanText(input?.notes == null ? '' : input.notes, Infinity);
+    if (notes.length > OUTFIT_LIMITS.notesMax) errors.notes = `Use ${OUTFIT_LIMITS.notesMax} characters or fewer`;
+    fields.notes = notes;
+  }
+  return { fields, errors };
 }
 
 export function defaultProfile(userId) {

@@ -66,7 +66,7 @@ async function removeAccountData(ctx, user) {
     removed[store] = (removed[store] ?? 0) + rows.length;
   };
 
-  for (const store of ['ownedItems', 'wishlistItems', 'photos', 'matchJobs', 'recRequests', 'feedback', 'stylistRequests', 'stylistRecs', 'corrections']) {
+  for (const store of ['ownedItems', 'wishlistItems', 'outfits', 'photos', 'matchJobs', 'recRequests', 'feedback', 'stylistRequests', 'stylistRecs', 'corrections']) {
     await drop(store, await ctx.db.where(store, 'userId', uid));
   }
   const profile = await ctx.db.get('profiles', uid);
@@ -100,7 +100,7 @@ export const ops = {
   /**
    * Everything stored about the actor, including private photos as data URLs.
    * result: { format, version, exportedAt, notes, account (no password hash or salt), profile,
-   *           owned, wishlist, photos: [{ id, kind, mime, width, height, bytes, createdAt,
+   *           owned, wishlist, outfits, photos: [{ id, kind, mime, width, height, bytes, createdAt,
    *           processingId, sourceId, dataUrl }], matchJobs, recRequests, feedback,
    *           stylistRequests, stylistRecs, stylistAssignments, corrections, clicks (rows under
    *           the account's pseudonymous analyticsId), conversions linked to those clicks,
@@ -115,10 +115,11 @@ export const ops = {
       const uid = ctx.actor.id;
       const user = (await ctx.db.get('users', uid)) ?? {};
       const byUser = (store) => ctx.db.where(store, 'userId', uid);
-      const [profile, owned, wishlist, photoRows, matchJobs, recRequests, feedback, requests, recsReceived, corrections, sessions] = await Promise.all([
+      const [profile, owned, wishlist, outfits, photoRows, matchJobs, recRequests, feedback, requests, recsReceived, corrections, sessions] = await Promise.all([
         ctx.db.get('profiles', uid),
         byUser('ownedItems'),
         byUser('wishlistItems'),
+        byUser('outfits'),
         byUser('photos'),
         byUser('matchJobs'),
         byUser('recRequests'),
@@ -152,7 +153,7 @@ export const ops = {
       const refs = new Set(clicks.map((c) => c.clickRef));
       const conversions = refs.size ? (await ctx.db.all('conversions')).filter((c) => refs.has(c.clickRef)) : [];
 
-      const mine = ownIds([owned, wishlist, photoRows, matchJobs, requests, corrections, recsReceived, asClient]);
+      const mine = ownIds([owned, wishlist, outfits, photoRows, matchJobs, requests, corrections, recsReceived, asClient]);
       mine.add(uid);
       const audit = await ctx.db.all('audit');
       const activity = audit
@@ -174,6 +175,7 @@ export const ops = {
         profile: profile ?? null,
         owned,
         wishlist,
+        outfits,
         photos,
         matchJobs,
         recRequests,
@@ -193,7 +195,7 @@ export const ops = {
 
   /**
    * Deletes the account and every private record and photo. args: { confirm: 'DELETE' }
-   * Removes items, wishlist, photos, match jobs, recommendation requests, feedback, stylist
+   * Removes items, wishlist, outfits, photos, match jobs, recommendation requests, feedback, stylist
    * requests, recommendations and assignments, corrections the person filed, idempotency
    * entries, sessions (signing out everywhere), clicks under the analyticsId and audit rows
    * about them, then the account.

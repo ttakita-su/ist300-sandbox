@@ -68,9 +68,9 @@ It assumes six decks, a dealer who hits soft 17 and peeks for blackjack, 3 to 2 
 ## Closet Advisor: Rotation ([`closet-advisor/`](closet-advisor/))
 
 A mobile-first prototype of an AI closet and shopping advisor: photograph what you own, confirm
-what it is, get picks that go with it, keep a wishlist and compare retailer offers. The photo
-pipeline and matching run in the browser against a fictional demo catalog (brands, retailers and
-prices are made up and labeled as demo). Live at
+what it is, save outfits made from it, get picks that go with it, keep a wishlist and compare
+retailer offers. The photo pipeline and matching run in the browser against a fictional demo
+catalog (brands, retailers and prices are made up and labeled as demo). Live at
 [/closet-advisor/](https://ttakita-su.github.io/ist300-sandbox/closet-advisor/), in demo mode.
 
 It also has three live features that look up **real products**: paste a store's product link,

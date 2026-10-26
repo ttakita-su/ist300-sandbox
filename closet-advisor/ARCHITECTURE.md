@@ -65,8 +65,8 @@ closet-advisor/
   README.md               how to run it, live features, privacy, troubleshooting (for people)
   index.html              app shell; loads css/*.css and js/app.js as a module
   manifest.webmanifest    PWA manifest
-  sw.js                   service worker (app shell, stale-while-revalidate; never cross-origin
-                          requests or ./api/)
+  sw.js                   service worker (app shell, stale-while-revalidate past the HTTP cache;
+                          never cross-origin requests or ./api/)
   api/status.json         { "live": false }: what every static host serves; the local server
                           answers this path itself with { "live": true, ... }
   backend/                the local server (Node 24, zero dependencies; section 2.1)
@@ -242,7 +242,8 @@ statuses and counts, never URLs, hosts, queries or user ids.
 - Sizes always carry their system: `{ value: '10', system: 'US-M' }`. One-size products use
   `{ value: 'OS', system: 'ONE-SIZE' }`. Size systems are never converted into each other.
 - IDs: catalog ids are stable slugs; user records use `newId(prefix)` from `js/lib/ids.js`
-  (`own_`, `wish_`, `pho_`, `job_`, `rec_`, `fb_`, `req_`, `srec_`, `clk_`, `cor_`, `aud_`).
+  (`own_`, `wish_`, `fit_` (outfits), `pho_`, `job_`, `rec_`, `fb_`, `req_`, `srec_`, `clk_`,
+  `cor_`, `aud_`).
 - User-facing copy: US English, sentence case, plain verbs, active voice. Buttons say what
   happens ("Save to collection", "View offers"). Errors say what happened and what to do; they
   don't apologize. No all-caps labels, no `→` on buttons, no percentages the data can't support.
@@ -485,6 +486,21 @@ wishlistItem {
   web: WebSnapshot | null, purchasedOwnedId: string | null
 }                                       // no display field: views derive it (5.2)
 
+outfit {                                // owner-only; never shared with stylists or admins
+  id, userId, createdAt, updatedAt,
+  name,                                 // 1..60 UTF-16 units after spaces are collapsed and
+                                        // control, zero-width and bidi characters removed
+                                        // (joiners kept); needs one visible character; unique
+                                        // per person ignoring case, spacing and
+                                        // default-ignorable characters (NFKC + lowercase;
+                                        // combining marks count; best effort, no index)
+  itemIds: [ownedItem id],              // 2..12 of the person's own items when saved, archived
+                                        // ones allowed; deleteOwned removes an id, so an outfit
+                                        // can drop below 2 (its view says incomplete)
+  notes: string                         // '' or up to 500 characters
+}                                       // DB_VERSION 2 added this store; no demo outfits are
+                                        // seeded (DEMO_SEED_VERSION is unchanged)
+
 matchJob {
   id, userId, createdAt, updatedAt, dest: 'owned' | 'wishlist', category: CATEGORY | null,
   photoId, processingId: string | null, crop: { x, y, w, h, rotate } | null,
@@ -624,6 +640,7 @@ export const ops = {
 | `ops/matching.js` | `createMatchJob`, `getMatchJob`, `addMatchEvidence`, `retryMatchJob`, `rejectMatch`, `searchWebForPhoto`, `confirmMatch` |
 | `ops/inventory.js` | `listOwned`, `getOwned`, `createOwned`, `updateOwned`, `archiveOwned`, `restoreOwned`, `deleteOwned`, `setDisplayImage`, `correctMatch`, `reportCatalogIssue`, `checkDuplicates` |
 | `ops/wishlist.js` | `listWishlist`, `getWishlistItem`, `createWishlist`, `updateWishlist`, `removeWishlist`, `markPurchased` |
+| `ops/outfits.js` | `listOutfits`, `getOutfit`, `createOutfit`, `updateOutfit`, `deleteOutfit` |
 | `ops/recs.js` | `recommend`, `helpMeChoose`, `giveFeedback`, `listFeedback`, `removeFeedback`, `parseRequest` |
 | `ops/offers.js` | `getOffers`, `createClick`, `importFromUrl` |
 | `ops/marketplaces.js` | `listMarketplaces`, `searchMarketplaces`, `importMarketplaceLink` |
@@ -670,6 +687,14 @@ OwnedView = ownedItem & {
 WishlistView = wishlistItem & { product, variant, brandName, title, subtitle, code, image, web,
   linkedOwned: [{ id, category, brandName, title, subtitle, image }],
   ownedCopies: number, purchasedOwned: { id } | null }
+
+OutfitView {               // ops/outfits.js; owner-only, like the items in it
+  id, name, notes, createdAt, updatedAt,
+  itemIds: [id],           // only ids that are still the person's items, in saved order
+  items: [OwnedView],      // archived items included (archivedAt set)
+  itemCount: number,
+  incomplete: boolean      // fewer than 2 items left after deletions
+}
 
 DisplayImage {
   kind: 'catalog' | 'original' | 'cleaned' | 'web' | 'placeholder',
@@ -800,7 +825,7 @@ missing ones (`not_found`).
 - `getOwned({ itemId })` → `OwnedView`
 - `createOwned({ category, productId?, variantId?, custom?, details?, ownerChanges?, photos?: { originalId?, labelIds?, webId? }, display?, source?: 'catalog_search'|'product_link'|'manual'|'web', sourceUrl?, web?, allowDuplicate?, idempotencyKey })` → `OwnedView`; the identity is always built server side. `source: 'web'` is a custom item like `manual` (`custom` required; a `productId` or `variantId` is `invalid`) plus a required `web` snapshot (`invalid` with `fields.web` when it can't be cleaned). Its identity is `manual` with one evidence line: "Details from nike.com on Oct 15, 2026; not checked by Rotation." (via `page`) or "Picked from a Bing Shopping listing (Walmart) on Oct 15, 2026; not checked by Rotation." (via `search`). `sourceUrl` defaults to `web.url`; `display` defaults to `'web'` when `photos.webId` is set.
 - `updateOwned({ itemId, patch: { details?, ownerChanges?, custom?, display?, photos?: { originalId?, labelIds?, webId? } } })` → `OwnedView`. A removed store image is deleted unless another record uses it, and a display without its image falls back.
-- `archiveOwned` / `restoreOwned({ itemId })` → `OwnedView`; `deleteOwned({ itemId })` → `{ ok: true }` (photos go too unless still used; removed from shares)
+- `archiveOwned` / `restoreOwned({ itemId })` → `OwnedView` (outfits keep archived items); `deleteOwned({ itemId })` → `{ ok: true }` (photos go too unless still used; removed from outfits first, then from wishlist links and shares)
 - `setDisplayImage({ itemId, display: 'catalog'|'original'|'cleaned'|'web' })` → `OwnedView`; `invalid` with the reason when that image can't be shown (`'web'` needs `photos.webId`)
 - `correctMatch({ itemId, productId|null, variantId|null, custom? })` → `OwnedView` (the person's record only; evidence replaced)
 - `reportCatalogIssue({ productId, variantId?, field, proposedValue, note })` → correction (`field` from `correctionFieldsFor(category)` in `ops/admin.js`)
@@ -814,6 +839,15 @@ missing ones (`not_found`).
 - `updateWishlist({ itemId, patch: { reason?, intent?, desired?, targetPriceMinor?, linkedOwnedIds?, reasonNote? } })` → `WishlistView`
 - `removeWishlist({ itemId })` → `{ ok: true }`
 - `markPurchased({ itemId, details: { size?, condition?, purchase? }, variantId?, allowDuplicate?, idempotencyKey })` → `{ owned: OwnedView, wish: WishlistView }`. The only way a wish becomes owned; the wished size is not assumed. A custom wish's `web` snapshot and `photos.webId` carry over (the owned item then displays `'web'`).
+
+**Outfits** (`user`; others → `not_found`; stylists and admins → `forbidden`)
+
+- `listOutfits({ itemId? })` → `{ outfits: [OutfitView], total }`, most recently changed first (an item-delete cleanup counts as a change); `itemId` keeps the outfits holding that item; `total` counts all of them
+- `getOutfit({ outfitId })` → `OutfitView`
+- `createOutfit({ name, itemIds, notes?, idempotencyKey })` → `OutfitView`
+- `updateOutfit({ outfitId, patch: { name?, itemIds?, notes? } })` → `OutfitView`. Only the given fields are checked and changed; keeping its own name, or changing only its capitals, is allowed; saving without a change leaves the record as it was. An empty patch is `invalid` ("Choose what to change.").
+- `deleteOutfit({ outfitId })` → `{ ok: true }`; the items stay
+- Errors are `invalid` with `fields.name` ("Enter a name for this outfit", "Use 60 characters or fewer", "You already have an outfit with this name"), `fields.itemIds` ("Choose at least two items", "Choose up to 12 items", "Choose items from your collection") or `fields.notes`. An item id that isn't one of the person's items, whether deleted, made up or someone else's, gets one answer: `fields.itemIds` "Choose again: some of these items are no longer in your collection", with `details.missingItemIds` echoing those ids. This is a deliberate exception to `not_found`, so the form can mark the field and drop the rows; it reveals nothing, since only the caller's own ids come back and every kind of id gets the same answer. Audit rows carry counts and field names, never the name or notes; the one metric is `outfit_created { items }`.
 
 **Recommendations** (`user`; `recommend` and `helpMeChoose` are rate-limited `recs`)
 
@@ -851,7 +885,7 @@ missing ones (`not_found`).
 
 **Privacy** (`any`)
 
-- `exportMyData({})` → everything stored about the actor (photos as data URLs, sessions without tokens, clicks under the analytics id), nothing about anyone else
+- `exportMyData({})` → everything stored about the actor (photos as data URLs, outfits, sessions without tokens, clicks under the analytics id), nothing about anyone else
 - `deleteMyAccount({ confirm: 'DELETE' })` → `{ ok: true, reset: boolean, removed: { [store]: count } }`; signs out everywhere. Demo accounts are reset (the whole demo re-seeds) instead of removed.
 
 **Admin** (`admin`; never returns a person's items)
@@ -1035,6 +1069,10 @@ Routes (hash based, `#/path?query`):
 | `/collection` | owned grid with filters | Collection |
 | `/collection/:id` | item detail | Collection |
 | `/collection/:id/edit` | edit item | Collection |
+| `/outfits` | outfits made from the collection (Items / Outfits switch) | Collection |
+| `/outfits/new` | build an outfit `?item=<ownedItem id>` preselects one | Collection |
+| `/outfits/:id` | outfit detail | Collection |
+| `/outfits/:id/edit` | edit an outfit | Collection |
 | `/wishlist` | wishlist | Wishlist |
 | `/wishlist/:id` | wishlist item | Wishlist |
 | `/wishlist/compare` | help me choose `?ids=a,b,c` | Wishlist |
@@ -1077,6 +1115,10 @@ form fields), `js/ui/item-forms.js` (size fields, owned details, wish fields, du
 `keepStoreImage`, `lookupFallback`, `loadStorePage`, `webSnapshot`, `seenParts`),
 `js/ui/catalog-picker.js`, `js/lib/ui.js` (`toast`, `openSheet`, `confirmDialog`, `withBusy`,
 `formData`, `showFieldErrors`, `toastError`, `downloadBlob`). `dev/components.html` shows them.
+A sheet belongs to the screen that opened it: a route change (Back, a link) dismisses it as if
+cancelled, so it can't act on a page the person has left. Sheets that navigate close themselves
+first, so their result is kept. Route parameters with a broken `%` escape are passed through
+as typed instead of throwing.
 
 ### 7.2 Design system
 
@@ -1140,7 +1182,25 @@ Tokens in `css/tokens.css`, classes in `css/components.css`:
   `reportCatalogIssue`, archive, delete, and "Find similar" / "Find matching" links to `/recs`.
   When `item.web` exists (collection and wishlist), `webSnapshot(item.web)` shows "Seen at
   {site} for {price}", "checked {relative time}" and a plain "View on {host}" link
-  (`target="_blank" rel="noopener noreferrer"`, not an affiliate link).
+  (`target="_blank" rel="noopener noreferrer"`, not an affiliate link). An "Outfits" section
+  lists `listOutfits({ itemId })` and links to `/outfits/new?item=` (not for archived items);
+  the delete confirmation says how many outfits the item is taken out of.
+- **Outfits.** `/collection` and `/outfits` share an Items / Outfits switch
+  (`collectionTabs`, the `.tabs` link row with `aria-current="page"`). The list shows cards
+  with up to four thumbnails, "Needs another item" for incomplete outfits, and empty states for
+  "No outfits yet" and for fewer than two active items ("Add a few items first", no form). The
+  form has a name (`maxlength` 60), items grouped clothing, sneakers, watches as `.choice`
+  checkboxes in a `fieldset.field` (the item error sits under its hint), a filter box from 7
+  items (hidden choices stay chosen; Enter there doesn't submit), a live "chosen" count, and
+  a 13th pick is refused with a toast. New outfits offer active items; edits also list archived
+  items already in the outfit, and send only the fields that changed (so a rename works on an
+  incomplete outfit and doesn't overwrite another tab's item changes). Save on edit goes back to
+  the outfit page when a plain click on its Edit link opened the form, else replaces the form
+  with the outfit page (Back, Forward or a bookmark); Cancel is a back link. After a refused
+  save the first error is scrolled to the middle of the screen (focus alone can leave it under
+  the sticky header), and focus stays in the item list when the filter hides the first item. `details.missingItemIds` rows are removed from the form. Detail and edit catch
+  `not_found` and show "Outfit not found" in the screen, without a console error. Delete uses
+  `confirmDialog` ("The items in it stay in your collection.").
 - **Discover / recs.** `recommend({ mode: 'feed' })`; the request box calls `recommend` with
   `text` and shows `interpretation.chips` (editable; rebuild with `constraintsFromChips`),
   `applied.hard`/`soft` labels, `emptyReason`, and one button per relaxation that merges its
@@ -1202,6 +1262,10 @@ Tokens in `css/tokens.css`, classes in `css/components.css`:
   - `admin`: roles, weights, provider simulation, job retry, clicks vs revenue, feed import,
     corrections, image status, offer freshness.
   - `inventory`, `matching`, `recs`, `commerce`, `marketplaces`: each module's own rules.
+  - `outfits`: create, list, read, update and delete; name, item and notes limits; duplicate
+    names (case, spacing, NFKC, invisible characters); idempotent saves; another person's
+    items and outfits; archived items; the item-delete cascade and dangling ids; stylists,
+    admins and logs never seeing outfit text; export, account deletion and demo reset.
   - `web`: `web-guess.js`, `cleanWebSnapshot`, `money()` digits, the web ops with a scripted
     provider (found, blocked, not connected, invalid links, rate limits, another person's job,
     a running job), saving with `source: 'web'` (manual identity, evidence, `sourceUrl`,
@@ -1231,7 +1295,13 @@ Tokens in `css/tokens.css`, classes in `css/components.css`:
   falling back to its link text, and the not-connected state on the static server. It fails on
   any request that would leave the machine, and checks nothing reaches `/api/lens` before the
   tap. `-- --ocr` also reads a label photo with Tesseract.js (needs a connection to jsDelivr;
-  the only test that uses the network). Helpers for new browser tests: `tests/e2e/helpers.mjs`
+  the only test that uses the network). `outfits.mjs` drives outfit create, read, update and
+  delete through the screens at 390 px (light) with reloads, the D08 break tests (empty and
+  duplicate saves, double taps, HTML and 60-character names, another person's address, a
+  signed-out bookmark, a broken `%` escape, two tabs, archived and deleted items, a big closet,
+  Back with a dialog open, keyboard only), export and demo reset, a desktop dark-theme pass and
+  a version 1 database upgrading to 2; it fails on clipped content as well as page scroll, and
+  on any request that would leave the machine. Helpers for new browser tests: `tests/e2e/helpers.mjs`
   (`openApp`, `signInAs`, `go`, `callApi`, `hasHorizontalScroll`).
 - `npm run eval` runs the synthetic evaluation in headless Chromium and writes
   `docs/evaluation.md`.

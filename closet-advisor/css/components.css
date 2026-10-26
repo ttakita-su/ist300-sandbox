@@ -1364,6 +1364,8 @@ button.list-item {
   padding: 0 var(--s5) calc(var(--s6) + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* Messages can quote names people typed, which may be one long word. */
+  overflow-wrap: anywhere;
 }
 
 @keyframes sheet-in {

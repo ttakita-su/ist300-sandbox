@@ -43,7 +43,7 @@ export const DEMO_ACCOUNTS = [
   },
 ];
 
-const USER_STORES = ['ownedItems', 'wishlistItems', 'photos', 'matchJobs', 'recRequests', 'feedback', 'stylistRequests', 'stylistRecs', 'corrections'];
+const USER_STORES = ['ownedItems', 'wishlistItems', 'outfits', 'photos', 'matchJobs', 'recRequests', 'feedback', 'stylistRequests', 'stylistRecs', 'corrections'];
 
 export const DEMO_ACCOUNT_IDS = new Set(DEMO_ACCOUNTS.map((a) => a.id));
 

@@ -8,6 +8,7 @@ import add from './add.js';
 import capture from './capture.js';
 import match from './match.js';
 import collection from './collection.js';
+import outfits from './outfits.js';
 import wishlist from './wishlist.js';
 import discover from './discover.js';
 import product from './product.js';
@@ -24,6 +25,7 @@ export default [
   ...capture,
   ...match,
   ...collection,
+  ...outfits,
   ...wishlist,
   ...discover,
   ...product,

@@ -16,6 +16,15 @@ function compile(path) {
   return { regex: new RegExp(`^${pattern || ''}/?$`), keys };
 }
 
+/** A path parameter, decoded. A hand-edited address with a broken escape ("%") is kept as typed. */
+function decodeParam(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 /** Parses the current hash into { path, query }. */
 export function parseHash(hash = location.hash) {
   const value = hash.replace(/^#/, '') || '/';
@@ -55,7 +64,7 @@ export function createRouter(options) {
       const m = entry.regex.exec(path);
       if (m) {
         const params = {};
-        entry.keys.forEach((key, i) => (params[key] = decodeURIComponent(m[i + 1])));
+        entry.keys.forEach((key, i) => (params[key] = decodeParam(m[i + 1])));
         return { route: entry.route, params };
       }
     }

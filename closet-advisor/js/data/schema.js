@@ -4,6 +4,9 @@ export const CATEGORIES = ['sneaker', 'watch', 'clothing'];
 export const CATEGORY_LABEL = { sneaker: 'Sneakers', watch: 'Watches', clothing: 'Clothing' };
 export const CATEGORY_SINGULAR = { sneaker: 'Sneaker', watch: 'Watch', clothing: 'Clothing item' };
 
+/** Outfit limits. An outfit can fall below minItems when one of its items is deleted. */
+export const OUTFIT_LIMITS = { nameMax: 60, notesMax: 500, minItems: 2, maxItems: 12 };
+
 export const RETRIEVAL = ['candidate_found', 'similar_result', 'no_match', 'processing_error', 'not_run'];
 export const IDENTITY = ['unconfirmed', 'user_confirmed', 'identifier_supported', 'manual'];
 export const VARIANT_STATE = ['confirmed', 'incomplete', 'conflicting', 'not_applicable'];

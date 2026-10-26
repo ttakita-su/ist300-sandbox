@@ -443,8 +443,9 @@ export const ops = {
 
   /**
    * Deletes the item and its private photos (original, processing, cleaned, label, store image) and removes
-   * it from the person's stylist shares, snapshots and wishlist links. A photo another of the
-   * person's records or an unfinished match job still uses is kept.
+   * it from the person's outfits, stylist shares, snapshots and wishlist links. An outfit left with
+   * fewer than two items is kept. A photo another of the person's records or an unfinished match
+   * job still uses is kept.
    * args: { itemId } -> { ok: true }
    */
   deleteOwned: {
@@ -456,6 +457,12 @@ export const ops = {
       const mine = [item.photos?.originalId, item.photos?.cleanedId, ...(item.photos?.labelIds ?? []), item.photos?.webId].filter(Boolean);
       const deletedPhotos = await deletePhotos(ctx, userId, mine.filter((id) => !inUse.has(id)));
 
+      // Outfits first: if a later write fails, the item is still there and deleting it again
+      // finishes the job. (Outfit views also skip ids that no longer exist.)
+      for (const outfit of await ctx.db.where('outfits', 'userId', userId)) {
+        if (!outfit.itemIds?.includes(item.id)) continue;
+        await ctx.db.put('outfits', { ...outfit, itemIds: outfit.itemIds.filter((id) => id !== item.id), updatedAt: ctx.iso() });
+      }
       await ctx.db.delete('ownedItems', item.id);
       for (const wish of await ctx.db.where('wishlistItems', 'userId', userId)) {
         if (!wish.linkedOwnedIds?.includes(item.id)) continue;

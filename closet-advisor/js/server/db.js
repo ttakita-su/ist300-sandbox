@@ -9,6 +9,7 @@ export const STORES = {
   photos: { key: 'id', indexes: ['userId'] },
   ownedItems: { key: 'id', indexes: ['userId', 'variantId'] },
   wishlistItems: { key: 'id', indexes: ['userId'] },
+  outfits: { key: 'id', indexes: ['userId'] },
   matchJobs: { key: 'id', indexes: ['userId', 'status'] },
   recRequests: { key: 'id', indexes: ['userId'] },
   feedback: { key: 'id', indexes: ['userId'] },
@@ -33,7 +34,8 @@ export const STORES = {
 };
 
 export const DB_NAME = 'rotation-prototype';
-export const DB_VERSION = 1;
+// 2: outfits.
+export const DB_VERSION = 2;
 
 /**
  * @typedef {{

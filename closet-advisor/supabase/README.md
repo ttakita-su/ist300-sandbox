@@ -26,6 +26,12 @@ Add these (with row-level security unchanged: the snapshot and the store image a
 person's private data, and a stylist sees the store image only when photos are shared) before
 the production build saves web items.
 
+**Not mirrored yet: outfits.** The prototype's `outfit` records (ARCHITECTURE.md 4.3: a name,
+2 to 12 of the person's own item ids, notes) have no table. A production table needs
+owner-only row-level security (never visible to stylists or admins), a check that every item
+belongs to the same person, removal of an item id when that item is deleted, and a unique index
+on the owner plus the normalized name, which the prototype checks only on a best-effort basis.
+
 ## How these were checked
 
 **The migrations parse, but they have not been run against a Supabase project or any

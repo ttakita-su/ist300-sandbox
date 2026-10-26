@@ -12,6 +12,7 @@ import * as photos from './ops/photos.js';
 import * as matching from './ops/matching.js';
 import * as inventory from './ops/inventory.js';
 import * as wishlist from './ops/wishlist.js';
+import * as outfits from './ops/outfits.js';
 import * as recs from './ops/recs.js';
 import * as offers from './ops/offers.js';
 import * as stylist from './ops/stylist.js';
@@ -20,7 +21,7 @@ import * as admin from './ops/admin.js';
 import * as marketplaces from './ops/marketplaces.js';
 import * as web from './ops/web.js';
 
-const MODULES = { account, profile, catalog: catalogOps, photos, matching, inventory, wishlist, recs, offers, stylist, privacy, admin, marketplaces, web };
+const MODULES = { account, profile, catalog: catalogOps, photos, matching, inventory, wishlist, outfits, recs, offers, stylist, privacy, admin, marketplaces, web };
 
 export const RATE_LIMITS = {
   scan: { limit: 30, windowMs: 3600000, label: 'scans' },

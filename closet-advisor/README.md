@@ -1,9 +1,9 @@
 # Rotation
 
 Rotation is a class prototype of an AI closet and shopping advisor. You photograph what you
-own, confirm what it is, and the app builds a collection, suggests what goes with it, keeps a
-wishlist and compares retailer offers. It is a mobile-first web app in plain HTML, CSS and
-JavaScript with no build step.
+own, confirm what it is, and the app builds a collection, lets you save outfits made from it,
+suggests what goes with it, keeps a wishlist and compares retailer offers. It is a
+mobile-first web app in plain HTML, CSS and JavaScript with no build step.
 
 It now also has a small local Node server (`npm start`) that looks up **real products** from
 online stores: paste a store's product link, search online stores by name, or search with a
@@ -20,6 +20,7 @@ Engineers: the design contract is [ARCHITECTURE.md](ARCHITECTURE.md). The produc
 | Matching against the catalog, identity and version checks, abstaining when unsure | Real logic, but matched against a fictional catalog |
 | Catalog, brands, retailers, offers, prices, affiliate links | Demo. Fictional, labeled as demo, store domains end in `.example` |
 | Accounts and the "server" for your data | Demo. A module layer in the browser tab, data in IndexedDB |
+| Outfits (Collection, Outfits: build, view, edit and delete named sets of your own items) | Real, kept in this browser like your items. Outfits are never shared with a stylist and are not used for suggestions |
 | Product page lookup (paste a link) | Real, with `npm start` |
 | Search online stores (Bing Shopping and Bing web results) | Real, with `npm start` |
 | Photo search (Bing visual search) | Real, with `npm start`, only when you press the button |
@@ -117,7 +118,8 @@ When a store blocks a lookup, Rotation:
 
 ## Privacy
 
-- Your items, photos, notes and sizes are kept in this browser (IndexedDB). Nothing is synced.
+- Your items, outfits, photos, notes and sizes are kept in this browser (IndexedDB). Nothing is
+  synced. Export my data includes your outfits; deleting your account removes them.
 - **Your photo leaves your device only when you press Search online stores** on the match
   screen. The line under the button says it goes to Microsoft Bing. Rotation sends the 768 px
   copy it already made, re-encoded without EXIF or GPS data, rotated the way you rotated it.
@@ -165,8 +167,8 @@ commercial.
 
 | Command | What it covers |
 | --- | --- |
-| `npm test` | Unit tests in Node (`tests/unit/*.test.mjs`): the server layer, matching, recommendations, access rules, and the live-lookup code with fake answers: the backend's request guard (address checks, redirects, size and type limits, block detection, cooldowns, spacing, caching), the product-page extractor, the Bing parsers, the server's request checks, and saving web items |
-| `npm run test:e2e` | Browser checks in Chromium (needs `npm install` once): every route as each role, the photo pipeline, and the real-product flows (a pasted link, an online search and a photo search, each to a saved item, a store that blocks, and demo mode) |
+| `npm test` | Unit tests in Node (`tests/unit/*.test.mjs`): the server layer, matching, recommendations, access rules, and the live-lookup code with fake answers: the backend's request guard (address checks, redirects, size and type limits, block detection, cooldowns, spacing, caching), the product-page extractor, the Bing parsers, the server's request checks, saving web items, and outfits (limits, duplicate names, ownership, the item-delete cascade, export and deletion) |
+| `npm run test:e2e` | Browser checks in Chromium (needs `npm install` once): every route as each role, the photo pipeline, and the real-product flows (a pasted link, an online search and a photo search, each to a saved item, a store that blocks, and demo mode), and outfits (create, view, edit and delete with reloads, the D08 break tests, a desktop dark pass, and the database upgrade from version 1) |
 | `npm run eval` | The synthetic matching evaluation; rewrites `docs/evaluation.md` |
 
 **The tests never use the network.** The live-lookup tests run the real server code against

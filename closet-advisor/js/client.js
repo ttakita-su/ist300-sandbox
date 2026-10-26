@@ -109,7 +109,9 @@ export async function resetDemo() {
   } catch (error) {
     console.error(error);
   }
-  location.hash = '#/welcome';
+  // replaceState doesn't fire hashchange, so no screen renders against the deleted database
+  // before the reload.
+  history.replaceState(null, '', '#/welcome');
   location.reload();
 }
 

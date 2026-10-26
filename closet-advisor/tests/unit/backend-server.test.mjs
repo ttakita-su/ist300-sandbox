@@ -320,8 +320,16 @@ test('the service worker leaves api/ to the network and uses a new cache name', 
   const listeners = {};
   const self = { location: new URL('https://ttakita.example/ist300-sandbox/closet-advisor/sw.js'), addEventListener: (type, fn) => (listeners[type] = fn), skipWaiting() {}, clients: { claim() {} } };
   const opened = [];
-  const caches = { open: async (name) => (opened.push(name), { match: async () => undefined, put: async () => {} }), keys: async () => [] };
-  vm.runInNewContext(source, { self, caches, URL, fetch: async () => new Response('ok') });
+  const added = [];
+  const fetchInits = [];
+  const caches = { open: async (name) => (opened.push(name), { match: async () => undefined, put: async () => {}, addAll: async (requests) => added.push(...requests) }), keys: async () => [] };
+  // A worker resolves relative URLs against its own location.
+  const WorkerRequest = class extends Request {
+    constructor(url, init) {
+      super(new URL(url, self.location), init);
+    }
+  };
+  vm.runInNewContext(source, { self, caches, URL, Request: WorkerRequest, fetch: async (request, init) => (fetchInits.push(init), new Response('ok')) });
   const handled = (url, method = 'GET') => {
     let responded = false;
     listeners.fetch({ request: { url, method, mode: 'cors' }, respondWith: () => (responded = true) });
@@ -332,7 +340,13 @@ test('the service worker leaves api/ to the network and uses a new cache name', 
   assert.equal(handled('https://ttakita.example/ist300-sandbox/closet-advisor/js/app.js'), true);
   assert.equal(handled('https://cdn.jsdelivr.net/npm/tesseract.js'), false);
   await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.deepEqual(opened, ['rotation-v2']);
+  assert.deepEqual(opened, ['rotation-v3']);
+  // Refreshes and the install skip the browser's HTTP cache, so old and new modules can't mix.
+  assert.deepEqual(fetchInits.map((init) => init?.cache), ['no-cache']);
+  let installed;
+  listeners.install({ waitUntil: (promise) => (installed = promise) });
+  await installed;
+  assert.ok(added.length > 5 && added.every((r) => r instanceof Request && r.cache === 'reload'));
 });
 
 test('the port: a busy one falls back to the next free port only when fallbacks are allowed', async (t) => {

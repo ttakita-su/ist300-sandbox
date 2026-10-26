@@ -11,6 +11,17 @@ export function pill(href, text, on, count) {
   return html`<a class="${cx('chip', on && 'is-selected')}" href="${href}" ${on ? html`aria-current="true"` : ''}>${text}${count != null ? html` <span class="count">${count}</span>` : ''}</a>`;
 }
 
+/**
+ * The Items / Outfits switch under the head of /collection and /outfits.
+ * @param {'items'|'outfits'} current
+ * @param {{ items?: number, outfits?: number }} [counts]
+ */
+export function collectionTabs(current, counts = {}) {
+  const tab = (id, href, text, count) =>
+    html`<a href="${href}" ${current === id ? html`aria-current="page"` : ''}>${text}${count != null ? html`<span class="count">${count}</span>` : ''}</a>`;
+  return html`<nav class="tabs" aria-label="Collection">${tab('items', '#/collection', 'Items', counts.items)}${tab('outfits', '#/outfits', 'Outfits', counts.outfits)}</nav>`;
+}
+
 /** Action row for a recommendation card. Feedback goes back to the request that showed it. */
 export function recActions(item, requestId) {
   const btn = (attr, cls, content) =>

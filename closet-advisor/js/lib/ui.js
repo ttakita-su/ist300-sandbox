@@ -57,7 +57,14 @@ export function openSheet(opts) {
       result = value;
       dialog.close();
     };
+    // A sheet belongs to the screen that opened it: leaving that screen (Back, a link) dismisses
+    // it, so it can't act on a page the person has left. A sheet already closing keeps its result.
+    const onRouteChange = () => {
+      if (dialog.open) close(undefined);
+    };
+    window.addEventListener('hashchange', onRouteChange);
     dialog.addEventListener('close', () => {
+      window.removeEventListener('hashchange', onRouteChange);
       if (typeof cleanup === 'function') cleanup();
       dialog.remove();
       resolve(result);
