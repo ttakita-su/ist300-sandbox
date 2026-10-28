@@ -168,7 +168,7 @@ commercial.
 | Command | What it covers |
 | --- | --- |
 | `npm test` | Unit tests in Node (`tests/unit/*.test.mjs`): the server layer, matching, recommendations, access rules, and the live-lookup code with fake answers: the backend's request guard (address checks, redirects, size and type limits, block detection, cooldowns, spacing, caching), the product-page extractor, the Bing parsers, the server's request checks, saving web items, and outfits (limits, duplicate names, ownership, the item-delete cascade, export and deletion) |
-| `npm run test:e2e` | Browser checks in Chromium (needs `npm install` once): every route as each role, the photo pipeline, and the real-product flows (a pasted link, an online search and a photo search, each to a saved item, a store that blocks, and demo mode), and outfits (create, view, edit and delete with reloads, the D08 break tests, a desktop dark pass, and the database upgrade from version 1) |
+| `npm run test:e2e` | Browser checks in Chromium (needs `npm install` once): every route as each role, the photo pipeline, and the real-product flows (a pasted link, an online search and a photo search, each to a saved item, a store that blocks, and demo mode), the closet inventory (the eight D08 checks for adding, listing, editing and deleting your own items, with reloads, two break tests per action and a desktop dark pass), and outfits (create, view, edit and delete with reloads, the D08 break tests, a desktop dark pass, and the database upgrade from version 1) |
 | `npm run eval` | The synthetic matching evaluation; rewrites `docs/evaluation.md` |
 
 **The tests never use the network.** The live-lookup tests run the real server code against

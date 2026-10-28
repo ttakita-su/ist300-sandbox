@@ -501,6 +501,19 @@ export default [
         const params = new URLSearchParams({ ...ctx.query, type: select.value, brand: form.elements['custom.brand'].value, name: form.elements['custom.name'].value, variantName: form.elements['custom.variantName'].value });
         ctx.navigate(`/add/manual?${params}`, { replace: true });
       });
+      // The category and destination pills open a new form; carry over what was typed.
+      ctx.on('click', 'a.chip[href^="#/add/manual?"]', (event, link) => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        const form = root.querySelector('form[data-manual]');
+        const params = new URLSearchParams(link.getAttribute('href').split('?')[1]);
+        for (const key of ['brand', 'name', 'variantName']) {
+          const value = form?.elements[`custom.${key}`].value;
+          if (value) params.set(key, value);
+          else params.delete(key);
+        }
+        event.preventDefault();
+        ctx.navigate(`/add/manual?${params}`);
+      });
       ctx.on('submit', '[data-manual]', async (event, form) => {
         event.preventDefault();
         const custom = {

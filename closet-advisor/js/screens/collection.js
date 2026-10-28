@@ -42,6 +42,31 @@ function filterHref(query, patch) {
   return `#/collection${qs ? `?${qs}` : ''}`;
 }
 
+// The id of the item whose page was just used to open its edit screen. Save then returns to
+// that page instead of adding it to history again.
+let editOpenedFrom = null;
+
+/** The item, or null when it isn't in this person's collection (deleted, or never theirs). */
+async function findItem(ctx) {
+  try {
+    return await ctx.api.getOwned({ itemId: ctx.params.id });
+  } catch (error) {
+    if (error?.code === 'not_found') return null;
+    throw error;
+  }
+}
+
+function itemNotFoundState() {
+  return html`<div class="stack stack-lg">
+    ${backHead({ title: 'Item not found', back: '#/collection' })}
+    ${emptyState({
+      title: "This item isn't here",
+      body: 'It may have been deleted, or it was saved in another browser.',
+      actions: html`<a class="btn btn-primary" href="#/collection">Back to collection</a>`,
+    })}
+  </div>`;
+}
+
 export default [
   {
     path: '/collection',
@@ -124,8 +149,12 @@ export default [
     tab: 'collection',
     roles: ['user'],
     async render(ctx) {
-      const [item, { outfits }] = await Promise.all([ctx.api.getOwned({ itemId: ctx.params.id }), ctx.api.listOutfits({ itemId: ctx.params.id })]);
+      const [item, { outfits }] = await Promise.all([findItem(ctx), ctx.api.listOutfits({ itemId: ctx.params.id })]);
       ctx.item = item;
+      if (!item) {
+        ctx.itemTitle = 'Item not found';
+        return itemNotFoundState();
+      }
       ctx.outfits = outfits;
       ctx.itemTitle = `${item.brandName} ${item.title}`;
       const d = item.details ?? {};
@@ -134,7 +163,7 @@ export default [
       const options = item.image?.options ?? [];
       const variantColors = item.variant?.colors ?? (item.custom?.colors ?? []).map((name) => ({ name }));
       return html`<div class="stack stack-lg">
-        ${backHead({ title: item.title, back: '#/collection', actions: html`<a class="icon-btn" href="#/collection/${id}/edit" aria-label="Edit details">${icon('edit')}</a>` })}
+        ${backHead({ title: item.title, back: '#/collection', actions: html`<a class="icon-btn" href="#/collection/${id}/edit" aria-label="Edit details" data-edit-item>${icon('edit')}</a>` })}
         ${item.archivedAt ? notice({ tone: 'info', title: 'Archived', body: `You archived this ${fmt.relative(item.archivedAt)}. It's hidden from your collection and suggestions.` }) : ''}
         <div class="split">
           <div class="stack">
@@ -160,6 +189,7 @@ export default [
             <section class="stack stack-sm">
               <h2>Your details</h2>
               ${facts([
+                ['Category', CATEGORY_LABEL[item.category] ?? null],
                 ['Size', fmt.size(d.size)],
                 ['Condition', OWNED_CONDITION_LABEL[d.condition] ?? null],
                 ['Paid', d.purchase?.priceMinor != null ? fmt.money(d.purchase.priceMinor, d.purchase.currency) : null],
@@ -170,7 +200,7 @@ export default [
                 ['Added', fmt.date(item.createdAt)],
               ])}
               ${d.notes ? html`<p class="panel panel-flat small">${d.notes}</p>` : ''}
-              <a class="link-btn" href="#/collection/${id}/edit">${icon('edit', { className: 'icon-sm' })} Edit details</a>
+              <a class="link-btn" href="#/collection/${id}/edit" data-edit-item>${icon('edit', { className: 'icon-sm' })} Edit details</a>
             </section>
             <section class="stack stack-sm">
               <h2>How it was identified</h2>
@@ -208,6 +238,12 @@ export default [
     },
     mount(root, ctx) {
       const item = ctx.item;
+      if (!item) return;
+      ctx.on('click', '[data-edit-item]', (event) => {
+        // A click that opens a new tab or window doesn't navigate this one.
+        const plain = event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+        editOpenedFrom = plain ? item.id : null;
+      });
       const run = (button, fn) =>
         withBusy(button, async () => {
           try {
@@ -270,8 +306,9 @@ export default [
     tab: 'collection',
     roles: ['user'],
     async render(ctx) {
-      const [item, profile] = await Promise.all([ctx.api.getOwned({ itemId: ctx.params.id }), ctx.api.getProfile({})]);
+      const [item, profile] = await Promise.all([findItem(ctx), ctx.api.getProfile({})]);
       ctx.item = item;
+      if (!item) return itemNotFoundState();
       let sizing = null;
       if (item.productId) sizing = (await ctx.api.getProduct({ productId: item.productId })).product.sizing;
       const type = item.product?.type ?? item.custom?.type ?? undefined;
@@ -289,29 +326,36 @@ export default [
           ${ownedDetailsFields({ category: item.category, type, sizing, values: item.details, usual: profileSizeFor(profile, item.category, type) })}
           <div class="button-row">
             <button type="submit" class="btn btn-primary">Save changes</button>
-            <a class="btn btn-ghost" href="#/collection/${encodeURIComponent(item.id)}">Cancel</a>
+            <a class="btn btn-ghost" href="#/collection/${encodeURIComponent(item.id)}" data-back>Cancel</a>
           </div>
         </form>
       </div>`;
     },
     mount(root, ctx) {
+      const item = ctx.item;
+      const openedFromPage = Boolean(item) && editOpenedFrom === item.id;
+      editOpenedFrom = null;
+      if (!item) return;
+      const page = `/collection/${encodeURIComponent(item.id)}`;
       const off = bindUsualSize(root);
       ctx.on('submit', '[data-edit]', async (event, form) => {
         event.preventDefault();
-        const item = ctx.item;
         await withBusy(form.querySelector('[type="submit"]'), async () => {
           try {
             const patch = { details: readOwnedDetails(form, item.category) };
             if (item.custom) {
-              patch.custom = {
-                brand: form.elements['custom.brand'].value,
-                name: form.elements['custom.name'].value,
-                variantName: form.elements['custom.variantName'].value,
-              };
+              // Only the fields changed here, so saving an older tab doesn't undo another tab's edit.
+              const custom = {};
+              for (const key of ['brand', 'name', 'variantName']) {
+                const value = form.elements[`custom.${key}`].value;
+                if (value !== (item.custom[key] ?? '')) custom[key] = value;
+              }
+              if (Object.keys(custom).length) patch.custom = custom;
             }
             await ctx.api.updateOwned({ itemId: item.id, patch });
             toast('Saved');
-            ctx.navigate(`/collection/${encodeURIComponent(item.id)}`, { replace: true });
+            if (openedFromPage) ctx.back(page);
+            else ctx.navigate(page, { replace: true });
           } catch (error) {
             if (!showFieldErrors(form, error)) toastError(error);
           }

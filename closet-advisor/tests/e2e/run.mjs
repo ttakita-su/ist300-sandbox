@@ -8,6 +8,7 @@ const CHECKS = [
   ['Every route as each role', here('./smoke.mjs'), []],
   ['Photo pipeline', here('./photo.mjs'), extra.filter((a) => a === '--ocr')],
   ['Real product lookups (fixture stores, no network)', here('./web.mjs'), []],
+  ['Closet inventory: the eight D08 checks and break tests', here('./inventory.mjs'), []],
   ['Outfits: create, read, update, delete and break tests', here('./outfits.mjs'), []],
 ];
 

@@ -321,6 +321,54 @@ test('manual items carry no catalog identity, and callers cannot supply one', as
   await rejectsWith(api.createOwned(alex, { category: 'sneaker', productId: 'kestrel-runner-2', variantId: 'vela-court-low--white-gum' }), 'invalid');
 });
 
+test('a manual item needs a visible name and brand, on create and on edit', async () => {
+  const { api, alex } = await setup();
+  const before = (await api.listOwned(alex, {})).total;
+  for (const name of ['', '   ', '​', ' ​‍﻿ ']) {
+    const error = await rejectsWith(api.createOwned(alex, { source: 'manual', category: 'clothing', custom: { brand: 'Uniqlo', name } }), 'invalid');
+    assert.equal(error.details.fields['custom.name'], 'Enter a name', JSON.stringify(name));
+  }
+  const brandless = await rejectsWith(api.createOwned(alex, { source: 'manual', category: 'clothing', custom: { brand: '​', name: 'Oxford shirt' } }), 'invalid');
+  assert.equal(brandless.details.fields['custom.brand'], 'Enter the brand');
+  assert.equal((await api.listOwned(alex, {})).total, before, 'nothing was saved');
+
+  const item = await api.createOwned(alex, { source: 'manual', category: 'clothing', custom: { brand: 'Uniqlo', name: 'Oxford shirt', variantName: 'Light blue' } });
+  for (const name of ['', '   ', '​']) {
+    const error = await rejectsWith(api.updateOwned(alex, { itemId: item.id, patch: { custom: { name, variantName: 'Changed' } } }), 'invalid');
+    assert.equal(error.details.fields['custom.name'], 'Enter a name', JSON.stringify(name));
+  }
+  const kept = await api.getOwned(alex, { itemId: item.id });
+  assert.equal(kept.custom.name, 'Oxford shirt');
+  assert.equal(kept.custom.variantName, 'Light blue', 'a refused edit writes nothing');
+
+  // A joiner inside a visible name (an emoji sequence) is still a name.
+  const emoji = await api.createOwned(alex, { source: 'manual', category: 'clothing', custom: { brand: 'Studio', name: '\u{1F469}‍\u{1F4BB} tee' } });
+  assert.equal(emoji.custom.name, '\u{1F469}‍\u{1F4BB} tee');
+});
+
+test('editing a manual item rewrites only that record, and deleting one of two copies keeps the other', async () => {
+  const { api, alex } = await setup();
+  const shoe = { source: 'manual', category: 'sneaker', custom: { brand: 'Nike', name: 'Air Force 1', variantName: 'White' } };
+  const first = await api.createOwned(alex, shoe);
+  const copy = await api.createOwned(alex, { ...shoe, allowDuplicate: true });
+  const watch = await api.createOwned(alex, { source: 'manual', category: 'watch', custom: { brand: 'Casio', name: 'F-91W', variantName: 'Black' } });
+  const total = (await api.listOwned(alex, {})).total;
+
+  const edited = await api.updateOwned(alex, { itemId: watch.id, patch: { custom: { name: 'F-91W-1', variantName: 'Gold' } } });
+  assert.equal(edited.id, watch.id);
+  assert.equal(edited.category, 'watch');
+  assert.deepEqual([edited.custom.brand, edited.custom.name, edited.custom.variantName], ['Casio', 'F-91W-1', 'Gold']);
+  assert.equal((await api.listOwned(alex, {})).total, total, 'the edit added no record');
+  assert.equal((await api.getOwned(alex, { itemId: first.id })).custom.name, 'Air Force 1', 'other items are untouched');
+
+  await api.deleteOwned(alex, { itemId: copy.id });
+  await rejectsWith(api.getOwned(alex, { itemId: copy.id }), 'not_found');
+  const left = await api.getOwned(alex, { itemId: first.id });
+  assert.deepEqual([left.custom.name, left.updatedAt], ['Air Force 1', first.updatedAt], 'the identical copy is still there, unchanged');
+  assert.equal((await api.getOwned(alex, { itemId: watch.id })).custom.name, 'F-91W-1');
+  assert.equal((await api.listOwned(alex, {})).total, total - 1);
+});
+
 test('items added from a product link record the link as their evidence', async () => {
   const { api, alex } = await setup();
   const item = await api.createOwned(alex, {

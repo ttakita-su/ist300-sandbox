@@ -436,6 +436,7 @@ photo    { id, userId, kind: 'original' | 'processing' | 'cleaned' | 'label' | '
 ownedItem {
   id, userId, createdAt, updatedAt, archivedAt: ISO | null,
   category, productId: string | null, variantId: string | null,
+  // brand and name need a visible character (a zero-width space alone is blank)
   custom: { brand, name, variantName, type, colors: [COLOR_NAME] } | null,
   identity: Identity,
   details: {
@@ -1184,7 +1185,15 @@ Tokens in `css/tokens.css`, classes in `css/components.css`:
   {site} for {price}", "checked {relative time}" and a plain "View on {host}" link
   (`target="_blank" rel="noopener noreferrer"`, not an affiliate link). An "Outfits" section
   lists `listOutfits({ itemId })` and links to `/outfits/new?item=` (not for archived items);
-  the delete confirmation says how many outfits the item is taken out of.
+  the delete confirmation says how many outfits the item is taken out of. "Your details" starts
+  with a Category row. An id that isn't the person's (deleted, never theirs) renders "This item
+  isn't here" with a link back to the collection on both the item page and its edit screen,
+  not the error state. The edit screen's Cancel is `data-back`; after Save it goes back in
+  history when it was opened from the item page (`[data-edit-item]`), else replaces itself with
+  the item page, so one Back press leaves. Save sends only the custom fields (brand, name,
+  color or version) that changed, so an older tab doesn't undo them; details are sent whole.
+  The manual add form's category and I own it / I want it pills carry the typed brand, name
+  and color into the new form.
 - **Outfits.** `/collection` and `/outfits` share an Items / Outfits switch
   (`collectionTabs`, the `.tabs` link row with `aria-current="page"`). The list shows cards
   with up to four thumbnails, "Needs another item" for incomplete outfits, and empty states for
@@ -1295,8 +1304,15 @@ Tokens in `css/tokens.css`, classes in `css/components.css`:
   falling back to its link text, and the not-connected state on the static server. It fails on
   any request that would leave the machine, and checks nothing reaches `/api/lens` before the
   tap. `-- --ocr` also reads a label photo with Tesseract.js (needs a connection to jsDelivr;
-  the only test that uses the network). `outfits.mjs` drives outfit create, read, update and
-  delete through the screens at 390 px (light) with reloads, the D08 break tests (empty and
+  the only test that uses the network). `inventory.mjs` signs up new accounts and drives the
+  closet inventory's eight D08 checks through the screens at 390 px (light) with reloads: the
+  empty state, adding by hand, the Category row, editing without a duplicate, blank names,
+  cancelled edits and deletes, deleting one item only, and one press of Back after Save or
+  Cancel. It adds two break tests per action (an invisible name, a category change after
+  typing, a missing item's address, a long HTML name, a refused edit, two tabs, Back after a
+  delete, two identical copies) and a desktop dark-theme pass. `outfits.mjs` drives outfit
+  create, read, update and delete through the screens at 390 px (light) with reloads, the D08
+  break tests (empty and
   duplicate saves, double taps, HTML and 60-character names, another person's address, a
   signed-out bookmark, a broken `%` escape, two tabs, archived and deleted items, a big closet,
   Back with a dialog open, keyboard only), export and demo reset, a desktop dark-theme pass and

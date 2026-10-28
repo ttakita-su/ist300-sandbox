@@ -200,6 +200,11 @@ function cleanText(value, max = MAX_TEXT) {
   return String(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, max);
 }
 
+/** True when nothing visible is left, such as a pasted zero-width space. */
+function isBlank(value) {
+  return !cleanText(value).replace(INVISIBLE, '');
+}
+
 function cleanColors(colors) {
   if (!Array.isArray(colors)) return [];
   return [...new Set(colors.filter((c) => COLOR_BY_NAME.has(c)))].slice(0, 4);
@@ -222,8 +227,8 @@ function checkIdentityFields(input, catalog, errors) {
   } else {
     if (input.variantId) errors.variantId = 'A version needs a product';
     const custom = input.custom ?? {};
-    if (!cleanText(custom.brand)) errors['custom.brand'] = 'Enter the brand';
-    if (!cleanText(custom.name)) errors['custom.name'] = 'Enter a name';
+    if (isBlank(custom.brand)) errors['custom.brand'] = 'Enter the brand';
+    if (isBlank(custom.name)) errors['custom.name'] = 'Enter a name';
   }
 }
 
@@ -338,8 +343,8 @@ export function patchOwnedItem(item, patch, env) {
   if (patch.ownerChanges) next.ownerChanges = normalizeOwnerChanges(patch.ownerChanges, item.category, errors);
   if (patch.custom && !item.productId) {
     const custom = { ...item.custom, ...patch.custom };
-    if (!cleanText(custom.brand)) errors['custom.brand'] = 'Enter the brand';
-    if (!cleanText(custom.name)) errors['custom.name'] = 'Enter a name';
+    if (isBlank(custom.brand)) errors['custom.brand'] = 'Enter the brand';
+    if (isBlank(custom.name)) errors['custom.name'] = 'Enter a name';
     next.custom = {
       brand: cleanText(custom.brand),
       name: cleanText(custom.name),
