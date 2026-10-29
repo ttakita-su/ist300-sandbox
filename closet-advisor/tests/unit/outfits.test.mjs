@@ -391,3 +391,104 @@ test('admin views never show outfits', async () => {
   const text = JSON.stringify([await api.adminOverview(morgan, {}), await api.adminListAccounts(morgan, {})]);
   assert.ok(!text.includes(outfit.id) && !text.includes('Secret combo'));
 });
+
+// ---------- Suggestions ----------
+
+const ALEX_REASONS = [
+  'Navy and grey are a classic pairing, so your Harbor & Pine Deck Field Jacket and Fieldhouse Wool Trouser go well together.',
+  'White and black are a classic pairing, so your Vela Court Low and Arden Field go well together.',
+  'Every piece shares a classic style.',
+];
+const SAM_TEE = { source: 'manual', category: 'clothing', custom: { brand: 'Studio Nine', name: 'Crew Tee', type: 'tee', colors: ['white'] } };
+
+test('A1: suggestions come from Alex\'s own items, and saving one hides it until the outfit is deleted', async () => {
+  const { api, alex, jacket, trousers, sneaker, watch } = await setup();
+  const out = await api.suggestOutfits(alex, {});
+  assert.equal(out.suggestions.length, 1);
+  const [s] = out.suggestions;
+  assert.ok(!('score' in s), 'the ranking score stays inside the engine');
+  assert.deepEqual(s.itemIds, [jacket.id, trousers.id, sneaker.id, watch.id]);
+  assert.equal(s.key, [jacket.id, trousers.id, sneaker.id].sort().join('+'));
+  assert.equal(s.name, 'Navy field jacket and grey trousers');
+  assert.deepEqual(s.items.map((i) => i.id), s.itemIds);
+  assert.equal(s.items[0].brandName, 'Harbor & Pine');
+  assert.ok(s.items.every((i) => i.image));
+  assert.deepEqual(s.reasons, ALEX_REASONS);
+  assert.deepEqual([out.missing, out.emptyReason], [[], null]);
+
+  const saved = await make(api, alex, { name: s.name, itemIds: s.itemIds });
+  assert.deepEqual(saved.itemIds, s.itemIds, 'saved in the suggested order');
+  const none = { suggestions: [], missing: [], emptyReason: 'all_saved', leftOut: { noType: 0, noColors: 0 } };
+  assert.deepEqual(await api.suggestOutfits(alex, {}), none);
+  await api.updateOutfit(alex, { outfitId: saved.id, patch: { itemIds: [jacket.id, trousers.id, sneaker.id] } });
+  assert.deepEqual(await api.suggestOutfits(alex, {}), none, 'a different watch still counts as the same outfit');
+  await api.deleteOutfit(alex, { outfitId: saved.id });
+  assert.equal((await api.suggestOutfits(alex, {})).suggestions.length, 1);
+});
+
+test('A2: a suggested name already taken gets a number, so it can be saved as is', async () => {
+  const { api, alex, trousers, sneaker } = await setup();
+  await make(api, alex, { name: 'navy  FIELD jacket and grey trousers', itemIds: [trousers.id, sneaker.id] });
+  const [s] = (await api.suggestOutfits(alex, {})).suggestions;
+  assert.equal(s.name, 'Navy field jacket and grey trousers 2');
+  assert.equal((await make(api, alex, { name: s.name, itemIds: s.itemIds })).name, s.name);
+});
+
+test('A3: Sam needs a top first; suggestions never use or reveal another person\'s items', async () => {
+  const { api, db, alex, sam, jacket, trousers, sneaker } = await setup();
+  assert.deepEqual(await api.suggestOutfits(sam, {}), { suggestions: [], missing: ['top'], emptyReason: 'missing', leftOut: { noType: 0, noColors: 0 } });
+  await api.createOwned(sam, SAM_TEE);
+  const out = await api.suggestOutfits(sam, {});
+  assert.equal(out.suggestions.length, 1);
+  assert.equal(out.suggestions[0].name, 'White t-shirt and charcoal trousers');
+  assert.deepEqual(out.suggestions[0].reasons, [
+    'White and charcoal are a classic pairing, so your Studio Nine Crew Tee and Fieldhouse Wool Trouser go well together.',
+    'Black and off-white are a classic pairing, so your Vela Court Low and Arden Field go well together.',
+  ]);
+  const samIds = new Set((await api.listOwned(sam, {})).items.map((i) => i.id));
+  assert.ok(out.suggestions[0].itemIds.every((id) => samIds.has(id)));
+  const text = JSON.stringify(out);
+  for (const id of [jacket.id, trousers.id, sneaker.id]) assert.ok(!text.includes(id));
+  // A record of Sam's that names Alex's items can't hide Alex's suggestion.
+  await db.put('outfits', { id: 'fit_sam_odd', userId: SAM, name: 'Odd', itemIds: [jacket.id, trousers.id, sneaker.id], notes: '', createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z' });
+  assert.equal((await api.suggestOutfits(alex, {})).suggestions.length, 1);
+});
+
+test('A4: stylists and admins cannot ask for suggestions; signed-out callers are refused', async () => {
+  const { api, as } = await setup();
+  await rejectsWith(api.suggestOutfits(await as(JORDAN), {}), 'forbidden');
+  await rejectsWith(api.suggestOutfits(await as(MORGAN), {}), 'forbidden');
+  await rejectsWith(api.suggestOutfits({}, {}), 'unauthenticated');
+});
+
+test('A5: archived items are never suggested, and come back when restored', async () => {
+  const { api, alex, jacket, trousers, sneaker, watch } = await setup();
+  await api.archiveOwned(alex, { itemId: watch.id });
+  const [s] = (await api.suggestOutfits(alex, {})).suggestions;
+  assert.deepEqual(s.itemIds, [jacket.id, trousers.id, sneaker.id]);
+  assert.equal(s.reasons[1], 'Navy and white are a classic pairing, so your Harbor & Pine Deck Field Jacket and Vela Court Low go well together.');
+  await api.archiveOwned(alex, { itemId: jacket.id });
+  const out = await api.suggestOutfits(alex, {});
+  assert.deepEqual([out.missing, out.emptyReason], [['top'], 'missing']);
+  await api.restoreOwned(alex, { itemId: watch.id });
+  await api.restoreOwned(alex, { itemId: jacket.id });
+  assert.equal((await api.suggestOutfits(alex, {})).suggestions[0].itemIds.length, 4);
+});
+
+test('A6: asking for suggestions writes nothing', async () => {
+  const { api, db, alex } = await setup();
+  const counts = async () => Promise.all(['outfits', 'audit', 'events', 'idempotency'].map(async (store) => (await db.all(store)).length));
+  const before = await counts();
+  const first = await api.suggestOutfits(alex, {});
+  assert.deepEqual(await api.suggestOutfits(alex, {}), first);
+  assert.deepEqual(await counts(), before);
+});
+
+test('A7: an item with no type is counted as left out, not guessed', async () => {
+  const { api, alex } = await setup();
+  await api.createOwned(alex, { source: 'manual', category: 'clothing', custom: { brand: 'Studio Nine', name: 'Tee 1' } });
+  const out = await api.suggestOutfits(alex, {});
+  assert.deepEqual(out.leftOut, { noType: 1, noColors: 0 });
+  assert.equal(out.suggestions.length, 1);
+  assert.equal(out.suggestions[0].itemIds.length, 4);
+});

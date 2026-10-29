@@ -183,6 +183,16 @@ function customType(category, raw) {
   return types.find((t) => (TYPE_LABEL[t] ?? '').toLowerCase() === text) ?? null;
 }
 
+/**
+ * The outfit part an item fills: 'top' | 'outer' | 'bottom' | 'feet' | 'wrist' | 'strap', or
+ * null for clothing whose type isn't one we know. Takes a type key or its label.
+ */
+export function outfitPart(category, type) {
+  const key = customType(category, type);
+  if (category === 'clothing' && !key) return null;
+  return slotOf(category, key);
+}
+
 function variantSubject(catalog, variant) {
   const product = catalog.product(variant.productId);
   if (!product) return null;
@@ -209,7 +219,7 @@ function variantSubject(catalog, variant) {
 }
 
 /** Subject for an owned or wishlist record. Custom items keep only what the person entered. */
-function itemSubject(catalog, record, itemType) {
+export function itemSubject(catalog, record, itemType) {
   const product = record.productId ? catalog.product(record.productId) : null;
   const variantRow = record.variantId ? catalog.variant(record.variantId) : null;
   const variant = variantRow && product && variantRow.productId === product.id ? variantRow : null;
@@ -256,11 +266,13 @@ function itemSubject(catalog, record, itemType) {
   };
 }
 
-function baseName(subject) {
+/** Brand and title, or 'item'. */
+export function baseName(subject) {
   return [subject.brandName, subject.title].filter(Boolean).join(' ').trim() || 'item';
 }
 
-function fullName(subject) {
+/** baseName plus the version name. */
+export function fullName(subject) {
   return subject.variantName ? `${baseName(subject)}, ${subject.variantName}` : baseName(subject);
 }
 

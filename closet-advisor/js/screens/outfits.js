@@ -1,5 +1,6 @@
-// Outfits: named sets of items from the person's collection. List, build, view, edit, delete.
-import { html } from '../lib/html.js';
+// Outfits: named sets of items from the person's collection. List, build, view, edit, delete,
+// and suggested combinations of the person's own items.
+import { html, safeUrl } from '../lib/html.js';
 import { icon } from '../lib/icons.js';
 import * as fmt from '../lib/format.js';
 import { idempotencyKey } from '../lib/ids.js';
@@ -7,9 +8,23 @@ import { CATEGORY_LABEL, OUTFIT_LIMITS } from '../data/schema.js';
 import { screenHead, backHead, itemTile, thumb, notice, emptyState, facts, field } from '../ui/components.js';
 import { collectionTabs } from '../ui/screen-kit.js';
 import { confirmDialog, toast, toastError, withBusy, showFieldErrors } from '../lib/ui.js';
+import { href as routeHref } from '../lib/router.js';
+import { outfitPart } from '../engine/recommend.js';
 
-// Head to toe: clothes, then shoes, then the watch.
-const GROUP_ORDER = ['clothing', 'sneaker', 'watch'];
+// Head to toe: the order the form lists items in, so outfits are saved in it too. Accessories
+// are watches and straps; clothing saved without a type we know goes under Other clothing.
+const PART_GROUPS = [
+  { id: 'top', label: 'Tops', parts: ['top'] },
+  { id: 'outer', label: 'Jackets', parts: ['outer'] },
+  { id: 'bottom', label: 'Bottoms', parts: ['bottom'] },
+  { id: 'other', label: 'Other clothing', parts: [null] },
+  { id: 'feet', label: 'Shoes', parts: ['feet'] },
+  { id: 'accessory', label: 'Accessories', parts: ['wrist', 'strap'] },
+];
+const OTHER = PART_GROUPS[3];
+const groupOf = (item) => PART_GROUPS.find((g) => g.parts.includes(outfitPart(item.category, item.product?.type ?? item.custom?.type))) ?? OTHER;
+const itemName = (item) => [item.brandName, item.title].filter(Boolean).join(' ');
+const NEED_WORD = { top: 'a top or jacket', bottom: 'bottoms', feet: 'shoes' };
 // Collections longer than this get a box that narrows the item list.
 const FILTER_FROM = 6;
 
@@ -52,6 +67,49 @@ function outfitCard(outfit) {
   </article>`;
 }
 
+// Nothing in the Suggested section uses emptyState (section.state) or the .outfit-card classes:
+// those name the saved outfits.
+function suggestionCard(s, i) {
+  return html`<article class="outfit-suggestion" data-suggestion="${s.key}" aria-labelledby="suggestion-${i}">
+    ${mosaic({ items: s.items, itemCount: s.items.length })}
+    <div class="outfit-suggestion-text">
+      <h3 class="outfit-suggestion-name" id="suggestion-${i}">${s.name}</h3>
+      <p class="small muted" data-suggestion-items>${fmt.listJoin(s.items.map(itemName))}</p>
+      <p class="small" data-suggestion-why>${s.reasons.join(' ')}</p>
+    </div>
+    <div class="button-row outfit-suggestion-actions">
+      <a class="btn btn-secondary" href="${safeUrl(routeHref('/outfits/new', { items: s.itemIds, name: s.name }))}" aria-describedby="suggestion-${i}" data-suggestion-save>${icon('layers')}Save this outfit</a>
+    </div>
+  </article>`;
+}
+
+function noSuggestions({ emptyReason, missing }) {
+  const text =
+    emptyReason === 'missing'
+      ? `Suggestions need shoes, bottoms and a top or jacket from your collection. Add ${fmt.listJoin(missing.map((p) => NEED_WORD[p]))} to get some.`
+      : emptyReason === 'all_saved'
+        ? "You've saved every combination we'd suggest from your items. Add more items to get new ideas."
+        : 'None of your items pair well enough by color for us to suggest an outfit yet. You can still build your own.';
+  return html`<div class="panel stack stack-sm" data-suggestions-none>
+    <p>${text}</p>
+    <div class="button-row"><a class="btn btn-secondary" href="#/add?dest=owned">${icon('plus')}Add an item</a></div>
+  </div>`;
+}
+
+function suggestionsSection(ideas) {
+  const skipped = ideas.leftOut.noType + ideas.leftOut.noColors;
+  return html`<section class="stack stack-sm" aria-labelledby="outfits-suggested" data-suggestions>
+    <div class="stack stack-xs">
+      <h2 id="outfits-suggested">Suggested for you</h2>
+      <p class="small muted">Made from items you own. Combinations you've already saved aren't suggested again.</p>
+    </div>
+    ${ideas.suggestions.length ? html`<div class="outfit-suggestions">${ideas.suggestions.map(suggestionCard)}</div>` : noSuggestions(ideas)}
+    ${skipped
+      ? html`<p class="small muted" data-suggestions-skipped>${fmt.plural(skipped, 'item')} ${skipped === 1 ? "isn't" : "aren't"} used in suggestions, because we need to know an item's type and colors to pair it.</p>`
+      : ''}
+  </section>`;
+}
+
 /** Shown on /outfits and /outfits/new when the collection can't make an outfit yet. */
 function needItemsState(count) {
   return emptyState({
@@ -85,7 +143,7 @@ async function findOutfit(ctx) {
 }
 
 function choice(item, checked) {
-  const words = findText([item.brandName, item.title, item.subtitle, CATEGORY_LABEL[item.category], item.product?.typeLabel ?? item.custom?.type].join(' '));
+  const words = findText([item.brandName, item.title, item.subtitle, CATEGORY_LABEL[item.category], item.product?.typeLabel ?? item.custom?.type, groupOf(item).label].join(' '));
   return html`<label class="choice" data-find="${words}"><input type="checkbox" name="itemIds" value="${item.id}" ${checked ? html`checked` : ''}>
     <span class="list-thumb">${thumb(item.image, '', item.category)}</span>
     <span class="choice-body"><span class="choice-title">${item.brandName} ${item.title}</span><span class="choice-hint">${item.subtitle ?? ''}${item.archivedAt ? ', archived' : ''}</span></span>
@@ -93,12 +151,12 @@ function choice(item, checked) {
 }
 
 /**
- * Name, the items to choose from (grouped by category) and notes.
+ * Name, the items to choose from (grouped by part, head to toe) and notes.
  * @param {{ values: { name?: string, itemIds?: string[], notes?: string }, items: any[], submitLabel: string, cancelHref: string }} opts
  */
 function outfitForm({ values, items, submitLabel, cancelHref }) {
   const chosen = new Set(values.itemIds ?? []);
-  const groups = GROUP_ORDER.map((c) => [c, items.filter((i) => i.category === c)]).filter(([, list]) => list.length);
+  const groups = PART_GROUPS.map((g) => [g, items.filter((i) => groupOf(i) === g)]).filter(([, list]) => list.length);
   return html`<form class="stack stack-lg" data-outfit-form novalidate>
     ${field({ label: 'Name', name: 'name', value: values.name ?? '', required: true, placeholder: 'Weekend errands', attrs: `maxlength="${OUTFIT_LIMITS.nameMax}" autocomplete="off"` })}
     <fieldset class="field outfit-items">
@@ -113,8 +171,8 @@ function outfitForm({ values, items, submitLabel, cancelHref }) {
           <p class="small muted" data-outfit-none hidden>No items match. Items you already chose stay chosen.</p>`
         : ''}
       ${groups.map(
-        ([category, list]) => html`<div class="stack stack-sm" role="group" aria-labelledby="og-${category}" data-outfit-group>
-          <h2 class="outfit-group" id="og-${category}">${CATEGORY_LABEL[category]}</h2>
+        ([group, list]) => html`<div class="stack stack-sm" role="group" aria-labelledby="og-${group.id}" data-outfit-group="${group.id}">
+          <h2 class="outfit-group" id="og-${group.id}">${group.label}</h2>
           ${list.map((item) => choice(item, chosen.has(item.id)))}
         </div>`,
       )}
@@ -209,7 +267,7 @@ export default [
     tab: 'collection',
     roles: ['user'],
     async render(ctx) {
-      const [data, owned] = await Promise.all([ctx.api.listOutfits({}), ctx.api.listOwned({})]);
+      const [data, owned, ideas] = await Promise.all([ctx.api.listOutfits({}), ctx.api.listOwned({}), ctx.api.suggestOutfits({})]);
       const canBuild = owned.collectionTotal >= OUTFIT_LIMITS.minItems;
       return html`<div class="stack stack-lg outfits-screen">
         ${screenHead({
@@ -219,7 +277,10 @@ export default [
         })}
         ${collectionTabs('outfits', { items: owned.collectionTotal, outfits: data.total })}
         ${data.outfits.length
-          ? html`<div class="tile-grid">${data.outfits.map(outfitCard)}</div>`
+          ? html`<section class="stack stack-sm" aria-labelledby="outfits-saved">
+              <h2 id="outfits-saved">Saved</h2>
+              <div class="tile-grid">${data.outfits.map(outfitCard)}</div>
+            </section>`
           : canBuild
             ? emptyState({
                 iconName: 'layers',
@@ -228,6 +289,7 @@ export default [
                 actions: html`<a class="btn btn-primary" href="#/outfits/new">${icon('plus')}Build an outfit</a>`,
               })
             : needItemsState(owned.collectionTotal)}
+        ${canBuild ? suggestionsSection(ideas) : ''}
       </div>`;
     },
   },
@@ -238,11 +300,21 @@ export default [
     roles: ['user'],
     async render(ctx) {
       const owned = await ctx.api.listOwned({});
-      const preset = owned.items.some((i) => i.id === ctx.query.item) ? [ctx.query.item] : [];
+      const active = new Set(owned.items.map((i) => i.id));
+      // ?items=a,b (a suggestion) or ?item=a (an item's page) only preselect; nothing is saved until Save.
+      const wanted = [...new Set(String(ctx.query.items ?? ctx.query.item ?? '').split(',').filter(Boolean))];
+      const preset = wanted.filter((id) => active.has(id)).slice(0, OUTFIT_LIMITS.maxItems);
+      const name = String(ctx.query.name ?? '').slice(0, OUTFIT_LIMITS.nameMax);
+      const note =
+        ctx.query.items == null || !wanted.length
+          ? ''
+          : preset.length < wanted.length
+            ? notice({ tone: 'warn', body: "Some items from this suggestion are left out because they're archived or no longer in your collection." })
+            : notice({ body: 'Suggested from items you own. Change the name or items if you like, then save.' });
       return html`<div class="stack stack-lg">
         ${backHead({ title: 'New outfit', back: '#/outfits' })}
         ${owned.items.length >= OUTFIT_LIMITS.minItems
-          ? outfitForm({ values: { itemIds: preset }, items: owned.items, submitLabel: 'Save outfit', cancelHref: '#/outfits' })
+          ? html`${note}${outfitForm({ values: { name, itemIds: preset }, items: owned.items, submitLabel: 'Save outfit', cancelHref: '#/outfits' })}`
           : needItemsState(owned.items.length)}
       </div>`;
     },

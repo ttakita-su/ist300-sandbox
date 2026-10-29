@@ -138,3 +138,57 @@
 .outfit-items .field-error {
   margin-top: 0;
 }
+
+/* ---------- Suggested outfits ---------- */
+
+.outfit-suggestions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s3);
+}
+
+@media (min-width: 640px) {
+  .outfit-suggestions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1000px) {
+  .outfit-suggestions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--s4);
+  }
+}
+
+.outfit-suggestion {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: var(--s3);
+  align-content: start;
+  min-width: 0;
+  padding: var(--s3);
+  border-radius: var(--r-tile);
+  background: var(--surface);
+}
+
+.outfit-suggestion-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.outfit-suggestion-text p {
+  overflow-wrap: anywhere;
+}
+
+.outfit-suggestion-name {
+  font-size: var(--text-md);
+  font-weight: 700;
+  font-stretch: 105%;
+  overflow-wrap: anywhere;
+}
+
+.outfit-suggestion-actions {
+  grid-column: 1 / -1;
+}

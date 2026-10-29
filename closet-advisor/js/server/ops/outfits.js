@@ -1,12 +1,22 @@
 // Outfits: named sets of the person's own items. Every read and write is scoped to the
 // signed-in person, and another person's outfit ids behave exactly like ids that don't exist.
-// Outfits hold item ids only; deleting an outfit never touches the items in it.
+// Outfits hold item ids only; deleting an outfit never touches the items in it. Suggestions
+// read the saved outfits only to leave out combinations the person already saved.
 import { ApiError, invalid } from '../errors.js';
 import { newId } from '../../lib/ids.js';
 import { isOwner } from '../policy.js';
 import { OUTFIT_FIELDS, checkOutfitFields, outfitNameKey } from '../records.js';
 import { OUTFIT_LIMITS } from '../../data/schema.js';
 import { ownedViews } from './inventory.js';
+import { suggestOutfits as buildSuggestions } from '../../engine/outfit-suggest.js';
+
+/** `base`, else `base 2`, `base 3`... (cut to fit): the first whose name key isn't in `taken`, which it joins. */
+function freeName(base, taken) {
+  let name = base;
+  for (let n = 2; taken.has(outfitNameKey(name)); n += 1) name = `${base.slice(0, OUTFIT_LIMITS.nameMax - String(n).length - 1).trimEnd()} ${n}`;
+  taken.add(outfitNameKey(name));
+  return name;
+}
 
 const outfitNotFound = () => new ApiError('not_found', "That outfit isn't in your collection. It may have been deleted.");
 
@@ -143,6 +153,38 @@ export const ops = {
       }
       const [view] = await outfitViews(ctx, [next]);
       return view;
+    },
+  },
+
+  /**
+   * args: {} -> OutfitSuggestions (ARCHITECTURE.md 5.2): combinations of the actor's own active
+   * items (engine/outfit-suggest.js). Names are unique among the actor's outfit names and the
+   * other suggestions. Read-only: nothing is stored, audited or measured; saving goes through
+   * createOutfit.
+   */
+  suggestOutfits: {
+    auth: 'user',
+    async run(ctx) {
+      const [ownedRows, outfitRows] = await Promise.all([ctx.db.where('ownedItems', 'userId', ctx.actor.id), ctx.db.where('outfits', 'userId', ctx.actor.id)]);
+      const owned = ownedRows.filter((r) => isOwner(ctx.actor, r));
+      const saved = outfitRows.filter((o) => isOwner(ctx.actor, o));
+      const result = buildSuggestions({ catalog: await ctx.catalog(), owned, saved: saved.map((o) => o.itemIds) });
+      const byId = new Map(owned.map((r) => [r.id, r]));
+      const ids = [...new Set(result.suggestions.flatMap((s) => s.itemIds))];
+      const views = new Map((await ownedViews(ctx, ids.map((id) => byId.get(id)), owned)).map((v) => [v.id, v]));
+      const taken = new Set(saved.map((o) => outfitNameKey(o.name)));
+      return {
+        suggestions: result.suggestions.map((s) => ({
+          key: s.key,
+          name: freeName(s.name, taken),
+          itemIds: s.itemIds,
+          items: s.itemIds.map((id) => views.get(id)),
+          reasons: s.reasons,
+        })),
+        missing: result.missing,
+        emptyReason: result.emptyReason,
+        leftOut: result.leftOut,
+      };
     },
   },
 

@@ -2,6 +2,8 @@
 // a relation that recommend.js computed (color pairing, shared style, shape, catalog strap
 // specs, prices from offers) and names the specific item it relates to. Nothing here invents a
 // fact: no percentages, no outfit counts, no wear history, no fit claims beyond catalog specs.
+// Outfit suggestions (outfit-suggest.js) use outfitPairDetail and outfitStyleDetail under the
+// same rules.
 import { money, relative, listJoin } from '../lib/format.js';
 import { STYLE_LABEL, TYPE_LABEL } from '../data/schema.js';
 import { colorLabel } from '../data/colors.js';
@@ -14,6 +16,16 @@ const ATTACHMENT_PHRASE = {
 const cap = (text) => (text ? text.charAt(0).toUpperCase() + text.slice(1) : '');
 const period = (text) => (/[.!?]$/.test(text) ? text : `${text}.`);
 const unperiod = (text) => text.replace(/[.!?]+$/, '');
+
+/** A color pairing between two of the person's items in a suggested outfit. */
+export function outfitPairDetail(sentence, nameA, nameB) {
+  return `${unperiod(sentence)}, so your ${nameA} and ${nameB} go well together.`;
+}
+
+/** The style tags every piece of a suggested outfit shares. */
+export function outfitStyleDetail(tags) {
+  return `Every piece shares a ${tagPhrase(tags)} style.`;
+}
 
 /** "minimal and classic" from style tags. */
 export function tagPhrase(tags) {
