@@ -9,7 +9,8 @@
     "serve": "node tests/serve.mjs",
     "test": "node --test tests/unit/*.test.mjs",
     "test:e2e": "node tests/e2e/run.mjs",
-    "eval": "node tests/e2e/eval.mjs"
+    "eval": "node tests/e2e/eval.mjs",
+    "weather": "node --env-file-if-exists=.env dev/weather.mjs"
   },
   "devDependencies": {
     "playwright": "1.63.0"

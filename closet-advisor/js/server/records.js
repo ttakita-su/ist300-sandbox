@@ -212,7 +212,7 @@ function cleanColors(colors) {
 
 /**
  * Checks the catalog identity: product exists, category matches, variant belongs to product.
- * Custom items must have a brand and a name and no catalog ids.
+ * Custom items need a visible name and no catalog ids. Clothing may have an unknown brand.
  */
 function checkIdentityFields(input, catalog, errors) {
   if (!CATEGORIES.includes(input.category)) errors.category = 'Choose sneakers, a watch or clothing';
@@ -227,7 +227,7 @@ function checkIdentityFields(input, catalog, errors) {
   } else {
     if (input.variantId) errors.variantId = 'A version needs a product';
     const custom = input.custom ?? {};
-    if (isBlank(custom.brand)) errors['custom.brand'] = 'Enter the brand';
+    if (input.category !== 'clothing' && isBlank(custom.brand)) errors['custom.brand'] = 'Enter the brand';
     if (isBlank(custom.name)) errors['custom.name'] = 'Enter a name';
   }
 }
@@ -319,7 +319,7 @@ export function buildOwnedItem(input, env) {
     custom: input.productId
       ? null
       : {
-          brand: cleanText(input.custom.brand),
+          brand: isBlank(input.custom.brand) ? null : cleanText(input.custom.brand),
           name: cleanText(input.custom.name),
           variantName: cleanText(input.custom.variantName) || null,
           type: cleanText(input.custom.type, 40) || null,
@@ -343,10 +343,10 @@ export function patchOwnedItem(item, patch, env) {
   if (patch.ownerChanges) next.ownerChanges = normalizeOwnerChanges(patch.ownerChanges, item.category, errors);
   if (patch.custom && !item.productId) {
     const custom = { ...item.custom, ...patch.custom };
-    if (isBlank(custom.brand)) errors['custom.brand'] = 'Enter the brand';
+    if (item.category !== 'clothing' && isBlank(custom.brand)) errors['custom.brand'] = 'Enter the brand';
     if (isBlank(custom.name)) errors['custom.name'] = 'Enter a name';
     next.custom = {
-      brand: cleanText(custom.brand),
+      brand: isBlank(custom.brand) ? null : cleanText(custom.brand),
       name: cleanText(custom.name),
       variantName: cleanText(custom.variantName) || null,
       type: cleanText(custom.type, 40) || null,
@@ -402,7 +402,7 @@ export function buildWishlistItem(input, env) {
     custom: input.productId || !input.custom
       ? null
       : {
-          brand: cleanText(input.custom.brand),
+          brand: isBlank(input.custom.brand) ? null : cleanText(input.custom.brand),
           name: cleanText(input.custom.name),
           variantName: cleanText(input.custom.variantName) || null,
           type: cleanText(input.custom.type, 40) || null,

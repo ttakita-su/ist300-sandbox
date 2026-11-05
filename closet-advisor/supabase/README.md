@@ -26,6 +26,11 @@ Add these (with row-level security unchanged: the snapshot and the store image a
 person's private data, and a stylist sees the store image only when photos are shared) before
 the production build saves web items.
 
+**Not mirrored yet: unknown clothing brands.** The prototype permits a null custom brand for
+clothing while still requiring a visible name. The SQL owned/wishlist checks still require
+`custom_brand` for custom items, and the stylist snapshot JSON schema expects a string brand.
+Update and validate those contracts before transferring brandless clothing to production.
+
 **Not mirrored yet: outfits.** The prototype's `outfit` records (ARCHITECTURE.md 4.3: a name,
 2 to 12 of the person's own item ids, notes) have no table. A production table needs
 owner-only row-level security (never visible to stylists or admins), a check that every item

@@ -17,6 +17,11 @@ in the browser:
 photo → candidate products → confirm item and variant → catalog image → collection →
 similar/matching recommendations → retailer offer comparison → affiliate redirect.
 
+For a person's own photo, the primary path is now **Search online for this item** → possible
+online products → confirm a result, or **Label it myself** → save a custom item. Both preserve
+the original photo. This path skips the fictional catalog matcher. Demo sample photos still
+offer **Try demo matching**, which follows the catalog journey above.
+
 What is real in the prototype:
 
 - The photo pipeline runs on the device: validation by file signature, orientation, metadata
@@ -214,8 +219,9 @@ currency's real digits; anything unknown is `null`. Bing details are in
 **Privacy.** The server stores nothing on disk and has no accounts. A photo sent to
 `/api/lens` lives in memory for that request only; the lens answer is cached for 15 minutes
 under a SHA-256 of the bytes, never the bytes. The browser sends the photo only from
-`searchWebForPhoto`, which runs only when the person presses "Search online stores" on the
-match screen next to the line saying it goes to Microsoft Bing. It sends the 768 px processing
+`searchWebForPhoto`, which runs only when the person presses "Search online for this item" on
+the photo preview or "Search online stores" / "Search again" on the results screen, beside
+the line saying it goes to Microsoft Bing. It sends the 768 px processing
 copy (already re-encoded without EXIF or GPS), rotated as the person rotated it. Metrics carry
 statuses and counts, never URLs, hosts, queries or user ids.
 
@@ -436,7 +442,7 @@ photo    { id, userId, kind: 'original' | 'processing' | 'cleaned' | 'label' | '
 ownedItem {
   id, userId, createdAt, updatedAt, archivedAt: ISO | null,
   category, productId: string | null, variantId: string | null,
-  // brand and name need a visible character (a zero-width space alone is blank)
+  // name needs a visible character; clothing brand may be null, other categories need a brand
   custom: { brand, name, variantName, type, colors: [COLOR_NAME] } | null,
   identity: Identity,
   details: {
@@ -504,6 +510,7 @@ outfit {                                // owner-only; never shared with stylist
 
 matchJob {
   id, userId, createdAt, updatedAt, dest: 'owned' | 'wishlist', category: CATEGORY | null,
+  mode: 'catalog' | 'online',           // old/missing modes mean catalog; online skips matching
   photoId, processingId: string | null, crop: { x, y, w, h, rotate } | null,
                                         // normalized 0..1, rotate in 90° steps
   labelPhotoIds: [id],
@@ -638,7 +645,7 @@ export const ops = {
 | `ops/profile.js` | `getProfile`, `updateProfile`, `completeOnboarding` |
 | `ops/catalog.js` | `searchCatalog`, `getProduct`, `getVariant`, `listBrands` |
 | `ops/photos.js` | `uploadPhoto`, `getPhotoUrl`, `cleanupPhoto` |
-| `ops/matching.js` | `createMatchJob`, `getMatchJob`, `addMatchEvidence`, `retryMatchJob`, `rejectMatch`, `searchWebForPhoto`, `confirmMatch` |
+| `ops/matching.js` | `createMatchJob` (catalog or online mode), `getMatchJob`, `addMatchEvidence`, `retryMatchJob`, `rejectMatch`, `searchWebForPhoto`, `confirmMatch` |
 | `ops/inventory.js` | `listOwned`, `getOwned`, `createOwned`, `updateOwned`, `archiveOwned`, `restoreOwned`, `deleteOwned`, `setDisplayImage`, `correctMatch`, `reportCatalogIssue`, `checkDuplicates` |
 | `ops/wishlist.js` | `listWishlist`, `getWishlistItem`, `createWishlist`, `updateWishlist`, `removeWishlist`, `markPurchased` |
 | `ops/outfits.js` | `listOutfits`, `getOutfit`, `createOutfit`, `updateOutfit`, `deleteOutfit` |
@@ -812,7 +819,7 @@ missing ones (`not_found`).
 
 **Matching** (`user`; create/evidence/retry are rate-limited `scan`)
 
-- `createMatchJob({ photoId, category?, dest: 'owned'|'wishlist', crop?, texts?, processingId?, idempotencyKey })` → `MatchJobView` (status `queued`; runs in the background).
+- `createMatchJob({ photoId, category?, dest: 'owned'|'wishlist', mode?: 'catalog'|'online', crop?, texts?, processingId?, idempotencyKey })` → `MatchJobView`. Default `catalog`: status `queued`, runs in the background. `online`: immediately `done`, retrieval `not_run`, empty candidates/asks/notes; no catalog analysis or outbound request. `searchWebForPhoto` remains an explicit separate call.
 - `getMatchJob({ jobId })` → `MatchJobView` = matchJob (4.3, without `runId`) & `{ maxAttempts, canRetry }`; each `result.candidates[i]` also has `product: ProductSummary` and `variants: [VariantView]` (same order as `variantOptions`). Poll every 100–300 ms while `queued`/`processing`.
 - `addMatchEvidence({ jobId, labelPhotoId?, code?, productUrl?, idempotencyKey })` → `MatchJobView` (re-queued, attempts reset). Codes are `user_entered`; label photos are read on the device (`labelReads`); product links resolve through `importFromUrl` (`link`).
 - `retryMatchJob({ jobId, idempotencyKey })` → `MatchJobView`; only `error`/`timeout`, ≤ 3 attempts, else `conflict`.
@@ -1150,9 +1157,17 @@ Tokens in `css/tokens.css`, classes in `css/components.css`:
   `onboardedAt: null` to onboarding (the router doesn't do it yet). With nothing owned, the feed
   returns `coldStart: true` with `picks-*` sections built from the survey.
 - **Add photo** (`/add/photo`). Pick or capture a file, or a sample (`listSamples()` /
-  `renderSample(id)`, labeled "Sample photo"), crop in the browser (normalized crop and
-  rotation), `uploadPhoto` then `createMatchJob` and go to `/match/:jobId`. Show upload errors'
-  messages as they are (HEIC, too small, too large, wrong type).
+  `renderSample(id)`, labeled "Sample photo"), and rotate in the browser. **Search online for
+  this item** explicitly starts `uploadPhoto`, `createMatchJob({ mode: 'online' })`, then
+  `searchWebForPhoto`, and opens `/match/:jobId` with the results. **Label it myself** creates
+  the online-mode job without searching and opens the custom form through `?manual=1`.
+  Sample **Try demo matching** creates the default catalog job. Block duplicate starts; after
+  navigation, ignore a late result. Upload/lookup failures leave manual entry available.
+- **Online photo results** (`/match/:jobId`, `mode: 'online'`). Show `job.web` possible product
+  listings and the manual-label fallback; skip catalog candidates and evidence requests. A
+  custom form collects name, brand (optional for clothing), color/version, type and main
+  colors. `confirmMatch` keeps the original photo for both online and manual choices. Custom
+  item editing exposes the same labels and submits only changed fields.
 - **Match** (`/match/:jobId`). Poll `getMatchJob`. While running, show `progress.stage`
   ('indexing' has `done`/`total`: the first scan renders reference images). On `done`:
   - `candidate_found`: candidates with `kind: 'match'` first; strength in words; evidence and

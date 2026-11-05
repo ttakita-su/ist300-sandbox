@@ -470,7 +470,9 @@ export const ops = {
   /**
    * Starts a match job for one item in one photo. Rate limit: 'scan'.
    * args: { photoId, category, dest: 'owned'|'wishlist', crop?: {x,y,w,h,rotate}, texts?: [{text, source}],
-   *         processingId?, idempotencyKey }
+   *         processingId?, mode?: 'catalog'|'online', idempotencyKey }
+   * - Online mode starts ready (done, retrieval not_run), without catalog analysis or a network
+   *   request. The person's explicit search action calls searchWebForPhoto separately.
    * - The photo must belong to the actor and be the person's own (a store image, kind 'web', is
    *   not_found). The processing copy is found from processingId, the
    *   original's processingId field, or a processing row linked by originalId.
@@ -486,6 +488,8 @@ export const ops = {
     idempotent: true,
     rateLimit: 'scan',
     async run(ctx, args) {
+      const mode = args.mode ?? 'catalog';
+      if (!['catalog', 'online'].includes(mode)) throw invalid({ mode: 'Choose online search or demo matching' });
       const dest = args.dest ?? 'owned';
       if (!['owned', 'wishlist'].includes(dest)) throw invalid({ dest: 'Choose collection or wishlist' });
       const category = args.category ?? null;
@@ -500,6 +504,7 @@ export const ops = {
         createdAt: iso(now),
         updatedAt: iso(now),
         dest,
+        mode,
         category,
         photoId: photo.id,
         processingId,
@@ -509,12 +514,12 @@ export const ops = {
         labelReads: [],
         productUrl: null,
         link: null,
-        status: 'queued',
+        status: mode === 'online' ? 'done' : 'queued',
         attempts: 0,
         error: null,
         latencyMs: null,
-        progress: { stage: 'queued', done: 0, total: 0 },
-        result: null,
+        progress: mode === 'online' ? null : { stage: 'queued', done: 0, total: 0 },
+        result: mode === 'online' ? { retrieval: 'not_run', candidates: [], askFor: [], notes: [] } : null,
         // Online store results, only after the person asks (searchWebForPhoto).
         web: null,
         confirmedItemId: null,
@@ -522,7 +527,7 @@ export const ops = {
       };
       await ctx.db.put('matchJobs', job);
       await ctx.metric('match_started', { category, dest, hasCrop: Boolean(crop), hasText: job.texts.length > 0 });
-      schedule(runnerEnv(ctx), job.id, job.runId);
+      if (mode === 'catalog') schedule(runnerEnv(ctx), job.id, job.runId);
       return jobView(await ctx.catalog(), job, now);
     },
   },

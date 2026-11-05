@@ -205,6 +205,10 @@ function categoryChoice(selected) {
   </fieldset>`;
 }
 
+function brandField(category, brand) {
+  return field({ label: 'Brand', name: 'custom.brand', id: 'f-web-brand', value: brand ?? '', required: category !== 'clothing', optional: category === 'clothing', attrs: 'maxlength="120" autocomplete="off"', hint: brand ? null : category === 'clothing' ? 'Leave blank if you do not know it.' : "The store didn't name the brand, so type it in." });
+}
+
 function typeField(category, type) {
   const types = PRODUCT_TYPES[category] ?? [];
   if (!types.length) {
@@ -265,7 +269,7 @@ export function webSaveForm(draft, opts) {
     ${storePreview(draft, { priceText })}
     ${categoryChoice(category)}
     <div class="form-grid two">
-      ${field({ label: 'Brand', name: 'custom.brand', id: 'f-web-brand', value: custom.brand ?? '', required: true, attrs: 'maxlength="120" autocomplete="off"', hint: custom.brand ? null : "The store didn't name the brand, so type it in." })}
+      <div data-web-brand>${brandField(category, custom.brand)}</div>
       ${field({ label: 'Name', name: 'custom.name', id: 'f-web-name', value: custom.name ?? '', required: true, placeholder: 'Model or a short description', attrs: 'maxlength="120" autocomplete="off"' })}
       ${field({ label: 'Color or version', name: 'custom.variantName', id: 'f-web-variant', value: custom.variantName ?? '', optional: true, attrs: 'maxlength="120" autocomplete="off"' })}
       <div class="web-type" data-web-type>${typeField(category, type)}</div>
@@ -296,7 +300,7 @@ export function readWebSaveForm(form) {
   };
   const errors = {};
   if (!CATEGORIES.includes(category)) errors.category = 'Choose what it is';
-  if (!custom.brand) errors['custom.brand'] = 'Enter the brand';
+  if (category !== 'clothing' && !custom.brand) errors['custom.brand'] = 'Enter the brand';
   if (!custom.name) errors['custom.name'] = 'Enter a name';
   const box = form.elements.saveImage;
   return { category, custom, saveImage: Boolean(box?.checked && !box.disabled), errors: Object.keys(errors).length ? errors : null };
@@ -330,6 +334,7 @@ export function bindWebSave(container, opts) {
       const category = event.target.value;
       const type = guessType(category, words) ?? '';
       form.dataset.category = category;
+      render(form.querySelector('[data-web-brand]'), brandField(category, form.elements['custom.brand'].value));
       form.querySelector('[data-category-hint]')?.remove();
       form.querySelector('.field-error[data-for="category"]')?.remove();
       for (const radio of form.querySelectorAll('input[name="category"]')) radio.removeAttribute('aria-invalid');

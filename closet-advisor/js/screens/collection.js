@@ -20,7 +20,7 @@ import {
   swatches,
   field,
 } from '../ui/components.js';
-import { ownedDetailsFields, readOwnedDetails, bindUsualSize, profileSizeFor } from '../ui/item-forms.js';
+import { ownedDetailsFields, readOwnedDetails, bindUsualSize, profileSizeFor, customItemFields, changedCustomItem } from '../ui/item-forms.js';
 import { openCatalogPicker } from '../ui/catalog-picker.js';
 import { webSnapshot } from '../ui/web-product.js';
 import { pill, collectionTabs } from '../ui/screen-kit.js';
@@ -316,13 +316,7 @@ export default [
         ${backHead({ title: 'Edit details', back: `#/collection/${encodeURIComponent(item.id)}` })}
         <p class="muted">${item.brandName} ${item.title}${item.subtitle ? `, ${item.subtitle}` : ''}</p>
         <form class="stack stack-lg" data-edit novalidate>
-          ${item.custom
-            ? html`<div class="form-grid two">
-                ${field({ label: 'Brand', name: 'custom.brand', value: item.custom.brand, required: true })}
-                ${field({ label: 'Name', name: 'custom.name', value: item.custom.name, required: true })}
-                ${field({ label: 'Color or version', name: 'custom.variantName', value: item.custom.variantName ?? '', optional: true })}
-              </div>`
-            : ''}
+          ${item.custom ? customItemFields(item.category, item.custom) : ''}
           ${ownedDetailsFields({ category: item.category, type, sizing, values: item.details, usual: profileSizeFor(profile, item.category, type) })}
           <div class="button-row">
             <button type="submit" class="btn btn-primary">Save changes</button>
@@ -345,11 +339,7 @@ export default [
             const patch = { details: readOwnedDetails(form, item.category) };
             if (item.custom) {
               // Only the fields changed here, so saving an older tab doesn't undo another tab's edit.
-              const custom = {};
-              for (const key of ['brand', 'name', 'variantName']) {
-                const value = form.elements[`custom.${key}`].value;
-                if (value !== (item.custom[key] ?? '')) custom[key] = value;
-              }
+              const custom = changedCustomItem(form, item.custom);
               if (Object.keys(custom).length) patch.custom = custom;
             }
             await ctx.api.updateOwned({ itemId: item.id, patch });

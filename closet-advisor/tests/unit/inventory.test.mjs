@@ -314,23 +314,26 @@ test('manual items carry no catalog identity, and callers cannot supply one', as
 
   await rejectsWith(api.createOwned(alex, { source: 'manual', category: 'clothing', productId: 'harbor-pine-deck-jacket', custom: { brand: 'A', name: 'B' } }), 'invalid');
   const missing = await rejectsWith(api.createOwned(alex, { source: 'manual', category: 'clothing', custom: { brand: '' } }), 'invalid');
-  assert.ok(missing.details.fields['custom.brand'] && missing.details.fields['custom.name']);
+  assert.equal(missing.details.fields['custom.name'], 'Enter a name');
+  assert.equal(missing.details.fields['custom.brand'], undefined, 'clothing can have an unknown brand');
   await rejectsWith(api.createOwned(alex, { source: 'catalog_search', category: 'watch' }), 'invalid');
   await rejectsWith(api.createOwned(alex, { category: 'sneaker', productId: 'not-a-product' }), 'invalid');
   await rejectsWith(api.createOwned(alex, { category: 'watch', productId: 'kestrel-runner-2' }), 'invalid');
   await rejectsWith(api.createOwned(alex, { category: 'sneaker', productId: 'kestrel-runner-2', variantId: 'vela-court-low--white-gum' }), 'invalid');
 });
 
-test('a manual item needs a visible name and brand, on create and on edit', async () => {
+test('manual clothing needs a visible name and allows an unknown brand, on create and edit', async () => {
   const { api, alex } = await setup();
   const before = (await api.listOwned(alex, {})).total;
   for (const name of ['', '   ', '​', ' ​‍﻿ ']) {
     const error = await rejectsWith(api.createOwned(alex, { source: 'manual', category: 'clothing', custom: { brand: 'Uniqlo', name } }), 'invalid');
     assert.equal(error.details.fields['custom.name'], 'Enter a name', JSON.stringify(name));
   }
-  const brandless = await rejectsWith(api.createOwned(alex, { source: 'manual', category: 'clothing', custom: { brand: '​', name: 'Oxford shirt' } }), 'invalid');
-  assert.equal(brandless.details.fields['custom.brand'], 'Enter the brand');
   assert.equal((await api.listOwned(alex, {})).total, before, 'nothing was saved');
+  const brandless = await api.createOwned(alex, { source: 'manual', category: 'clothing', custom: { brand: '​', name: 'Oxford shirt' } });
+  assert.equal(brandless.custom.brand, null);
+  const missingShoeBrand = await rejectsWith(api.createOwned(alex, { source: 'manual', category: 'sneaker', custom: { name: 'Court shoe' } }), 'invalid');
+  assert.equal(missingShoeBrand.details.fields['custom.brand'], 'Enter the brand');
 
   const item = await api.createOwned(alex, { source: 'manual', category: 'clothing', custom: { brand: 'Uniqlo', name: 'Oxford shirt', variantName: 'Light blue' } });
   for (const name of ['', '   ', '​']) {

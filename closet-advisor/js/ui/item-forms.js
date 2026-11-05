@@ -16,12 +16,41 @@ import {
   WISH_INTENT_FOR_REASON,
   WISH_INTENT_LABEL,
   WISH_INTENTS,
+  PRODUCT_TYPES,
+  TYPE_LABEL,
 } from '../data/schema.js';
-import { field, selectField, thumb } from './components.js';
+import { PICKABLE_COLORS, colorLabel } from '../data/colors.js';
+import { field, selectField, thumb, chipGroup } from './components.js';
 import { hydratePhotos } from './hydrate.js';
 
 const WAISTS = ['28', '29', '30', '31', '32', '33', '34', '36', '38', '40'];
 const INSEAMS = ['28', '30', '32', '34', '36'];
+
+/** Editable labels for a person's own item, without a catalog identity. */
+export function customItemFields(category, values = {}) {
+  const types = [...new Set([...(PRODUCT_TYPES[category] ?? []), ...(values.type ? [values.type] : [])])];
+  const colors = [...new Set([...(values.colors ?? []), ...PICKABLE_COLORS])];
+  return html`<div class="form-grid two">
+    ${field({ label: 'Brand', name: 'custom.brand', value: values.brand ?? '', required: category !== 'clothing', optional: category === 'clothing', hint: category === 'clothing' ? 'Leave blank if you do not know it.' : null })}
+    ${field({ label: 'Name', name: 'custom.name', value: values.name ?? '', required: true, placeholder: 'For example, my blue striped shirt' })}
+    ${field({ label: 'Color or version', name: 'custom.variantName', value: values.variantName ?? '', optional: true })}
+    ${selectField({ label: 'Type', name: 'custom.type', options: types.map((t) => ({ value: t, label: TYPE_LABEL[t] ?? t })), value: values.type ?? '', placeholder: 'Not sure', optional: true })}
+  </div>
+  ${chipGroup({ legend: 'Main colors', name: 'colors', options: colors.map((c) => ({ value: c, label: colorLabel(c) })), selected: values.colors ?? [] })}`;
+}
+
+/** Reads the labels rendered by customItemFields. Validation stays in the API. */
+export function readCustomItem(form) {
+  const value = (key) => form.elements[`custom.${key}`]?.value ?? '';
+  return { brand: value('brand'), name: value('name'), variantName: value('variantName'), type: value('type'), colors: [...form.querySelectorAll('input[name="colors"]:checked')].map((el) => el.value) };
+}
+
+/** Only changed labels enter the patch, preserving unrelated edits from other tabs. */
+export function changedCustomItem(form, before) {
+  return Object.fromEntries(Object.entries(readCustomItem(form)).filter(([key, value]) =>
+    Array.isArray(value) ? JSON.stringify(value) !== JSON.stringify(before[key] ?? []) : value !== (before[key] ?? ''),
+  ));
+}
 
 /** Which size control a product needs: 'shoe' | 'top' | 'bottom' | null (watches, straps). */
 export function sizeKind(category, type) {

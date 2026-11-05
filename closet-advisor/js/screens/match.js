@@ -9,7 +9,7 @@ import { idempotencyKey } from '../lib/ids.js';
 import { CATEGORIES, CATEGORY_SINGULAR } from '../data/schema.js';
 import { renderLabel } from '../engine/samples.js';
 import { backHead, media, label, evidenceList, notice, thumb, field, selectField, demoNote } from '../ui/components.js';
-import { createWithDuplicateCheck, readOwnedDetails, readWish } from '../ui/item-forms.js';
+import { createWithDuplicateCheck, readOwnedDetails, readWish, customItemFields, readCustomItem } from '../ui/item-forms.js';
 import { openCatalogPicker } from '../ui/catalog-picker.js';
 import { IMAGE_NOT_KEPT, bindRemoteImages, keepStoreImage, loadStorePage, openWebSheet, webResultLists } from '../ui/web-product.js';
 import { openSheet, toast, toastError, withBusy, showFieldErrors } from '../lib/ui.js';
@@ -162,13 +162,13 @@ function webPanel(job) {
     body = html`<p class="small">Bing visual search can name what's in the photo and find real store listings for it, with prices.</p>${action}`;
   } else if (web.status === 'ok') {
     body = html`<div class="stack stack-xs">
-        <p>Bing recognized this as: <strong>${web.query ?? 'something it could search for'}</strong></p>
+        <p>${job.mode === 'online' ? 'Possible products for:' : 'Bing recognized this as:'} <strong>${web.query ?? 'something it could search for'}</strong></p>
         <p class="small muted">Searched ${fmt.relative(web.searchedAt)}. Choose a result to save it as your own item; your photo stays its photo.</p>
       </div>
       ${action}
       ${webResultLists(web, { headingLevel: 3, empty: 'Bing named it, but no store listings or pages came back. Search again, or search the catalog.' })}`;
   } else {
-    body = html`${notice({ tone: web.status === 'not_connected' ? 'info' : 'warn', title: WEB_PROBLEM[web.status] ?? WEB_PROBLEM.unavailable, body: web.reason })}${action}`;
+    body = html`${notice({ tone: web.status === 'not_connected' ? 'info' : 'warn', title: job.mode === 'online' && web.status === 'no_match' ? 'No product match found' : WEB_PROBLEM[web.status] ?? WEB_PROBLEM.unavailable, body: web.reason })}${action}`;
   }
   return html`<section class="panel stack" aria-labelledby="web-h" data-web-panel>
     <h2 id="web-h">Online stores</h2>
@@ -177,6 +177,15 @@ function webPanel(job) {
 }
 
 function doneView(job) {
+  if (job.mode === 'online') {
+    const empty = job.web?.status === 'ok' && !job.web.shopping.length && !job.web.results.length;
+    return html`<section class="stack stack-sm">
+        ${empty ? notice({ tone: 'info', title: 'No product match found', body: 'Try another photo or label the item yourself.' }) : ''}
+        <div class="button-row"><button type="button" class="btn ${!job.web || job.web.status !== 'ok' || empty ? 'btn-primary' : 'btn-secondary'}" data-custom>${icon('edit')}Label it myself</button>
+          <span class="small muted">${job.web ? 'No suitable result? Add your own details and edit them later.' : 'Add a name, type and colors. You can edit them later.'}</span></div>
+      </section>
+      ${webPanel(job)}`;
+  }
   const r = job.result;
   const reads = (job.labelReads ?? []).filter((l) => l.status !== 'read');
   const candidates = [...r.candidates].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'match' ? -1 : 1));
@@ -236,7 +245,7 @@ export default [
         body = doneView(job);
       }
       return html`<div class="stack stack-lg">
-        ${backHead({ title: 'Match', back: `#/add/photo?dest=${job.dest}` })}
+        ${backHead({ title: job.mode === 'online' ? 'Photo results' : 'Match', back: `#/add/photo?dest=${job.dest}` })}
         <p class="muted">${job.dest === 'wishlist' ? 'Saving to your wishlist' : 'Adding to your collection'}${job.category ? `: ${CATEGORY_SINGULAR[job.category].toLowerCase()}` : ''}</p>
         ${photo}
         ${body}
@@ -341,23 +350,26 @@ export default [
       );
       // Saving as the person's own item; `known` fills it in (from a store page that wasn't a product).
       const openCustom = async (known = {}) => {
-        const category = job.category ?? (CATEGORIES.includes(known.category) ? known.category : null);
+        const category = job.category ?? (CATEGORIES.includes(known.category) ? known.category : 'clothing');
         const out = await openSheet({
-          title: 'Save as your own item',
+          title: job.mode === 'online' ? 'Label your item' : 'Save as your own item',
           body: html`<form class="stack" novalidate>
-            ${job.category ? '' : selectField({ label: 'What is it?', name: 'category', options: CATEGORIES.map((c) => ({ value: c, label: CATEGORY_SINGULAR[c] })), value: category ?? 'sneaker' })}
-            ${field({ label: 'Brand', name: 'custom.brand', value: known.brand ?? '', required: true })}
-            ${field({ label: 'Name', name: 'custom.name', value: known.name ?? '', required: true, placeholder: 'Model or a short description' })}
-            ${field({ label: 'Color or version', name: 'custom.variantName', value: known.variantName ?? '', optional: true })}
+            <p class="small muted">Your photo stays with this item. Add a name you will recognize; the other clothing labels can stay blank.</p>
+            ${job.category ? '' : selectField({ label: 'What is it?', name: 'category', options: CATEGORIES.map((c) => ({ value: c, label: CATEGORY_SINGULAR[c] })), value: category })}
+            <div data-custom-fields>${customItemFields(category, known)}</div>
             <button type="submit" class="btn btn-primary btn-block">Save</button>
           </form>`,
           onMount(el, close) {
+            el.querySelector('select[name="category"]')?.addEventListener('change', (event) => {
+              const form = el.querySelector('form');
+              render(el.querySelector('[data-custom-fields]'), customItemFields(event.target.value, { ...readCustomItem(form), type: null }));
+            });
             el.querySelector('form').addEventListener('submit', async (event) => {
               event.preventDefault();
               const form = event.target;
               await withBusy(form.querySelector('[type="submit"]'), async () => {
                 try {
-                  const custom = { brand: form.elements['custom.brand'].value, name: form.elements['custom.name'].value, variantName: form.elements['custom.variantName'].value };
+                  const custom = readCustomItem(form);
                   const result = await saveWith({ candidateId: null, variantId: null, custom, category: job.category ?? form.elements.category.value }, (path) => close({ navigate: path }));
                   close(result ?? null);
                 } catch (error) {
@@ -424,6 +436,7 @@ export default [
           }),
         );
       });
+      if (ctx.query.manual === '1' && job.status !== 'confirmed') openCustom().catch(toastError);
       return () => {
         clearTimeout(timer);
         offImages();

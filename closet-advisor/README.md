@@ -9,6 +9,17 @@ It now also has a small local Node server (`npm start`) that looks up **real pro
 online stores: paste a store's product link, search online stores by name, or search with a
 photo through Microsoft Bing. Everything else runs in the browser.
 
+To add your own clothes, take or upload a photo and press **Search online for this item**.
+The prepared photo goes to Bing visual search, which suggests a product name and online
+listings. Choose a result and check its details before saving; a result can be a lookalike.
+Your original photo stays with the saved item. There is no demo-catalog scan before this search.
+
+If no result is suitable, the search is blocked, or the local server is unavailable, choose
+**Label it myself**. You can also choose that straight after taking the photo without sending
+it anywhere. Enter a name, optional clothing brand, type, color/version and main colors;
+**Edit details** on the saved item lets you change these later. Sample photos still offer
+**Try demo matching** to demonstrate the on-device catalog matcher.
+
 Engineers: the design contract is [ARCHITECTURE.md](ARCHITECTURE.md). The production plan is
 [docs/PLAN.md](docs/PLAN.md).
 
@@ -82,7 +93,7 @@ person action at a time.
 | --- | --- | --- |
 | Paste a product link | Add, Paste a product link (`/add/link`) | The server reads that one page (plus one Shopify data file on the same store, when the store uses Shopify). You get the name, brand, store image, price, availability, color, style code or barcode, and a form to check before saving. |
 | Search online stores | Add, Search online stores (`/add/web`) | Bing Shopping listings (thumbnail, title, price, seller) and Bing web results for store pages. A listing opens the save form directly; a store page is read like a pasted link first. |
-| Photo search | On the match screen after a photo, Search online stores | The photo goes to Bing visual search, which names the item ("Bing recognized this as: Casio F-91W") and returns the same listings and store pages for that name. Your photo stays the item's photo; the store image is saved as an extra option. |
+| Photo search | After taking/uploading a photo, Search online for this item; existing demo match results also offer Search online stores | The photo goes to Bing visual search, which suggests a name and returns listings and store pages for that name. Check which result is yours, or choose Label it myself. Your photo stays the item's photo; a store image can be saved as an extra option. |
 
 When you save, "Save the store's image with it" downloads the store image through the server
 and keeps a re-encoded copy in this browser, so the item doesn't depend on the store later.
@@ -120,8 +131,9 @@ When a store blocks a lookup, Rotation:
 
 - Your items, outfits, photos, notes and sizes are kept in this browser (IndexedDB). Nothing is
   synced. Export my data includes your outfits; deleting your account removes them.
-- **Your photo leaves your device only when you press Search online stores** on the match
-  screen. The line under the button says it goes to Microsoft Bing. Rotation sends the 768 px
+- **Your photo leaves your device only when you press a photo-search button**: Search online
+  for this item on the preview, or Search online stores / Search again on the results screen.
+  The text beside the button says it goes to Microsoft Bing. Rotation sends the 768 px
   copy it already made, re-encoded without EXIF or GPS data, rotated the way you rotated it.
   Bing's own privacy terms then apply to it.
 - A pasted link goes to that store. A typed search goes to Bing. Both are sent from your

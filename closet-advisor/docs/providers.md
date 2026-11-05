@@ -127,8 +127,9 @@ retried. A 401, 403 or 429, or a results page with no results and Bing's challen
 (captcha, "verify you are human", "unusual traffic"), counts as a block: Bing then gets no
 requests for 30 minutes and the app says to try later or search by name. Bing's cookies stay in
 the server's memory and go only to Bing; no other site gets cookies. The photo is sent only
-when the person presses "Search online stores" on the match screen, next to the line "Sends this
-photo to Microsoft Bing to recognize it", as the 768 px copy without EXIF or GPS. The server
+when the person presses "Search online for this item" on the preview or "Search online stores"
+/ "Search again" on the results screen, beside text explaining it goes to Microsoft Bing,
+as the 768 px copy without EXIF or GPS. The server
 keeps the answer for 15 minutes under a SHA-256 of the bytes, never the bytes.
 
 **Verified live on 2026-10-15** (from the developer's Mac, honest User-Agent, no blocks or

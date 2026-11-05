@@ -161,7 +161,7 @@ export default [
     render(ctx) {
       const dest = destOf(ctx);
       const ways = [
-        { path: '/add/photo', icon: 'camera', title: 'Take a photo', body: 'Matched on this device. You can also search online stores with it.' },
+        { path: '/add/photo', icon: 'camera', title: 'Take a photo', body: 'Search online for your item, or label it yourself.' },
         { path: '/add/web', icon: 'globe', title: 'Search online stores', body: 'Find a real product by name or code.' },
         { path: '/add/link', icon: 'link', title: 'Paste a product link', body: "From any store's product page." },
         { path: '/add/search', icon: 'search', title: 'Search the demo catalog', body: 'By brand, model, color or code.' },
@@ -478,7 +478,7 @@ export default [
         </div>
         <form class="stack stack-lg" data-manual novalidate>
           <div class="form-grid two">
-            ${field({ label: 'Brand', name: 'custom.brand', value: q.brand ?? '', required: true })}
+            ${field({ label: 'Brand', name: 'custom.brand', value: q.brand ?? '', required: category !== 'clothing', optional: category === 'clothing' })}
             ${field({ label: 'Name', name: 'custom.name', value: q.name ?? '', required: true, placeholder: 'Model or a short description' })}
             ${field({ label: 'Color or version', name: 'custom.variantName', value: q.variantName ?? '', optional: true })}
             ${selectField({ label: 'Type', name: 'custom.type', options: types.map((t) => ({ value: t, label: TYPE_LABEL[t] ?? fmt.humanize(t) })), value: type })}
