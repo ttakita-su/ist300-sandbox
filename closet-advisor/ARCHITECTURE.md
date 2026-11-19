@@ -777,10 +777,10 @@ DisplayImage {
   options: ['catalog'?, 'original'?, 'cleaned'?, 'web'?]   // what the person can switch to
 }
 // Order: the wanted display when it has an image, then the person's photo, then the store
-// image (photos.webId), then the catalog image, then the placeholder. Defaults: items saved
-// from a link or text search show 'web'; items saved from the photo flow show 'original' and
-// keep 'web' as an option. Wishlist views derive the display: catalog image when permitted,
-// else the person's photo, else the store image.
+// image (photos.webId), then the catalog image, then the placeholder. Defaults: any item saved
+// with a store image shows 'web' (from a link, a text search or the photo flow, and when a wish
+// is marked bought); the person's photo stays as the 'original' option. Wishlist views derive
+// the display: catalog image when permitted, else the store image, else the person's photo.
 
 RedactedItem {             // what a stylist sees (policy.redactForStylist), allowlist only
   id, category, productId, variantId, custom, product, variant, title, brandName, subtitle, code,
@@ -1136,13 +1136,13 @@ Routes (hash based, `#/path?query`):
 | `/onboarding` | preference survey (cold start) | none |
 | `/discover` | recommendation feed and request box | Discover |
 | `/recs` | results for `?mode=similar|matching|alternatives&seed=...` | Discover |
-| `/collection` | owned grid with filters | Collection |
+| `/collection` | home for shoppers: add-item tiles, owned grid, filters | Collection |
 | `/collection/:id` | item detail | Collection |
 | `/collection/:id/edit` | edit item | Collection |
-| `/outfits` | outfits made from the collection (Items / Outfits switch) | Collection |
-| `/outfits/new` | build an outfit `?item=<ownedItem id>` preselects one | Collection |
-| `/outfits/:id` | outfit detail | Collection |
-| `/outfits/:id/edit` | edit an outfit | Collection |
+| `/outfits` | outfits made from the collection | Outfits |
+| `/outfits/new` | build an outfit `?item=<ownedItem id>` preselects one | Outfits |
+| `/outfits/:id` | outfit detail | Outfits |
+| `/outfits/:id/edit` | edit an outfit | Outfits |
 | `/wishlist` | wishlist | Wishlist |
 | `/wishlist/:id` | wishlist item | Wishlist |
 | `/wishlist/compare` | help me choose `?ids=a,b,c` | Wishlist |
@@ -1273,8 +1273,13 @@ Tokens in `css/tokens.css`, classes in `css/components.css`:
   color or version) that changed, so an older tab doesn't undo them; details are sent whole.
   The manual add form's category and I own it / I want it pills carry the typed brand, name
   and color into the new form.
-- **Outfits.** `/collection` and `/outfits` share an Items / Outfits switch
-  (`collectionTabs`, the `.tabs` link row with `aria-current="page"`). The list shows cards
+- **Collection.** The shoppers' home screen and first tab (Collection, Discover, +, Outfits,
+  Wishlist, Profile). Under the head, "Add something you own" shows four icon tiles (Take a
+  photo, filled and first; Search online stores; Paste a link; Type it in) plus a More ways link
+  to `/add`. Category chips stay visible; brand, color, sort and archived items sit in a
+  "Filters and sort" `<details>` that opens while one of them is in use. Picture tags carry an
+  icon for where the picture came from (camera, globe for a store, tag for the catalog).
+- **Outfits.** Its own tab (`tab: 'outfits'`). The list shows cards
   with up to four thumbnails, "Needs another item" for incomplete outfits, and empty states for
   "No outfits yet" and for fewer than two active items ("Add a few items first", no form). The
   form has a name (`maxlength` 60), items grouped clothing, sneakers, watches as `.choice`

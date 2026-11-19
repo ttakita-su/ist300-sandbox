@@ -20,6 +20,9 @@ const onDevice = (image) => DEVICE_KINDS.includes(image?.kind) && Boolean(image.
  * @param {any} image DisplayImage or variant image { url, label }
  * @param {{ alt: string, category?: string, tag?: boolean, wide?: boolean, className?: string }} opts
  */
+// Where a picture came from, at a glance: the person's camera, an online store, or the catalog.
+const TAG_ICON = { original: 'camera', cleaned: 'camera', web: 'globe', catalog: 'tag' };
+
 export function media(image, opts) {
   const kind = image?.kind ?? (image?.url ? 'catalog' : 'placeholder');
   // The person's own photos fill the tile; product shots (catalog or store) sit inside it.
@@ -34,7 +37,7 @@ export function media(image, opts) {
     inner = html`<div class="media-placeholder" role="img" aria-label="${opts.alt}">${categoryIcon(opts.category)}</div>`;
   }
   return html`<div class="${cx('media', isPhoto && 'is-photo', opts.wide && 'media-wide', opts.className)}">
-    ${inner}${showTag ? html`<span class="media-tag">${image.label}</span>` : ''}
+    ${inner}${showTag ? html`<span class="media-tag">${TAG_ICON[kind] ? icon(TAG_ICON[kind]) : ''}${image.label}</span>` : ''}
   </div>`;
 }
 

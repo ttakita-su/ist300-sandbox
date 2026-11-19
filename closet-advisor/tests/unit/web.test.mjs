@@ -808,7 +808,7 @@ test('the store image can be switched, replaced and removed like a photo, and go
   assert.equal(await db.get('photos', photo.photoId), null);
 });
 
-test('confirmMatch can save an online result: the person’s photo stays, the store image is an option', async () => {
+test('confirmMatch can save an online result: the store image shows by default, the person’s photo stays as an option', async () => {
   const web = fakeWebProvider({ searchImage: LENS_OK, fetchImage: storeImage });
   const { api, db, alex, sam } = await webEnv({ web });
   const { upload, job } = await finishedJob(api, alex, { category: 'watch' });
@@ -826,9 +826,9 @@ test('confirmMatch can save an online result: the person’s photo stays, the st
   assert.equal(saved.confirmedItemId, item.id);
   assert.equal(item.photos.originalId, upload.photoId);
   assert.equal(item.photos.webId, image.photoId);
-  assert.equal(item.display, 'original');
-  assert.equal(item.image.kind, 'original');
-  assert.deepEqual(item.image.options, ['original', 'web']);
+  assert.equal(item.display, 'web', 'the store image shows by default');
+  assert.equal(item.image.kind, 'web');
+  assert.deepEqual(item.image.options, ['original', 'web'], 'the person’s photo is still one tap away');
   assert.deepEqual(item.web, draft.web);
   assert.equal(item.web.via, 'photo');
   assert.equal(item.sourceUrl, draft.web.url);
@@ -848,7 +848,7 @@ test('confirmMatch can save an online result: the person’s photo stays, the st
   assert.equal(wish.photos.originalId, wishJob.upload.photoId);
   assert.equal(wish.photos.webId, image.photoId);
   assert.equal(wish.sourceUrl, pick.web.url);
-  assert.equal(wish.image.kind, 'original');
+  assert.equal(wish.image.kind, 'web', 'a wish shows the store image too');
   assert.deepEqual(wish.web, pick.web);
 });
 
@@ -1073,7 +1073,7 @@ test('a store image is never matched, read as a label or kept as the person’s 
   assert.notEqual(item.image.label, 'Your photo');
 });
 
-test('marking a photo-flow wish as bought keeps the person’s photo and the store image', async () => {
+test('marking a photo-flow wish as bought keeps both images and shows the store image', async () => {
   const web = fakeWebProvider({ searchImage: LENS_OK, fetchImage: storeImage });
   const { api, db, alex } = await webEnv({ web });
   const { upload, job } = await finishedJob(api, alex, { dest: 'wishlist', category: 'watch' });
@@ -1083,8 +1083,8 @@ test('marking a photo-flow wish as bought keeps the person’s photo and the sto
   const { owned } = await api.markPurchased(alex, { itemId: wish.id, details: {} });
   assert.equal(owned.photos.originalId, upload.photoId);
   assert.equal(owned.photos.webId, image.photoId);
-  assert.equal(owned.display, 'original');
-  assert.equal(owned.image.kind, 'original');
+  assert.equal(owned.display, 'web');
+  assert.equal(owned.image.kind, 'web');
   assert.deepEqual(owned.image.options, ['original', 'web']);
   await api.deleteOwned(alex, { itemId: owned.id });
   assert.ok(await db.get('photos', upload.photoId), 'the wish still uses the photo');

@@ -192,3 +192,156 @@
 .outfit-suggestion-actions {
   grid-column: 1 / -1;
 }
+
+/* ---------- Add something you own ---------- */
+
+.add-ways {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.add-ways h2 {
+  font-size: var(--text-lg);
+}
+
+.add-ways-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.add-ways-grid > li {
+  display: flex;
+  min-width: 0;
+}
+
+.add-way {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "icon title" "hint hint";
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-tile);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.add-way:hover {
+  border-color: var(--ink-faint);
+}
+
+.add-way:focus-visible {
+  outline-offset: 3px;
+}
+
+.add-way-icon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-control);
+  background: var(--studio);
+}
+
+.add-way-icon .icon {
+  width: 22px;
+  height: 22px;
+}
+
+.add-way-title {
+  grid-area: title;
+  font-weight: 680;
+  line-height: 1.2;
+}
+
+.add-way-hint {
+  grid-area: hint;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  line-height: 1.35;
+}
+
+/* The main way in: photographing the item. Filled with ink, its icon in the signal accent. */
+.add-way-primary {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.add-way-primary:hover {
+  border-color: var(--ink);
+}
+
+.add-way-primary .add-way-icon {
+  background: var(--accent-fill);
+  color: var(--on-accent-fill);
+}
+
+.add-way-primary .add-way-hint {
+  color: color-mix(in srgb, var(--on-ink) 78%, transparent);
+}
+
+@media (min-width: 720px) {
+  .add-ways-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .add-way {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "icon" "title" "hint";
+    align-items: start;
+    align-content: start;
+  }
+}
+
+/* ---------- Filters and sort ---------- */
+
+.filter-panel {
+  border: 1px solid var(--line);
+  border-radius: var(--r-control);
+  background: var(--surface);
+}
+
+.filter-panel > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 44px;
+  padding: 0 var(--s3);
+  cursor: pointer;
+  font-weight: 620;
+  list-style: none;
+}
+
+.filter-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.filter-panel > summary > .icon:last-child {
+  margin-left: auto;
+  transition: transform 150ms var(--ease);
+}
+
+.filter-panel[open] > summary > .icon:last-child {
+  transform: rotate(180deg);
+}
+
+.filter-panel-body {
+  padding: 0 var(--s3) var(--s3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filter-panel > summary > .icon:last-child {
+    transition: none;
+  }
+}

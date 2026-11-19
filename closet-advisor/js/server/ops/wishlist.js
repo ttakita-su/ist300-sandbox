@@ -290,7 +290,7 @@ export const ops = {
           details: args.details,
           identity,
           photos: { originalId, webId },
-          display: wish.productId ? 'catalog' : originalId ? 'original' : webId ? 'web' : 'original',
+          display: wish.productId ? 'catalog' : webId ? 'web' : 'original',
           web: wish.web ?? null,
         },
         { userId: ctx.actor.id, now, catalog },

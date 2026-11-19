@@ -28,7 +28,9 @@ browser verification is required; Rotation then offers **Open Bing Visual Search
 To add your own clothes, take or upload a photo and press **Search online for this item**.
 The prepared photo goes to the local model or Claude (or Bing visual search, with neither), which
 suggests a product name, and Rotation shows online listings for it. Choose a result and check its details
-before saving; a result can be a lookalike. Your original photo stays with the saved item. There
+before saving; a result can be a lookalike. When you keep the store's image, it becomes the
+item's picture; your original photo is saved with the item, and **Image to show** on its page
+switches back. There
 is no demo-catalog scan before this search.
 
 If no result is suitable, the search is blocked, or the local server is unavailable, choose
@@ -48,7 +50,7 @@ Engineers: the design contract is [ARCHITECTURE.md](ARCHITECTURE.md). The produc
 | Matching against the catalog, identity and version checks, abstaining when unsure | Real logic, but matched against a fictional catalog |
 | Catalog, brands, retailers, offers, prices, affiliate links | Demo. Fictional, labeled as demo, store domains end in `.example` |
 | Accounts and the "server" for your data | Demo. A module layer in the browser tab, data in IndexedDB |
-| Outfits (Collection, Outfits: build, view, edit and delete named sets of your own items) | Real, kept in this browser like your items. Outfits are never shared with a stylist and are not used for suggestions |
+| Outfits (its own tab: build, view, edit and delete named sets of your own items) | Real, kept in this browser like your items. Outfits are never shared with a stylist and are not used for suggestions |
 | Product page lookup (paste a link) | Real, with `npm start` |
 | Search online stores (Bing Shopping and Bing web results) | Real, with `npm start` |
 | Photo search (a model names the item, then Bing Shopping and web search) | Real, with `npm start` and either a vision model in Ollama on this computer (`OLLAMA_PHOTO_MODEL`, free) or an Anthropic API key in `.env`. With neither it falls back to Bing visual search, which currently refuses automated uploads (browser verification), so only Open Bing Visual Search and manual labeling work |
@@ -159,7 +161,7 @@ person action at a time.
 | --- | --- | --- |
 | Paste a product link | Add, Paste a product link (`/add/link`) | The server reads that one page (plus one Shopify data file on the same store, when the store uses Shopify). You get the name, brand, store image, price, availability, color, style code or barcode, and a form to check before saving. |
 | Search online stores | Add, Search online stores (`/add/web`) | Bing Shopping listings (thumbnail, title, price, seller) and Bing web results for store pages. A listing opens the save form directly; a store page is read like a pasted link first. |
-| Photo search | After taking/uploading a photo, Search online for this item; existing demo match results also offer Search online stores | The local model (with `OLLAMA_PHOTO_MODEL`) or Claude (with an Anthropic key) names the item in the photo and the server searches Bing Shopping and the web for that name; with neither, the photo goes to Bing visual search. Check which result is yours, or choose Label it myself. Your photo stays the item's photo; a store image can be saved as an extra option. |
+| Photo search | After taking/uploading a photo, Search online for this item; existing demo match results also offer Search online stores | The local model (with `OLLAMA_PHOTO_MODEL`) or Claude (with an Anthropic key) names the item in the photo and the server searches Bing Shopping and the web for that name; with neither, the photo goes to Bing visual search. Check which result is yours, or choose Label it myself. The store's image becomes the item's picture when you keep it; your photo is saved with it as the other option. |
 
 When you save, "Save the store's image with it" downloads the store image through the server
 and keeps a re-encoded copy in this browser, so the item doesn't depend on the store later.

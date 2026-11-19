@@ -16,6 +16,7 @@ const TABS = [
   { id: 'collection', label: 'Collection', href: '#/collection', icon: 'hanger' },
   { id: 'discover', label: 'Discover', href: '#/discover', icon: 'compass' },
   { id: 'add', label: 'Add item', href: '#/add', icon: 'plus', add: true },
+  { id: 'outfits', label: 'Outfits', href: '#/outfits', icon: 'layers' },
   { id: 'wishlist', label: 'Wishlist', href: '#/wishlist', icon: 'heart' },
   { id: 'profile', label: 'Profile', href: '#/profile', icon: 'user' },
 ];

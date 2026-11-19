@@ -163,11 +163,11 @@ try {
   // ---------- Read: nothing saved yet ----------
   await check('BR1', 'Open Outfits with no outfits saved: empty state with a next step', async () => {
     await go(page, '/collection');
-    await page.click('nav.tabs a[href="#/outfits"]');
+    await page.click('#tabbar [data-tab="outfits"]');
     await landed(page, /^#\/outfits$/);
     assert.equal(await h1(page), 'Outfits');
-    assert.match(await page.locator('nav.tabs a[aria-current="page"]').innerText(), /Outfits\s*0/);
-    assert.equal(await page.locator('[data-tab="collection"][aria-current="page"]').count(), 1, 'the Collection tab stays current');
+    assert.equal(await page.locator('[data-tab="outfits"][aria-current="page"]').count(), 1, 'Outfits is its own tab');
+    assert.equal(await page.locator('nav.tabs').count(), 0, 'no Items / Outfits switch any more');
     assert.equal(await page.locator('section.state h2').innerText(), 'No outfits yet');
     assert.equal(await page.locator('section.state a[href="#/outfits/new"]').innerText(), 'Build an outfit');
     await fitsScreen(page, 'empty outfits');

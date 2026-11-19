@@ -169,7 +169,7 @@ function webPanel(job, engine) {
   } else if (web.status === 'ok') {
     body = html`<div class="stack stack-xs">
         <p>${job.mode === 'online' ? 'Possible products for:' : `${answered.name} recognized this as:`} <strong>${web.query ?? 'something it could search for'}</strong></p>
-        <p class="small muted">Searched ${fmt.relative(web.searchedAt)}. Choose a result to save it as your own item; your photo stays its photo.</p>
+        <p class="small muted">Searched ${fmt.relative(web.searchedAt)}. Choose a result to save it as your own item; the store's image becomes its picture, and your photo is saved with it.</p>
       </div>
       ${action}
       ${webResultLists(web, { headingLevel: 3, empty: `${answered.name} named it, but no store listings or pages came back. Search again, or search the catalog.` })}`;
@@ -408,8 +408,8 @@ export default [
           ctx.refresh();
         }),
       );
-      // A pick saves through confirmMatch's custom path: the job is marked saved and the person's
-      // photo stays the item's photo, with the store's image as another option.
+      // A pick saves through confirmMatch's custom path: the job is marked saved, the store's image
+      // (when kept) shows by default, and the person's photo stays saved as another option.
       const openWebPick = async (pick) => {
         const imageKey = idempotencyKey();
         const out = await openWebSheet({

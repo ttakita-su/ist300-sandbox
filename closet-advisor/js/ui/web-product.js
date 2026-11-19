@@ -270,7 +270,7 @@ function imageChoice(hasImage, photoFlow) {
   const hint = !hasImage
     ? "There's no store image to save with this one."
     : photoFlow
-      ? "Your photo stays the item's photo; the store's image is kept on this device as another option."
+      ? "The store's image becomes the item's picture and is kept on this device. Your photo is saved too, and you can switch back to it on the item's page."
       : "It's downloaded once through Rotation's local server and kept on this device.";
   return html`<div class="field">
     <label class="check"><input type="checkbox" name="saveImage" ${hasImage ? raw('checked') : raw('disabled')}> Save the store's image with it</label>

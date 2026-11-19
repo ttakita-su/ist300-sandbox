@@ -23,7 +23,7 @@ import {
 import { ownedDetailsFields, readOwnedDetails, bindUsualSize, profileSizeFor, customItemFields, changedCustomItem } from '../ui/item-forms.js';
 import { openCatalogPicker } from '../ui/catalog-picker.js';
 import { webSnapshot } from '../ui/web-product.js';
-import { pill, collectionTabs } from '../ui/screen-kit.js';
+import { pill } from '../ui/screen-kit.js';
 import { confirmDialog, toast, toastError, withBusy, showFieldErrors } from '../lib/ui.js';
 
 const DISPLAY_LABEL = { catalog: 'Catalog image', original: 'Your photo', cleaned: 'Cleaned up', web: 'Store image' };
@@ -40,6 +40,58 @@ function filterHref(query, patch) {
   for (const [k, v] of Object.entries(next)) if (v) params.set(k, v);
   const qs = params.toString();
   return `#/collection${qs ? `?${qs}` : ''}`;
+}
+
+// The ways to add an item, each with an icon that says what it does. Taking a photo is the main one.
+const ADD_WAYS = [
+  { path: '/add/photo', icon: 'camera', title: 'Take a photo', hint: 'Snap your item, then find it online or label it yourself.', primary: true },
+  { path: '/add/web', icon: 'globe', title: 'Search online stores', hint: 'Find it by name or style code.' },
+  { path: '/add/link', icon: 'link', title: 'Paste a link', hint: "Use a store's product page." },
+  { path: '/add/manual', icon: 'edit', title: 'Type it in', hint: 'Enter the details yourself.' },
+];
+
+function addWays() {
+  return html`<section class="add-ways" aria-labelledby="add-ways-title">
+    <div class="spread">
+      <h2 id="add-ways-title">Add something you own</h2>
+      <a class="link-btn small" href="#/add?dest=owned">More ways</a>
+    </div>
+    <ul class="add-ways-grid">${ADD_WAYS.map(
+      (w) => html`<li><a class="add-way${w.primary ? ' add-way-primary' : ''}" href="#${w.path}?dest=owned">
+        <span class="add-way-icon">${icon(w.icon)}</span>
+        <span class="add-way-title">${w.title}</span>
+        <span class="add-way-hint">${w.hint}</span>
+      </a></li>`,
+    )}</ul>
+  </section>`;
+}
+
+// Brand, color, sort and archived items, folded away so the grid stays near the top. It opens by
+// itself while one of them is in use, so an active filter is never hidden.
+function filterPanel(q, data) {
+  const { facets } = data;
+  const active = [q.brand, q.color, q.sort && q.sort !== 'recent', q.archived === '1'].filter(Boolean).length;
+  return html`<details class="filter-panel" ${active ? html`open` : ''}>
+    <summary>${icon('sliders')}<span>Filters and sort</span>${active ? html`<span class="badge">${active} on</span>` : ''}${icon('chevron-down')}</summary>
+    <div class="stack stack-sm filter-panel-body">
+      ${facets.brands.length > 1
+        ? html`<div class="stack stack-xs"><span class="small muted" id="f-col-brand">Brand</span>
+            <div class="cluster" role="group" aria-labelledby="f-col-brand">${facets.brands.map((b) => pill(filterHref(q, { brand: q.brand === b.id ? '' : b.id }), b.name, q.brand === b.id, b.count))}</div></div>`
+        : ''}
+      ${facets.colors.length > 1
+        ? html`<div class="stack stack-xs"><span class="small muted" id="f-col-color">Color</span>
+            <div class="cluster" role="group" aria-labelledby="f-col-color">${facets.colors.map((c) => pill(filterHref(q, { color: q.color === c.name ? '' : c.name }), c.label, q.color === c.name, c.count))}</div></div>`
+        : ''}
+      <div class="spread">
+        <label class="row small" style="--gap: 8px">Sort
+          <select class="select" data-sort aria-label="Sort">${SORTS.map((s) => html`<option value="${s.value}" ${(q.sort || 'recent') === s.value ? html`selected` : ''}>${s.label}</option>`)}</select>
+        </label>
+        ${data.archivedCount
+          ? html`<a class="link-btn small" href="${filterHref(q, { archived: q.archived === '1' ? '' : '1' })}">${q.archived === '1' ? 'Hide archived' : `Show archived (${data.archivedCount})`}</a>`
+          : ''}
+      </div>
+    </div>
+  </details>`;
 }
 
 // The id of the item whose page was just used to open its edit screen. Save then returns to
@@ -75,26 +127,22 @@ export default [
     roles: ['user'],
     async render(ctx) {
       const q = ctx.query;
-      const [data, outfits] = await Promise.all([
-        ctx.api.listOwned({
-          category: q.category || undefined,
-          brandId: q.brand || undefined,
-          color: q.color || undefined,
-          q: q.q || undefined,
-          sort: q.sort || 'recent',
-          includeArchived: q.archived === '1',
-        }),
-        ctx.api.listOutfits({}),
-      ]);
+      const data = await ctx.api.listOwned({
+        category: q.category || undefined,
+        brandId: q.brand || undefined,
+        color: q.color || undefined,
+        q: q.q || undefined,
+        sort: q.sort || 'recent',
+        includeArchived: q.archived === '1',
+      });
       const { facets } = data;
       const filtered = Boolean(q.category || q.brand || q.color || q.q);
       return html`<div class="stack stack-lg">
         ${screenHead({
           title: 'Collection',
-          lede: data.collectionTotal ? `${fmt.plural(data.collectionTotal, 'item')} you own` : null,
-          actions: html`<a class="btn btn-primary" href="#/add?dest=owned">${icon('plus')}Add</a>`,
+          lede: data.collectionTotal ? `${fmt.plural(data.collectionTotal, 'item')} you own` : 'Everything you own, in one place.',
         })}
-        ${collectionTabs('items', { items: data.collectionTotal, outfits: outfits.total })}
+        ${addWays()}
         ${data.collectionTotal || data.archivedCount
           ? html`<div class="stack stack-sm">
               <form class="search-field" data-search role="search">
@@ -106,20 +154,7 @@ export default [
                 ${pill(filterHref(q, { category: '' }), 'All', !q.category, data.collectionTotal)}
                 ${CATEGORIES.filter((c) => facets.categories[c]).map((c) => pill(filterHref(q, { category: c }), CATEGORY_LABEL[c], q.category === c, facets.categories[c]))}
               </div>
-              ${facets.brands.length > 1
-                ? html`<div class="cluster" role="group" aria-label="Brand">${facets.brands.map((b) => pill(filterHref(q, { brand: q.brand === b.id ? '' : b.id }), b.name, q.brand === b.id, b.count))}</div>`
-                : ''}
-              ${facets.colors.length > 1
-                ? html`<div class="cluster" role="group" aria-label="Color">${facets.colors.map((c) => pill(filterHref(q, { color: q.color === c.name ? '' : c.name }), c.label, q.color === c.name, c.count))}</div>`
-                : ''}
-              <div class="spread">
-                <label class="row small" style="--gap: 8px">Sort
-                  <select class="select" data-sort aria-label="Sort">${SORTS.map((s) => html`<option value="${s.value}" ${(q.sort || 'recent') === s.value ? html`selected` : ''}>${s.label}</option>`)}</select>
-                </label>
-                ${data.archivedCount
-                  ? html`<a class="link-btn small" href="${filterHref(q, { archived: q.archived === '1' ? '' : '1' })}">${q.archived === '1' ? 'Hide archived' : `Show archived (${data.archivedCount})`}</a>`
-                  : ''}
-              </div>
+              ${filterPanel(q, data)}
             </div>`
           : ''}
         ${data.items.length
@@ -127,9 +162,9 @@ export default [
           : filtered
             ? emptyState({ iconName: 'filter', title: 'Nothing matches these filters', actions: html`<a class="btn btn-secondary" href="#/collection">Clear filters</a>` })
             : emptyState({
+                iconName: 'hanger',
                 title: 'Your collection is empty',
-                body: 'Photograph something you own, paste a product link, or search the catalog.',
-                actions: html`<a class="btn btn-primary" href="#/add/photo?dest=owned">${icon('camera')}Photograph an item</a><a class="btn btn-secondary" href="#/add?dest=owned">Other ways to add</a>`,
+                body: 'Add your first item with one of the options above. Taking a photo is the quickest.',
               })}
       </div>`;
     },

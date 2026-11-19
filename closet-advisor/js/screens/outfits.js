@@ -6,7 +6,6 @@ import * as fmt from '../lib/format.js';
 import { idempotencyKey } from '../lib/ids.js';
 import { CATEGORY_LABEL, OUTFIT_LIMITS } from '../data/schema.js';
 import { screenHead, backHead, itemTile, thumb, notice, emptyState, facts, field } from '../ui/components.js';
-import { collectionTabs } from '../ui/screen-kit.js';
 import { confirmDialog, toast, toastError, withBusy, showFieldErrors } from '../lib/ui.js';
 import { href as routeHref } from '../lib/router.js';
 import { outfitPart } from '../engine/recommend.js';
@@ -264,7 +263,7 @@ export default [
   {
     path: '/outfits',
     title: 'Outfits',
-    tab: 'collection',
+    tab: 'outfits',
     roles: ['user'],
     async render(ctx) {
       const [data, owned, ideas] = await Promise.all([ctx.api.listOutfits({}), ctx.api.listOwned({}), ctx.api.suggestOutfits({})]);
@@ -275,7 +274,6 @@ export default [
           lede: data.total ? `${fmt.plural(data.total, 'outfit')} from your collection` : null,
           actions: canBuild ? html`<a class="btn btn-primary" href="#/outfits/new">${icon('plus')}New outfit</a>` : '',
         })}
-        ${collectionTabs('outfits', { items: owned.collectionTotal, outfits: data.total })}
         ${data.outfits.length
           ? html`<section class="stack stack-sm" aria-labelledby="outfits-saved">
               <h2 id="outfits-saved">Saved</h2>
@@ -296,7 +294,7 @@ export default [
   {
     path: '/outfits/new',
     title: 'New outfit',
-    tab: 'collection',
+    tab: 'outfits',
     roles: ['user'],
     async render(ctx) {
       const owned = await ctx.api.listOwned({});
@@ -332,7 +330,7 @@ export default [
   {
     path: '/outfits/:id',
     title: (ctx) => ctx.outfitTitle ?? 'Outfit',
-    tab: 'collection',
+    tab: 'outfits',
     roles: ['user'],
     async render(ctx) {
       const outfit = await findOutfit(ctx);
@@ -400,7 +398,7 @@ export default [
   {
     path: '/outfits/:id/edit',
     title: 'Edit outfit',
-    tab: 'collection',
+    tab: 'outfits',
     roles: ['user'],
     async render(ctx) {
       const [outfit, owned] = await Promise.all([findOutfit(ctx), ctx.api.listOwned({ includeArchived: true })]);

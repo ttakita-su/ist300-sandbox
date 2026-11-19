@@ -109,9 +109,9 @@ export function ownedView(catalog, item, env) {
  * @param {{ now: number }} env
  */
 export function wishlistView(catalog, item, env) {
-  // Wishlist items have no "display" preference: catalog image when permitted, else the person's
-  // photo, else the store image saved with it.
-  const display = item.variantId ? 'catalog' : !item.photos?.originalId && item.photos?.webId ? 'web' : 'original';
+  // Wishlist items have no "display" preference: catalog image when permitted, else the store
+  // image saved with it, else the person's photo.
+  const display = item.variantId ? 'catalog' : item.photos?.webId ? 'web' : 'original';
   const record = { ...item, display, photos: { ...item.photos, cleanedId: null } };
   return {
     ...item,

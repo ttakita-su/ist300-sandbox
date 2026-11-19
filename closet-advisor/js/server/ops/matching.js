@@ -782,7 +782,8 @@ export const ops = {
         await ctx.db.put('wishlistItems', item);
         view = wishlistView(catalog, item, { now });
       } else {
-        const display = args.display === 'original' ? 'original' : input.productId && input.variantId ? 'catalog' : 'original';
+        // A store image the person chose to keep shows by default; their photo stays as an option.
+        const display = args.display === 'original' ? 'original' : input.productId && input.variantId ? 'catalog' : webPhotoId ? 'web' : 'original';
         item = buildOwnedItem(
           { ...input, details: args.details, photos: { originalId, cleanedId: null, labelIds: job.labelPhotoIds ?? [], webId: webPhotoId }, display: args.display ?? display },
           env,

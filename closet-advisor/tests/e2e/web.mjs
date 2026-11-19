@@ -199,17 +199,17 @@ try {
   const job = await callApi(page, 'getMatchJob', { jobId });
   assert.equal(job.status, 'confirmed', 'the job is marked saved');
   assert.equal(job.confirmedItemId, found.id);
-  assert.equal(found.image.kind, 'original', "the person's own photo stays the item's photo");
-  assert.equal(found.photos.originalId, job.photoId);
-  assert.ok(found.photos.webId, "and the store's image is kept as an option");
+  assert.equal(found.image.kind, 'web', "the store's image shows by default");
+  assert.equal(found.photos.originalId, job.photoId, "the person's own photo is saved with it");
+  assert.ok(found.photos.webId);
   assert.deepEqual(found.image.options, ['original', 'web']);
   assert.equal(found.web.via, 'photo');
   assert.match(found.identity.evidence[0].detail, /^Found by searching online stores from your photo/);
-  assert.match(await page.locator('.media .media-tag').first().innerText(), /Your photo/);
-  assert.deepEqual(await page.locator('.segmented label').allInnerTexts(), ['Your photo', 'Store image'], 'the store image is a display option');
-  await page.locator('.segmented label', { hasText: 'Store image' }).click();
-  await page.waitForFunction(() => document.querySelector('.media .media-tag')?.textContent.includes('Image from'));
+  assert.match(await page.locator('.media .media-tag').first().innerText(), /Image from/, 'the store image is labeled as the store’s, never "Your photo"');
+  assert.deepEqual(await page.locator('.segmented label').allInnerTexts(), ['Your photo', 'Store image'], 'the person can switch to their own photo');
   await shot(page, 'photo-saved');
+  await page.locator('.segmented label', { hasText: 'Your photo' }).click();
+  await page.waitForFunction(() => document.querySelector('.media .media-tag')?.textContent.includes('Your photo'));
 
   // (d) A store that blocks automated lookups says so, and offers to enter it by hand.
   await go(page, `/add/link?dest=owned&url=${encodeURIComponent(FIXTURE.blockedUrl)}`);
