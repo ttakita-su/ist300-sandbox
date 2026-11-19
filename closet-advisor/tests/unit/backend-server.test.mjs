@@ -530,7 +530,7 @@ test('the service worker leaves api/ to the network and uses a new cache name', 
   assert.equal(handled('https://ttakita.example/ist300-sandbox/closet-advisor/js/app.js'), true);
   assert.equal(handled('https://cdn.jsdelivr.net/npm/tesseract.js'), false);
   await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.deepEqual(opened, ['rotation-v3']);
+  assert.deepEqual(opened, ['rotation-v4']);
   // Refreshes and the install skip the browser's HTTP cache, so old and new modules can't mix.
   assert.deepEqual(fetchInits.map((init) => init?.cache), ['no-cache']);
   let installed;
