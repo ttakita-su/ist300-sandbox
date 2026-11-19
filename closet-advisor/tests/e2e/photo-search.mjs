@@ -26,6 +26,9 @@ try {
     if (delayed) await new Promise((resolve) => { releaseSearch = resolve; });
     await route.fulfill({ json: reply });
   });
+  // The photo screen reads status.json once per page load, so load it again behind the fake.
+  await page.reload();
+  await page.waitForSelector('html[data-ready="true"]');
   const bytes = await page.evaluate(async () => {
     const { renderSample } = await import('./js/engine/samples.js');
     return Array.from(new Uint8Array(await (await renderSample('field-jacket')).arrayBuffer()));
@@ -92,6 +95,77 @@ try {
   assert.equal(edited.custom.type, 'hoodie');
   assert.deepEqual(edited.custom.colors, ['red']);
   assert.equal(edited.photos.originalId, manual.photos.originalId);
+
+  reply = { status: 'unavailable', reason: 'Bing now requires browser verification for photo uploads. Automatic photo search is unavailable. Open Bing Visual Search in your browser, or label the item yourself.' };
+  await upload();
+  await page.locator('[data-photo-search]').click();
+  await page.waitForSelector('[data-custom]');
+  const browserSearch = page.getByRole('link', { name: 'Open Bing Visual Search', exact: true });
+  assert.equal(await browserSearch.getAttribute('href'), 'https://www.bing.com/images');
+  assert.equal(await browserSearch.getAttribute('target'), '_blank');
+  assert.equal(await page.getByRole('button', { name: 'Label it myself', exact: true }).isVisible(), true);
+  await page.waitForFunction(() => !document.querySelector('.toast'));
+  await page.screenshot({ path: '/tmp/rotation-bing-verification-fallback.png', fullPage: true });
+
+  // With a Claude key the server says so, and the app says where the photo goes before it's sent.
+  await page.unroute('**/api/status.json');
+  await page.route('**/api/status.json', (route) => route.fulfill({ json: { live: true, version: 1, engines: { lookup: 'page', search: 'bing', photo: 'claude' } } }));
+  await page.reload();
+  await page.waitForSelector('html[data-ready="true"]');
+  const beforeClaude = posts;
+  await upload();
+  assert.equal(posts, beforeClaude, 'selecting a photo does not send it to Claude');
+  assert.match(await page.locator('[data-preview]').innerText(), /Anthropic's Claude/);
+  assert.doesNotMatch(await page.locator('[data-preview]').innerText(), /Microsoft Bing/);
+  reply = { ...reply, status: 'ok', engine: 'claude', query: 'Blue Oxford Shirt', reason: null, shopping: [{ id: 'shirt_2', title: 'Blue Oxford Shirt', seller: 'Fixture Store', source: 'bing_shopping', url: 'https://www.bing.com/shop/productdetails?q=blue+shirt&goid=2', imageUrl: null, price: null }], results: [] };
+  await page.locator('[data-photo-search]').click();
+  await page.waitForSelector('[data-web-listing]');
+  assert.equal(posts, beforeClaude + 1);
+  const claudePanel = await page.locator('[data-web-panel]').innerText();
+  assert.match(claudePanel, /Possible products for:\s*Blue Oxford Shirt/);
+  assert.match(claudePanel, /Sends this photo to Anthropic's Claude/);
+  assert.equal(await hasHorizontalScroll(page), false);
+  await page.screenshot({ path: '/tmp/rotation-claude-photo-results.png', fullPage: true });
+
+  // With a model in Ollama on the server's computer, the app says the photo goes to no online service.
+  await page.unroute('**/api/status.json');
+  await page.route('**/api/status.json', (route) => route.fulfill({ json: { live: true, version: 1, engines: { lookup: 'page', search: 'bing', photo: 'local' } } }));
+  await page.reload();
+  await page.waitForSelector('html[data-ready="true"]');
+  const beforeLocal = posts;
+  let shownEngine = null;
+  await page.unroute('**/api/lens');
+  await page.route('**/api/lens', async (route) => {
+    posts += 1;
+    shownEngine = route.request().headers()['x-rotation-photo-engine'];
+    await route.fulfill({ json: reply });
+  });
+  await upload();
+  assert.equal(posts, beforeLocal, 'selecting a photo does not send it to the model');
+  const localPreview = await page.locator('[data-preview]').innerText();
+  assert.match(localPreview, /vision model on the computer running Rotation/);
+  assert.match(localPreview, /goes to no online service/);
+  assert.doesNotMatch(localPreview, /Anthropic|Microsoft Bing to find/);
+  reply = { ...reply, engine: 'local', query: 'navy field jacket' };
+  await page.locator('[data-photo-search]').click();
+  await page.waitForSelector('[data-web-listing]');
+  assert.equal(posts, beforeLocal + 1);
+  assert.equal(shownEngine, 'local', 'the page tells the server where it said the photo goes');
+  const localPanel = await page.locator('[data-web-panel]').innerText();
+  assert.match(localPanel, /Possible products for:\s*navy field jacket/);
+  assert.match(localPanel, /Sends this photo to a vision model on the computer running Rotation/);
+  assert.equal(await hasHorizontalScroll(page), false);
+  await page.screenshot({ path: '/tmp/rotation-local-photo-results.png', fullPage: true });
+  await page.unroute('**/api/lens');
+  await page.route('**/api/lens', async (route) => {
+    posts += 1;
+    if (delayed) await new Promise((resolve) => { releaseSearch = resolve; });
+    await route.fulfill({ json: reply });
+  });
+  await page.unroute('**/api/status.json');
+  await page.route('**/api/status.json', (route) => route.fulfill({ json: { live: true } }));
+  await page.reload();
+  await page.waitForSelector('html[data-ready="true"]');
 
   const beforeManual = posts;
   await upload();

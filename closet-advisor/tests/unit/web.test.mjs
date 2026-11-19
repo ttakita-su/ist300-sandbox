@@ -290,7 +290,7 @@ test('without the local server nothing is fetched and every call says so', withN
     assert.deepEqual(await notConnectedWeb[call]({}), { status: 'not_connected', reason: NOT_CONNECTED });
   }
   const { api, alex } = await webEnv();
-  assert.deepEqual(await api.webStatus(alex, {}), { live: false, reason: NOT_CONNECTED });
+  assert.deepEqual(await api.webStatus(alex, {}), { live: false, reason: NOT_CONNECTED, photoEngine: null });
   assert.deepEqual(await api.lookupProductPage(alex, { url: PAGE.url }), { status: 'not_connected', reason: NOT_CONNECTED });
   assert.deepEqual(await api.searchWebProducts(alex, { query: 'casio f-91w' }), { status: 'not_connected', reason: NOT_CONNECTED });
   assert.deepEqual(await api.importWebImage(alex, { imageUrl: LISTING.imageUrl }), { status: 'not_connected', reason: NOT_CONNECTED });
@@ -345,7 +345,7 @@ test('the browser provider posts same-origin JSON with X-Rotation and never thro
   };
   try {
     const { webProvider } = await import('../../js/server/providers/web.browser.js?case=live');
-    assert.deepEqual(await webProvider.status(), { live: true, reason: null });
+    assert.deepEqual(await webProvider.status(), { live: true, reason: null, photoEngine: 'bing' }, 'a status without engines means Bing photo search');
 
     next = () => Response.json({ status: 'found', page: { name: 'AF1' } });
     const found = await webProvider.lookup({ url: PAGE.url });
@@ -372,6 +372,7 @@ test('the browser provider posts same-origin JSON with X-Rotation and never thro
     const lens = posts.at(-1);
     assert.equal(lens.href, 'http://127.0.0.1:8130/api/lens');
     assert.equal(lens.headers['content-type'], 'image/jpeg');
+    assert.equal(lens.headers['x-rotation-photo-engine'], 'bing', 'the photo carries the engine the page named');
     assert.equal(lens.body, photo);
     // Rotating needs a canvas; without one the photo can't be prepared, which is reported, not thrown.
     const before = posts.length;
@@ -389,6 +390,28 @@ test('the browser provider posts same-origin JSON with X-Rotation and never thro
     assert.deepEqual(await webProvider.fetchImage({ url: 'https://static.nike.com/a.png' }), { status: 'blocked', reason: 'That store refused the image download.' });
     next = () => new Response('<svg/>', { status: 200, headers: { 'content-type': 'image/svg+xml' } });
     assert.equal((await webProvider.fetchImage({ url: 'https://static.nike.com/a.svg' })).status, 'unavailable', 'only raster types are taken');
+  } finally {
+    globalThis.fetch = real.fetch;
+    globalThis.document = real.document;
+  }
+});
+
+test('the browser provider reads a local photo engine from status.json and names it when it sends a photo', async () => {
+  const real = { fetch: globalThis.fetch, document: globalThis.document };
+  const posts = [];
+  globalThis.document = { baseURI: 'http://127.0.0.1:8130/' };
+  globalThis.fetch = async (url, init = {}) => {
+    if (String(url).endsWith('/api/status.json')) return Response.json({ live: true, version: 1, engines: { lookup: 'page', search: 'bing', photo: 'local' } });
+    posts.push({ href: String(url), headers: init.headers });
+    return Response.json({ status: 'no_match', reason: "The local model couldn't name a sneaker, watch or clothing item in this photo." });
+  };
+  try {
+    const { webProvider } = await import('../../js/server/providers/web.browser.js?case=local-engine');
+    assert.deepEqual(await webProvider.status(), { live: true, reason: null, photoEngine: 'local' });
+    const answered = await webProvider.searchImage({ blob: fakeJpeg() });
+    assert.equal(answered.status, 'no_match');
+    assert.equal(posts.length, 1);
+    assert.equal(posts[0].headers['x-rotation-photo-engine'], 'local', 'the server is told the page said the photo stays on this computer');
   } finally {
     globalThis.fetch = real.fetch;
     globalThis.document = real.document;
@@ -480,7 +503,13 @@ test('admins see whether the local server is on, read-only, with the simulation 
   const live = await webEnv({ web: fakeWebProvider({}) });
   const overview = await live.api.adminOverview(await live.as(MORGAN), {});
   assert.equal(overview.providers.find((p) => p.id === 'web').status, 'connected');
-  assert.deepEqual(await live.api.webStatus(live.alex, {}), { live: true, reason: null });
+  assert.deepEqual(await live.api.webStatus(live.alex, {}), { live: true, reason: null, photoEngine: 'bing' });
+  const claude = await webEnv({ web: fakeWebProvider({ photoEngine: 'claude' }) });
+  assert.equal((await claude.api.webStatus(claude.alex, {})).photoEngine, 'claude', 'webStatus says when photos go to Claude');
+  const local = await webEnv({ web: fakeWebProvider({ photoEngine: 'local' }) });
+  assert.equal((await local.api.webStatus(local.alex, {})).photoEngine, 'local', 'webStatus says when a model on this computer names photos');
+  const odd = await webEnv({ web: fakeWebProvider({ photoEngine: 'somewhere-else' }) });
+  assert.equal((await odd.api.webStatus(odd.alex, {})).photoEngine, 'bing', 'an engine the app does not know is described as Bing');
 });
 
 test('web operations share one hourly limit', async () => {
@@ -806,7 +835,7 @@ test('confirmMatch can save an online result: the person’s photo stays, the st
   assert.equal(item.identity.resolution, 'manual');
   assert.equal(item.identity.matchJobId, job.id);
   assert.deepEqual(item.identity.evidence.map((e) => e.kind), ['product_link', 'user_selection']);
-  assert.equal(item.identity.evidence[0].detail, `Found with Bing visual search from your photo on ${formatDate(draft.web.fetchedAt)}; you chose it.`);
+  assert.equal(item.identity.evidence[0].detail, `Found by searching online stores from your photo on ${formatDate(draft.web.fetchedAt)}; you chose it.`);
   assert.equal((await db.get('ownedItems', item.id)).sourceUrl, draft.web.url);
   const event = (await db.where('events', 'type', 'match_confirmed')).at(-1);
   assert.equal(event.data.pick, 'web');

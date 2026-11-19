@@ -23,7 +23,7 @@ const MAX_TEXT = 120;
 /** Images an owned item can show. 'web' is a store image saved on this device (photos.webId). */
 export const OWNED_DISPLAYS = ['catalog', 'original', 'cleaned', 'web'];
 
-/** How a web snapshot was found: a store page, a Bing Shopping listing, or Bing visual search. */
+/** How a web snapshot was found: a store page, a Bing Shopping listing, or a photo search. */
 export const WEB_VIA = ['page', 'search', 'photo'];
 export const WEB_AVAILABILITY = ['in_stock', 'out_of_stock', 'preorder', 'backorder', 'discontinued', 'limited'];
 const MAX_PRICE_MINOR = 1e9;
@@ -184,7 +184,7 @@ export function validateIdentity(identity) {
 export function webEvidence(web, { photoFlow = false } = {}) {
   const on = formatDate(web.fetchedAt);
   let detail;
-  if (photoFlow || web.via === 'photo') detail = `Found with Bing visual search from your photo on ${on}; you chose it.`;
+  if (photoFlow || web.via === 'photo') detail = `Found by searching online stores from your photo on ${on}; you chose it.`;
   else if (web.via === 'search') detail = `Picked from a Bing Shopping listing${web.siteName ? ` (${web.siteName})` : ''} on ${on}; not checked by Rotation.`;
   else detail = `Details from ${web.host ?? 'a store page'} on ${on}; not checked by Rotation.`;
   return { kind: 'product_link', source: 'url', detail };

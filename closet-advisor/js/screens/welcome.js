@@ -21,7 +21,7 @@ async function enter(ctx, result) {
     }
   }
   const next = ctx.query.next;
-  const home = HOME_FOR_ROLE[session.role] ?? '/discover';
+  const home = HOME_FOR_ROLE[session.role] ?? '/collection';
   ctx.navigate(next && next.startsWith('/') && !next.startsWith('/welcome') ? next : home, { replace: true });
 }
 

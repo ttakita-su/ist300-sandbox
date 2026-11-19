@@ -4,7 +4,7 @@
 // status, store lookups) are never cached or replayed here. Refreshes skip the browser's own HTTP
 // cache, so an update can't fill this cache with a mix of old and new modules (the database
 // version in js/server/db.js has to match the code that opens it).
-const CACHE = 'rotation-v3';
+const CACHE = 'rotation-v4';
 const API_PATH = new URL('./api/', self.location).pathname;
 const SHELL = ['./', './index.html', './css/tokens.css', './css/base.css', './css/components.css', './css/screens/account.css', './css/screens/add.css', './css/screens/collection.css', './css/screens/discover.css', './css/screens/workspace.css', './js/app.js', './fonts/archivo-latin-wdth.woff2', './icons/icon.svg', './manifest.webmanifest'];
 

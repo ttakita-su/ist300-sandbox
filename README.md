@@ -75,8 +75,9 @@ prices are made up and labeled as demo). Live at
 
 It also has three live features that look up **real products**: paste a store's product link,
 search online stores by name (Bing Shopping and Bing web results), and search with a photo
-(Bing visual search, only when you press the button). These need the small local Node server in
-the folder:
+(only when you press the button: a vision model names the item, then Bing is searched for that
+name; this needs either a free model in Ollama on your computer or an Anthropic API key). These
+need the small local Node server in the folder:
 
 ```bash
 cd closet-advisor
@@ -149,11 +150,12 @@ do on GitHub Pages:
 ```bash
 git clone https://github.com/ttakita-su/ist300-sandbox.git
 cd ist300-sandbox
-python3 -m http.server 8000
+python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
 Then visit <http://localhost:8000>. That serves every site, including Closet Advisor in demo
-mode.
+mode. Keep `--bind 127.0.0.1`: this server hands out every file in the folder, including a
+`closet-advisor/.env` with an API key, to anyone who can reach it.
 
 Closet Advisor's live features (real product links, online store search and photo search) need
 its own Node server instead (Node 24 or newer, no install step):

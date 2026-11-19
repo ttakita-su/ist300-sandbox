@@ -2,16 +2,22 @@
 // files and answers /api (backend/routes.mjs), which looks up real product pages and searches Bing.
 // It binds to 127.0.0.1 unless HOST says otherwise. GitHub Pages, `npm run serve` and any other
 // static server keep working in demo mode: they serve api/status.json, which says { "live": false }.
+// Photo search uses Claude when ANTHROPIC_API_KEY is set, else a free vision model in Ollama on
+// this computer when OLLAMA_PHOTO_MODEL is set (both in the environment or closet-advisor/.env,
+// which npm start reads; the environment wins), and Bing visual search otherwise.
 //
 // Usage: npm start [-- --port 8131] [-- --host 192.168.1.20]   (or PORT / HOST in the environment)
 // Without a port, npm start uses 8130, or the first free port from 8131 to 8139 when 8130 is busy.
 // A port that was asked for is used or nothing is: a busy one stops with a one-line message.
 import http from 'node:http';
 import os from 'node:os';
+import { existsSync } from 'node:fs';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { createClaudeVision, visionConfigFrom } from './claude-vision.mjs';
+import { createLocalVision, localVisionConfigFrom } from './local-vision.mjs';
 import { createUpstream } from './net.mjs';
 import { createApiHandler } from './routes.mjs';
 
@@ -95,18 +101,33 @@ export function allowedHostsFor(host, port) {
 }
 
 /**
+ * Who names the item in a photo: Claude when ANTHROPIC_API_KEY is set, else the local model in
+ * Ollama when OLLAMA_PHOTO_MODEL is set, else null (Bing visual search).
+ * @param {Record<string, string|undefined>} env process.env, or a test's own object
+ * @returns {ReturnType<typeof createClaudeVision> | ReturnType<typeof createLocalVision> | null}
+ */
+export function photoVisionFrom(env) {
+  const claude = visionConfigFrom(env);
+  if (claude) return createClaudeVision(claude);
+  const local = localVisionConfigFrom(env);
+  return local ? createLocalVision(local) : null;
+}
+
+/**
  * Starts the app server.
- * @param {{ port?: number, host?: string, upstream?: ReturnType<typeof createUpstream>, portFallbacks?: number }} [options]
+ * @param {{ port?: number, host?: string, upstream?: ReturnType<typeof createUpstream>, portFallbacks?: number,
+ *   vision?: ReturnType<typeof photoVisionFrom> }} [options]
  *   upstream: the guarded upstream (tests and e2e pass tests/fixtures/web/upstream.mjs fixtureUpstream());
  *   portFallbacks: when `port` is busy, how many of the next ports to try in order (0: fail with
- *   EADDRINUSE at once)
+ *   EADDRINUSE at once); vision: photo identification by Claude or the local model (null or left
+ *   out: Bing visual search)
  * @returns {Promise<{ server: http.Server, port: number, requestedPort: number, url: string, close: () => Promise<void> }>}
  *   port is the bound port; requestedPort the one asked for
  */
-export async function startAppServer({ port = DEFAULT_PORT, host = '127.0.0.1', upstream, portFallbacks = 0 } = {}) {
+export async function startAppServer({ port = DEFAULT_PORT, host = '127.0.0.1', upstream, portFallbacks = 0, vision = null } = {}) {
   const rootReal = await realpath(ROOT);
   const allowedHosts = new Set();
-  const handleApi = createApiHandler({ upstream: upstream ?? createUpstream(), allowedHosts });
+  const handleApi = createApiHandler({ upstream: upstream ?? createUpstream(), allowedHosts, vision });
 
   async function serveStatic(req, res, pathname) {
     const file = staticFile(pathname);
@@ -187,13 +208,21 @@ export async function startAppServer({ port = DEFAULT_PORT, host = '127.0.0.1', 
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  // Values already in the environment win over the file's.
+  const envFile = join(ROOT, '.env');
+  try {
+    if (existsSync(envFile)) process.loadEnvFile(envFile);
+  } catch (error) {
+    console.error(`closet-advisor/.env couldn't be read, so it was skipped: ${error?.message ?? error}`);
+  }
+  const vision = photoVisionFrom(process.env);
   const { values } = parseArgs({ options: { port: { type: 'string' }, host: { type: 'string' } }, strict: false });
   const given = values.port ?? (process.env.PORT || undefined);
   const port = given === undefined ? DEFAULT_PORT : Number(given);
   const host = String(values.host ?? process.env.HOST ?? '127.0.0.1');
   // Only the default port falls back to the next free one; a port that was asked for is kept.
   const portFallbacks = given === undefined ? PORT_FALLBACKS : 0;
-  startAppServer({ port, host, portFallbacks })
+  startAppServer({ port, host, portFallbacks, vision })
     .then(({ url, port: bound }) => {
       if (bound !== port) {
         console.log(`Port ${port} is in use, so Rotation is using port ${bound} instead.`);
@@ -201,7 +230,29 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         console.log(`Items saved at port ${port} stay there. To get back to them, stop what is using port ${port} and run npm start again.`);
       }
       console.log(`Rotation is running at ${url}`);
-      console.log('Live web lookups are on: product links, Bing search and Bing photo search are fetched from this computer.');
+      console.log('Live web lookups are on: product links and Bing search are fetched from this computer.');
+      const onNetwork = !['127.0.0.1', 'localhost', '::1'].includes(host);
+      if (vision?.engine === 'claude') {
+        console.log(`Photo search is on: photos go to Claude (${vision.model}) only when someone presses its search button.`);
+        if (onNetwork) {
+          console.log('Anyone on your network who can reach this server can run photo searches billed to your Anthropic key (up to 60 an hour). Start it with ANTHROPIC_API_KEY= to turn that off.');
+        }
+      } else if (vision?.engine === 'local') {
+        console.log(`Photo search is on: ${vision.model} in Ollama on this computer names the item, and only that name goes to Bing.`);
+        if (onNetwork) console.log('Anyone on your network who can reach this server can run photo searches on this computer. Start it with OLLAMA_PHOTO_MODEL= to turn that off.');
+        // Load the model now, so the first photo doesn't wait for it.
+        vision
+          .warm()
+          .then((ready) => {
+            if (ready.ok) console.log('The photo model is loaded.');
+            else if (ready.code === 'not_running') console.log("Ollama isn't running, so photo search won't work until it is. Start it with ollama serve (or open the Ollama app).");
+            else if (ready.code === 'model') console.log(`Ollama doesn't have ${vision.model} yet. Run ollama pull ${vision.model}.`);
+            else console.log(`The photo model couldn't be loaded yet (${ready.code}). The first photo search will try again.`);
+          })
+          .catch((error) => console.error('Loading the photo model failed:', error?.message ?? error));
+      } else {
+        console.log('Photo search uses Bing, which now asks for browser verification and refuses automated uploads. To search photos for free on this computer, set OLLAMA_PHOTO_MODEL in closet-advisor/.env (see the README), or add ANTHROPIC_API_KEY for Claude. Then restart npm start.');
+      }
     })
     .catch((error) => {
       if (error?.code === 'EADDRINUSE') console.error(portBusyMessage(port, portFallbacks));

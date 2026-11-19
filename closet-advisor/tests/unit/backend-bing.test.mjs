@@ -184,6 +184,21 @@ test('photo search: no name means no_match; a blocked upload cools Bing down for
   assert.equal(transport.requests.length, before, 'Bing is not contacted during the cooldown');
 });
 
+test('photo search reports browser verification without uploading or disabling ordinary search', async () => {
+  const transport = fixtureTransport();
+  const send = transport.send;
+  transport.send = async (req) => req.url.pathname === '/images'
+    ? { status: 200, headers: { 'content-type': 'text/html' }, body: Buffer.from('<html><title>Bing Images</title><div method="POST" action="/images/kblob" data-kblobpowmode=""></div></html>') }
+    : send(req);
+  const bing = createBing({ upstream: createUpstream({ transport, minIntervalMs: 0 }) });
+  const result = await bing.visualSearch(fixtureImage('/court-classic-white.jpg'), 'image/jpeg');
+  assert.deepEqual([result.ok, result.status, result.code], [false, 'unavailable', 'browser_verification']);
+  assert.equal(transport.requests.some((r) => r.method === 'POST'), false, 'no image is uploaded when browser verification is required');
+  const ordinary = await bing.webSearch('Court Classic White');
+  assert.equal(ordinary.ok, true, 'browser photo verification does not block text search');
+  assert.ok(ordinary.results.length > 0);
+});
+
 test("a Bing page with no results and Bing's challenge wording is a block", async () => {
   const upstream = fixtureUpstream();
   const bing = createBing({ upstream });

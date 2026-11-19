@@ -133,7 +133,7 @@ export default [
     render(ctx) {
       return html`<div class="stack stack-lg">
         ${backHead({ title: 'Privacy and data', back: '#/profile' })}
-        ${notice({ tone: 'info', iconName: 'lock', title: 'Stored in this browser', body: "Your photos, items, notes and sizes are stored on this device. Online store lookups go through Rotation's local server, which keeps nothing: a link you paste goes to that store, a typed search to Bing, and a photo to Microsoft Bing only when you choose Search online stores. Clicks to stores are recorded under a pseudonymous id, not your name." })}
+        ${notice({ tone: 'info', iconName: 'lock', title: 'Stored in this browser', body: "Your photos, items, notes and sizes are stored on this device. Online store lookups go through Rotation's local server, which keeps nothing: a link you paste goes to that store, a typed search to Bing, and a photo only when you choose Search online stores: to Anthropic's Claude when the server has a Claude key, or to a vision model on the server's computer when it has one set up (either way, the name found goes to Bing), otherwise to Microsoft Bing. Clicks to stores are recorded under a pseudonymous id, not your name." })}
         <section class="panel stack stack-sm">
           <h2>Download your data</h2>
           <p class="small">Everything stored about your account, including photos, as one JSON file.</p>

@@ -96,7 +96,7 @@ export function createRouter(options) {
     }
   }
 
-  function back(fallback = '/discover') {
+  function back(fallback = '/collection') {
     if (depth > 1) {
       history.back();
     } else {

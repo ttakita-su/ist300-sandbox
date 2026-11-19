@@ -13,8 +13,8 @@ const tabbar = document.getElementById('tabbar');
 const offline = document.getElementById('offline');
 
 const TABS = [
-  { id: 'discover', label: 'Discover', href: '#/discover', icon: 'compass' },
   { id: 'collection', label: 'Collection', href: '#/collection', icon: 'hanger' },
+  { id: 'discover', label: 'Discover', href: '#/discover', icon: 'compass' },
   { id: 'add', label: 'Add item', href: '#/add', icon: 'plus', add: true },
   { id: 'wishlist', label: 'Wishlist', href: '#/wishlist', icon: 'heart' },
   { id: 'profile', label: 'Profile', href: '#/profile', icon: 'user' },
@@ -23,7 +23,7 @@ const TABS = [
 function renderTabbar() {
   render(
     tabbar,
-    html`<a class="tabbar-brand" href="#/discover">Rotation</a>
+    html`<a class="tabbar-brand" href="#/collection">Rotation</a>
       ${TABS.map(
         (t) => html`<a class="tab${t.add ? ' tab-add' : ''}" href="${t.href}" data-tab="${t.id}">
           ${icon(t.icon)}<span class="tab-text">${t.label}</span>

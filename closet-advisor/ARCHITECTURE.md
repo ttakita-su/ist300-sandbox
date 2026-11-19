@@ -40,7 +40,9 @@ What is real in the prototype:
 - A synthetic evaluation (`npm run eval`, `docs/evaluation.md`) measures the matching pipeline.
 - **Live mode** (only with `npm start`): real product lookups. A pasted store link is read for
   its structured product data, typed words search Bing Shopping and Bing web results, and a photo
-  the person chooses to send goes to Bing visual search. What comes back is a draft the person
+  the person chooses to send goes to Claude, or to a vision model in Ollama on the server's own
+  computer, which names the item for a Bing search (Bing visual search when neither is set up).
+  What comes back is a draft the person
   confirms and saves as a custom item with a `WebSnapshot` (4.3); it never becomes a catalog
   identity, an offer or a recommendation. Without the server (GitHub Pages,
   `python3 -m http.server`, `npm run serve`, the tests) every live call answers `not_connected`
@@ -81,6 +83,10 @@ closet-advisor/
                           User-Agent, per-host spacing, cache, block detection and cooldown)
     extract.mjs           extractProduct(html, url): structured product data from a store page
     bing.mjs              createBing(): Bing web search, Shopping and visual search parsers
+    claude-vision.mjs     createClaudeVision(): names the item in a photo with Claude (Anthropic
+                          SDK, imported on first use); visionConfigFrom(env)
+    local-vision.mjs      createLocalVision(): names the item with a vision model in Ollama on
+                          this computer (127.0.0.1:11434); localVisionConfigFrom(env)
   css/
     tokens.css            color, type, spacing tokens; light/dark themes
     base.css              element defaults, layout primitives, focus, motion
@@ -142,9 +148,59 @@ Rules:
 `npm start` runs `backend/server.mjs`. It uses port 8130, or the next free port up to 8139,
 and prints the address (`--port` / `PORT` choose another). It binds to `127.0.0.1`; `HOST` or
 `--host` (for example `0.0.0.0` for a phone on the same Wi-Fi) binds elsewhere, and the bound
-interface addresses are then added to the allowed `Host` values. It reads no other
-environment variable and no `.env` file. `startAppServer({ port, host, upstream })` returns
-`{ server, port, url, close() }`; tests pass `port: 0` and `upstream: fixtureUpstream()`.
+interface addresses are then added to the allowed `Host` values. It loads `closet-advisor/.env`
+when the file exists (`process.loadEnvFile`; a variable already in the environment wins) and
+reads three more variables, all only for photo search: `ANTHROPIC_API_KEY`, the optional
+`ANTHROPIC_PHOTO_MODEL` (default `claude-opus-5-5`) and `OLLAMA_PHOTO_MODEL`. `photoVisionFrom(env)`
+picks the engine: Claude when there is a key, else the local model when `OLLAMA_PHOTO_MODEL` is
+set, else none (Bing visual search). `startAppServer({ port, host, upstream, vision })` returns
+`{ server, port, url, close() }`; tests pass `port: 0`, `upstream: fixtureUpstream()` and, for
+photo search, a `vision` built on a fake SDK or fake fetch.
+
+**Photo search.** With `ANTHROPIC_API_KEY` set, `POST /api/lens` asks Claude to name the item
+(`backend/claude-vision.mjs`), then runs the same Bing web and Shopping searches as
+`/api/search` for that name; `status.json` says `engines.photo: 'claude'`. One Messages request
+per photo through the official `@anthropic-ai/sdk` (the only runtime dependency, imported on the
+first photo so everything else runs without `npm install`): the 768 px JPEG as a base64 image,
+a JSON-schema answer `{ found, brand, name, color, kind, search }` (`output_config.format`),
+effort `low`, `fallbacks: 'default'` (beta `server-side-fallback-2026-07-01`), at most 25 s and
+no SDK retry (its timeout is per attempt and it would wait out any `retry-after`), leaving 8 s
+of the 36 s photo budget for Bing. The answer is untrusted text: it is
+cleaned and capped to a 2 to 200 character query and goes nowhere but Bing's search box. Failures
+map to codes by the SDK's error classes (`key`, `rejected`, `rate_limited`, `timeout`,
+`network`, `http_error`, `bad_response`, `sdk_missing`) and to reasons that say what to fix; a
+refusal or `found: false` is `no_match`; an unknown `ANTHROPIC_PHOTO_MODEL` (404) is `model`; a
+connection cut mid-answer is `network`. The server sends at most 60 photos an hour to Claude
+(`local_limit`, the slot taken before the SDK loads), and Claude's name is cached by photo hash
+for 15 minutes apart from the listings: when both Bing searches then fail, the answer is
+`blocked` or `unavailable` (as `/api/search`), is not cached, and a retry asks only Bing. These calls
+go through the SDK, not `net.mjs`: the host is Anthropic's fixed, authenticated API, not an
+address a person or a page supplied. The key is read once, passed to the SDK client only, and
+never sent to the browser, put in an answer or logged.
+
+**Free photo search on this computer.** Without a key but with `OLLAMA_PHOTO_MODEL` set,
+`/api/lens` asks a vision model in Ollama on the same computer (`backend/local-vision.mjs`) and
+`status.json` says `engines.photo: 'local'`; the Bing searches after it are the same. One
+`POST http://127.0.0.1:11434/api/chat` per photo, a fixed loopback address that no person or
+page supplies (so not through `net.mjs`): the 768 px JPEG as a base64 image, `format` set to the
+same JSON schema, `stream: false`, temperature 0, `keep_alive: '30m'`, at most 28 s, leaving 8 s
+for Bing. Ollama enforces the schema's shape but doesn't show the model its descriptions, so the
+question spells out each field, and a placeholder brand (`Unknown`, `Generic`, `N/A`...) counts
+as no brand. Failures become codes (`not_running` for a refused connection, `model` for a 404,
+`timeout`, `network`, `http_error`, `bad_response`) and reasons that say what to run. The default
+model is `qwen3-vl:8b-instruct`: the plain `qwen3-vl:8b` tag reasons first and took 53 to 70 s
+per photo here, too long for the 40 s browser wait. `npm start` loads the model at startup
+(`warm()`, an empty `messages` request) and says when Ollama isn't running or lacks the model.
+The photo goes to no online service; only the name reaches Bing. There is no hourly cap: the
+model costs nothing per photo.
+
+Without either, `/api/lens` uses Bing visual search (`engines.photo: 'bing'`). As checked on
+2026-11-05 and again on 2026-11-12, Bing's image-upload session page has replaced the supported
+signed token with a browser-verification flow. The adapter returns `unavailable` with a specific
+reason before uploading (it names `OLLAMA_PHOTO_MODEL` and `ANTHROPIC_API_KEY`), and the UI offers **Open Bing Visual Search** plus
+manual labeling. This is distinct from `no_match`, a temporary network failure, or an HTTP block:
+it does not put ordinary text search on a cooldown. The signed-token path remains covered by
+fixtures; those tests do not establish current live availability.
 
 **Static files.** Only `/`, `index.html`, `manifest.webmanifest`, `sw.js` and the folders `css/`,
 `js/`, `fonts/`, `icons/` and `dev/` are served; everything else (`backend/`, `tests/`, `docs/`,
@@ -153,7 +209,9 @@ symlinks leading outside the folder are refused. Every response is `Cache-Contro
 
 **How the browser knows.** `providers.web.status()` reads `./api/status.json` once per page
 load. The committed file says `{ "live": false }`; the local server answers that path with
-`{ "live": true, "version": 1, "engines": { "lookup": "page", "search": "bing", "photo": "bing" } }`.
+`{ "live": true, "version": 1, "engines": { "lookup": "page", "search": "bing", "photo": "claude" | "bing" } }`;
+`status()` and the `webStatus` op pass `photoEngine` on, and the photo screens use it to say
+where the photo will go before anything is sent (`photoEngineCopy` in `js/ui/web-product.js`).
 Starting the server after the page loaded needs a reload.
 
 **HTTP API.** Every `/api/*` request except `GET /api/status.json` must be a `POST` with
@@ -170,7 +228,7 @@ Every `reason` is a full sentence that can be shown. Expected outcomes are HTTP 
 | `GET /api/status.json` | none | `{ live: true, version: 1, engines }` |
 | `POST /api/lookup` | `{ url }` | `{ status: 'found', page: Page }` \| `{ status: 'not_product', host, reason, page: Page \| null }` (fetched, not a single product; a 404 or 410 page is `not_product` with `page: null`) \| `{ status: 'blocked', host, reason }` \| `{ status: 'invalid_url', code, reason }` \| `{ status: 'unavailable', host, reason }` (DNS, timeout, 5xx, too large, not HTML) |
 | `POST /api/search` | `{ query }` (2 to 200 characters) | `{ status: 'ok', engine: 'bing', query, shopping: [Listing], results: [WebResult] }` \| `{ status: 'blocked' \| 'unavailable' \| 'invalid', reason }`; `ok` when either Bing page answered |
-| `POST /api/lens` | raw JPEG, PNG or WebP (type sniffed from the bytes) | `{ status: 'ok', engine: 'bing', query /* what Bing recognized */, shopping, results }` \| `{ status: 'no_match', reason }` \| `blocked` \| `unavailable` \| `invalid` with `reason` |
+| `POST /api/lens` | raw JPEG, PNG or WebP (type sniffed from the bytes) | `{ status: 'ok', engine: 'claude' \| 'bing', query /* what Claude or Bing recognized */, shopping, results }` \| `{ status: 'no_match', reason }` \| `blocked` \| `unavailable` \| `invalid` with `reason` |
 | `POST /api/image` | `{ url }` | 200 with the image bytes (JPEG, PNG, WebP, GIF or AVIF, sniffed), `Content-Type` and `X-Final-Url`; or `{ status: 'invalid_url' \| 'blocked' \| 'unsupported' \| 'unavailable', reason }` with 400, 415, 502 or 504 |
 
 ```js
@@ -194,7 +252,8 @@ follow-up on the same host adds cent prices and variants. Money is integer minor
 currency's real digits; anything unknown is `null`. Bing details are in
 `docs/providers.md` (Bing visual search, web search and Shopping).
 
-**Network rules** (non-negotiable; `backend/net.mjs` enforces them for every outbound request):
+**Network rules** (non-negotiable; `backend/net.mjs` enforces them for every outbound request
+to a store or Bing; the Anthropic API calls above go through the official SDK instead):
 
 - **Honest client.** User-Agent `Mozilla/5.0 (compatible; RotationLookup/0.1; educational
   prototype)`. No headless browser, no stealth or spoofed fingerprint, no CAPTCHA handling. Google
@@ -221,7 +280,10 @@ currency's real digits; anything unknown is `null`. Bing details are in
 under a SHA-256 of the bytes, never the bytes. The browser sends the photo only from
 `searchWebForPhoto`, which runs only when the person presses "Search online for this item" on
 the photo preview or "Search online stores" / "Search again" on the results screen, beside
-the line saying it goes to Microsoft Bing. It sends the 768 px processing
+the line saying where it goes (`photoEngineCopy`: Anthropic's Claude or Microsoft Bing, from
+`status.json`). The request carries `X-Rotation-Photo-Engine` with the engine that line named,
+and the server answers 409 without sending the photo anywhere when its engine differs (a page
+opened before `npm start` was restarted with or without a key). It sends the 768 px processing
 copy (already re-encoded without EXIF or GPS), rotated as the person rotated it. Metrics carry
 statuses and counts, never URLs, hosts, queries or user ids.
 
@@ -470,8 +532,8 @@ WebSnapshot {                           // records.cleanWebSnapshot rebuilds it 
   identifiers: { sku, gtin, mpn },      // each string (<= 64) or null
   imageUrl,                             // where the image came from (provenance; never rendered
                                         // for saved items, which show photos.webId)
-  via: 'page' | 'search' | 'photo',     // store page, Bing Shopping listing, Bing visual search
-  query,                                // typed query (search) or Bing's recognized name (photo)
+  via: 'page' | 'search' | 'photo',     // store page, Bing Shopping listing, photo search
+  query,                                // typed query (search) or the recognized name (photo)
   fetchedAt                             // ISO; a value after now + 1 day becomes now
 }
 
@@ -531,7 +593,7 @@ matchJob {
 
 JobWeb {
   status: 'ok' | 'no_match' | 'not_connected' | 'blocked' | 'unavailable',
-  engine: 'bing' | null, query: string | null,   // what Bing recognized
+  engine: 'claude' | 'bing' | null, query: string | null,   // who named it, and the name
   shopping: [Listing & { draft: WebDraft }],     // Listing and WebResult: section 2.1
   results: [WebResult],                          // pages to read with lookupProductPage
   reason: string | null, searchedAt: ISO
@@ -825,7 +887,7 @@ missing ones (`not_found`).
 - `retryMatchJob({ jobId, idempotencyKey })` → `MatchJobView`; only `error`/`timeout`, ≤ 3 attempts, else `conflict`.
 - `rejectMatch({ jobId })` → `MatchJobView` (`rejected`).
 - `searchWebForPhoto({ jobId, idempotencyKey })` (rate limit `web`) → `MatchJobView` with `web: JobWeb` (4.3). The one place a photo leaves the device: the job's processing copy (the original when there is none) goes to `providers.web.searchImage` with the person's framing (`crop: job.crop`, rotation included; the browser provider sends only that part), bounded by config `webSearchTimeoutMs` (45000). Own jobs only (others → `not_found`); `conflict` while `queued`/`processing` and once `confirmed`. Failures are stored as `job.web.status` with a `reason`, not thrown. Listings carry a `draft` (via `'photo'`, the job's category when set). Results are never match candidates.
-- `confirmMatch({ jobId, candidateId|null, variantId|null, variantUnsure?, custom?, category?, web?, webPhotoId?, details? | wish?, display?, allowDuplicate?, idempotencyKey })` → `{ item: OwnedView | WishlistView, job: MatchJobView }`. Identity per 4.1 (identifier_supported only when a code in `job.texts` matches the chosen version). `duplicate` with `details.duplicates`; `conflict` if already confirmed or still running. Custom saves may add `web` (a WebSnapshot from `job.web`; `invalid` when it can't be cleaned) and `webPhotoId` (a kind `'web'` photo of the actor's, from `importWebImage`; others → `not_found`): the item keeps the person's photo as `photos.originalId` and shows it, gets `photos.webId`, `web` and `sourceUrl = web.url`, and its evidence adds "Found with Bing visual search from your photo on {date}; you chose it." It stays `manual`.
+- `confirmMatch({ jobId, candidateId|null, variantId|null, variantUnsure?, custom?, category?, web?, webPhotoId?, details? | wish?, display?, allowDuplicate?, idempotencyKey })` → `{ item: OwnedView | WishlistView, job: MatchJobView }`. Identity per 4.1 (identifier_supported only when a code in `job.texts` matches the chosen version). `duplicate` with `details.duplicates`; `conflict` if already confirmed or still running. Custom saves may add `web` (a WebSnapshot from `job.web`; `invalid` when it can't be cleaned) and `webPhotoId` (a kind `'web'` photo of the actor's, from `importWebImage`; others → `not_found`): the item keeps the person's photo as `photos.originalId` and shows it, gets `photos.webId`, `web` and `sourceUrl = web.url`, and its evidence adds "Found by searching online stores from your photo on {date}; you chose it." (items saved before 2026-11-05 keep the older "Found with Bing visual search ..." wording). It stays `manual`.
 
 **Inventory** (`user`; others → `not_found`)
 
@@ -1183,9 +1245,11 @@ Tokens in `css/tokens.css`, classes in `css/components.css`:
   - Confirm with `confirmMatch` (one idempotency key per confirm sequence); handle `duplicate`
     with `duplicateDialog` and `allowDuplicate`. "Not mine" is `rejectMatch`.
   - On `done`, `rejected`, `error` and `timeout`: an "Online stores" panel. Its "Search online stores"
-    button carries the line "Sends this photo to Microsoft Bing to recognize it. Rotation's
-    server doesn't keep it." and calls `searchWebForPhoto`; nothing is sent before the tap.
-    Show "Bing recognized this as: {query}", `job.web.reason` for other statuses, and the result
+    button carries the line `photoEngineCopy(engine).sends` for the engine in `webStatus`
+    ("Sends this photo to Anthropic's Claude to name the item, then searches Bing for that
+    name. ..." or "Sends this photo to Microsoft Bing to recognize it. ...") and calls
+    `searchWebForPhoto`; nothing is sent before the tap. Show "{Claude|Bing} recognized this
+    as: {query}" (from `job.web.engine`), `job.web.reason` for other statuses, and the result
     lists. A listing opens the save form from its `draft`; a store page runs
     `lookupProductPage` first. Saving uses `importWebImage` (when "Save the store's image with
     it" is checked) and then `confirmMatch` with `custom`, `web` and `webPhotoId`, so the job is
@@ -1295,6 +1359,10 @@ Tokens in `css/tokens.css`, classes in `css/components.css`:
     a running job), saving with `source: 'web'` (manual identity, evidence, `sourceUrl`,
     display `'web'`, `photos.webId`), `confirmMatch` with `web`, `markPurchased`, and delete,
     export and stylist redaction of store images.
+  - `backend-claude-vision`: Claude photo identification against a fake SDK module: the request
+    (model, base64 image, JSON schema, effort, fallbacks, timeout; the key only in the client),
+    query building and cleaning, no_match and unreadable answers, every SDK error class, a
+    missing SDK, the hourly cap and a short deadline, and `visionConfigFrom`.
   - `backend-net`, `backend-extract`, `backend-bing`, `backend-server`: the backend on
     synthetic pages through a fake transport: SSRF refusals (private and metadata addresses,
     private DNS answers, redirects), block detection and cooldowns, spacing, caching and

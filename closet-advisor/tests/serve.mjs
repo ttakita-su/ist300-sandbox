@@ -28,6 +28,8 @@ export function startServer(port = 0) {
       let path = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, '');
       let file = join(ROOT, path);
       if (!file.startsWith(ROOT)) throw Object.assign(new Error('forbidden'), { status: 403 });
+      // Dotfiles (.env with an API key, .git) are never served.
+      if (path.split(/[/\\]/).some((segment) => segment.startsWith('.'))) throw Object.assign(new Error('not found'), { status: 404 });
       const info = await stat(file).catch(() => null);
       if (info?.isDirectory()) file = join(file, 'index.html');
       const body = await readFile(file);

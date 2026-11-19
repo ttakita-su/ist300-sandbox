@@ -30,20 +30,23 @@ async function readStatus() {
     const response = await fetch(apiUrl('status.json'), { cache: 'no-store', headers: { accept: 'application/json' } });
     if (!response.ok) return { live: false, reason: NOT_CONNECTED };
     const body = await response.json();
-    return body?.live === true ? { live: true, reason: null } : { live: false, reason: NOT_CONNECTED };
+    // Who names the item in a photo: Claude when the server has a key, a model in Ollama on the
+    // server's computer when it has one set up, else Bing visual search.
+    const photoEngine = ['claude', 'local'].includes(body?.engines?.photo) ? body.engines.photo : 'bing';
+    return body?.live === true ? { live: true, reason: null, photoEngine } : { live: false, reason: NOT_CONNECTED };
   } catch {
     return { live: false, reason: NOT_CONNECTED };
   }
 }
 
 /** POSTs to the local server once status.json said it is there. */
-async function send(path, body, { type, timeoutMs }) {
+async function send(path, body, { type, timeoutMs, headers = {} }) {
   const { live } = await webProvider.status();
   if (!live) return { failure: { status: 'not_connected', reason: NOT_CONNECTED } };
   try {
     const response = await fetch(apiUrl(path), {
       method: 'POST',
-      headers: { 'content-type': type, 'x-rotation': '1' },
+      headers: { 'content-type': type, 'x-rotation': '1', ...headers },
       body,
       cache: 'no-store',
       credentials: 'same-origin',
@@ -110,7 +113,7 @@ async function jpegFor(blob, crop, rotate) {
 export const webProvider = {
   name: 'web',
 
-  /** Reads ./api/status.json once per page load. @returns {Promise<{ live: boolean, reason: string|null }>} */
+  /** Reads ./api/status.json once per page load. @returns {Promise<{ live: boolean, reason: string|null, photoEngine?: 'claude'|'local'|'bing' }>} */
   status() {
     statusOnce ??= readStatus();
     return statusOnce;
@@ -135,14 +138,15 @@ export const webProvider = {
   },
 
   /**
-   * Bing visual search for a photo. Only the image bytes are sent: the 768 px processing copy,
+   * Photo search: Claude or a model in Ollama on the server's computer names the item and Bing is
+   * searched for the name, or Bing visual search when the server has neither. Only the image bytes are sent: the 768 px processing copy,
    * already re-encoded without EXIF or GPS, cut to the person's crop and rotated as they rotated
    * it (`crop.rotate` wins over `rotate`, which is kept for callers without a crop).
    * @param {{ blob: Blob, rotate?: number, crop?: { x: number, y: number, w: number, h: number, rotate?: number } | null }} args
    * @returns {Promise<{ status: 'ok'|'no_match'|'blocked'|'unavailable'|'invalid'|'not_connected', reason, engine?, query?, shopping?, results? }>}
    */
   async searchImage({ blob, rotate = 0, crop = null } = {}) {
-    const { live } = await webProvider.status();
+    const { live, photoEngine } = await webProvider.status();
     if (!live) return { status: 'not_connected', reason: NOT_CONNECTED };
     let jpeg;
     try {
@@ -150,7 +154,8 @@ export const webProvider = {
     } catch {
       return { status: 'invalid', reason: PHOTO_FAILED };
     }
-    const sent = await send('lens', jpeg, { type: 'image/jpeg', timeoutMs: TIMEOUT_MS.lens });
+    // The engine this page named beside the button: the server refuses the photo if it now differs.
+    const sent = await send('lens', jpeg, { type: 'image/jpeg', timeoutMs: TIMEOUT_MS.lens, headers: { 'x-rotation-photo-engine': photoEngine } });
     return answer(sent, ['ok', 'no_match', 'blocked', 'unavailable', 'invalid']);
   },
 

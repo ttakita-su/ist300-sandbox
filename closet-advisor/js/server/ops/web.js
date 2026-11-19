@@ -24,7 +24,7 @@ const ENGINE_HOSTS = /(?:^|\.)(?:bing\.com|msn\.com)$/;
 const LOOKUP_UNAVAILABLE = "The store page couldn't be read right now. Try again in a moment, or enter the details yourself.";
 const SEARCH_UNAVAILABLE = "Online stores couldn't be searched right now. Try again in a moment.";
 const SEARCH_BLOCKED = "Bing isn't answering automated searches right now. Try again in about 30 minutes, or enter the details yourself.";
-const NO_MATCH = "Bing couldn't tell what this is. Try a closer photo of just the item, or search by name.";
+const NO_MATCH = "The photo search couldn't tell what this is. Try a closer photo of just the item, or search by name.";
 const IMAGE_UNAVAILABLE = "The store's image couldn't be saved. Save the item without it, or try again.";
 const IMAGE_LINK = "The store image's link can't be used, so the image wasn't saved. Save the item without it.";
 /** A photo search that outlived config.webSearchTimeoutMs. */
@@ -188,13 +188,16 @@ function imageFailure(out) {
 }
 
 export const ops = {
-  /** Whether real store lookups are on (the local server is running). args: {} -> { live, reason } */
+  /**
+   * Whether real store lookups are on (the local server is running), and who names the item in a
+   * photo search. args: {} -> { live, reason, photoEngine: 'claude'|'local'|'bing'|null }
+   */
   webStatus: {
     auth: 'user',
     async run(ctx) {
       const status = await ask(() => provider(ctx).status());
-      if (status?.live === true) return { live: true, reason: null };
-      return { live: false, reason: reasonOr(status, NOT_CONNECTED) };
+      if (status?.live === true) return { live: true, reason: null, photoEngine: ['claude', 'local'].includes(status.photoEngine) ? status.photoEngine : 'bing' };
+      return { live: false, reason: reasonOr(status, NOT_CONNECTED), photoEngine: null };
     },
   },
 

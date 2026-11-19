@@ -367,7 +367,7 @@ export function screenHead({ title, lede, actions }) {
   </header>`;
 }
 
-export function backHead({ title, back = '#/discover', actions }) {
+export function backHead({ title, back = '#/collection', actions }) {
   return html`<header class="back-head">
     <a class="icon-btn" href="${back}" data-back aria-label="Back">${icon('chevron-left')}</a>
     <h1>${title}</h1>

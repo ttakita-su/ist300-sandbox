@@ -1,5 +1,6 @@
 // The local server's /api: a store's product page (lookup), Bing web and Shopping search (search),
-// Bing visual search for a photo (lens) and a guarded store-image download (image).
+// photo search (lens: Claude or a local model in Ollama names the item, then Bing is searched for
+// that name; Bing visual search when neither is set up) and a guarded store-image download (image).
 //
 // Every request except GET /api/status.json must be a POST from the Rotation page this server
 // opened: X-Rotation: 1, the server's own Host (so DNS rebinding can't reach it), no Origin or our
@@ -13,12 +14,18 @@ import { sniffImageType, sniffStoreImageType, STORE_IMAGE_TYPES } from '../js/se
 import { createCache } from './net.mjs';
 import { extractProduct, looksLikeProduct, mergeShopifyProduct, shopifyProductJsonUrl, toPage } from './extract.mjs';
 import { cleanQuery, createBing } from './bing.mjs';
+import { PHOTOS_PER_HOUR } from './claude-vision.mjs';
 
 export const JSON_BODY_LIMIT = 16 * 1024;
 export const IMAGE_BODY_LIMIT = 6 * 1024 * 1024;
 
-/** What GET /api/status.json says when this server answers (the committed file says { live: false }). */
-export const LIVE_STATUS = { live: true, version: 1, engines: { lookup: 'page', search: 'bing', photo: 'bing' } };
+/**
+ * What GET /api/status.json says when this server answers (the committed file says { live: false }).
+ * @param {{ photo: 'claude' | 'local' | 'bing' }} [engines] who names the item in a photo
+ */
+export function liveStatus({ photo = 'bing' } = {}) {
+  return { live: true, version: 1, engines: { lookup: 'page', search: 'bing', photo } };
+}
 
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 // Each route answers before the browser gives up (25 s for lookups and searches, 40 s for photos).
@@ -68,7 +75,32 @@ const REASONS = {
   photoNoMatch: "Bing couldn't name the item in this photo. Try a closer photo with the item filling the frame, or search by name.",
   photoBlocked: "Bing isn't accepting automated photo searches from this computer right now. Try again in about 30 minutes, or search by name.",
   photoSession: "Bing's photo search page has changed, so the photo couldn't be sent. Search by name instead.",
+  photoVerification:
+    'Bing now requires browser verification for photo uploads. Automatic photo search is unavailable. Open Bing Visual Search in your browser, or label the item yourself. To turn photo search back on, add OLLAMA_PHOTO_MODEL (a free model on this computer) or ANTHROPIC_API_KEY (Claude) to closet-advisor/.env, restart npm start, then reload Rotation.',
+  photoEngineChanged: "Rotation's photo search changed since this page was opened, so the photo wasn't sent. Reload Rotation to see where it goes now, then try again.",
   photoUnavailable: (code) => bingTrouble(code, "Bing's photo search"),
+  claudeNoMatch: "Claude couldn't name a sneaker, watch or clothing item in this photo. Try a closer photo with the item filling the frame, or search by name.",
+  claudeUnavailable(code) {
+    if (code === 'key') return 'Claude refused the API key. Check ANTHROPIC_API_KEY in closet-advisor/.env, then restart npm start.';
+    if (code === 'rejected') return "Claude's API refused the request. Check the key's billing and limits in the Claude Console, then try again.";
+    if (code === 'rate_limited') return "Claude's API is limiting requests from this key. Wait a minute, then try again.";
+    if (code === 'model') return "Claude doesn't offer the model named in ANTHROPIC_PHOTO_MODEL. Fix or clear it in closet-advisor/.env, then restart npm start.";
+    if (code === 'local_limit') return `Rotation has sent ${PHOTOS_PER_HOUR} photos to Claude in the last hour, its limit to keep costs down. Try again later, or label the item yourself.`;
+    if (code === 'sdk_missing') return 'Photo search with Claude needs its library. In the closet-advisor folder, run npm install, then restart npm start.';
+    if (code === 'timeout') return 'Claude took too long to answer. Try again in a minute.';
+    if (code === 'network') return "Claude's API couldn't be reached. Check the internet connection, then try again.";
+    if (code === 'http_error') return "Claude's API answered with an error. Try again in a few minutes.";
+    return "Claude's answer couldn't be read. Try again, or search by name.";
+  },
+  localNoMatch: "The local model couldn't name a sneaker, watch or clothing item in this photo. Try a closer photo with the item filling the frame, or search by name.",
+  localUnavailable(code, model) {
+    if (code === 'not_running') return "Ollama isn't running on this computer. Start it with ollama serve (or open the Ollama app), then try again.";
+    if (code === 'model') return `Ollama doesn't have the model ${model}. Run ollama pull ${model}, or fix OLLAMA_PHOTO_MODEL in closet-advisor/.env and restart npm start.`;
+    if (code === 'timeout') return 'The local model took too long to answer. The first photo after a pause waits for the model to load, so try again in a minute.';
+    if (code === 'network') return 'The connection to Ollama broke before it answered. Try again, and restart Ollama if it keeps happening.';
+    if (code === 'http_error') return 'Ollama answered with an error. Check the terminal running ollama serve, then try again.';
+    return "The local model's answer couldn't be read. Try again, or search by name.";
+  },
   imageBlocked: (host) => `Automated downloads aren't allowed on ${host}. Save the item without the store's image.`,
   imageType: "That link isn't a JPEG, PNG, WebP, GIF or AVIF image.",
   imageLarge: "The store's image is larger than 10 MB, so it wasn't downloaded. Save the item without it.",
@@ -157,15 +189,52 @@ export async function downloadImage(upstream, input) {
   return { ok: true, type, finalUrl: res.url, body: res.body };
 }
 
+/** Why the photo engine named nothing, in its own words: Claude's or the local model's. */
+function namingFailure(vision, named) {
+  if (vision.engine === 'local') {
+    return named.status === 'no_match' ? { status: 'no_match', reason: REASONS.localNoMatch } : { status: 'unavailable', reason: REASONS.localUnavailable(named.code, vision.model) };
+  }
+  return named.status === 'no_match' ? { status: 'no_match', reason: REASONS.claudeNoMatch } : { status: 'unavailable', reason: REASONS.claudeUnavailable(named.code) };
+}
+
+/**
+ * POST /api/lens with a photo engine (Claude, or the local model in Ollama): it names the item,
+ * then Bing web results and Bing Shopping are searched for that name. `named` is the engine's
+ * answer for this photo when it is already known (a retry after Bing failed), so the photo isn't
+ * sent to it twice. When both Bing searches fail the answer says why ('blocked' or 'unavailable'),
+ * as /api/search does, and isn't cached.
+ * @param {ReturnType<typeof import('./claude-vision.mjs').createClaudeVision> | ReturnType<typeof import('./local-vision.mjs').createLocalVision>} vision
+ * @param {ReturnType<typeof createBing>} bing
+ * @param {{ now?: () => number, named?: object|null, remember?: (named: object) => void }} [opts]
+ * @returns {Promise<{ status: 'ok', engine: 'claude' | 'local', query, shopping, results } | { status: 'no_match' | 'blocked' | 'unavailable', reason }>}
+ */
+export async function searchPhotoByName(vision, bing, bytes, mime, { now = Date.now, named = null, remember = () => {} } = {}) {
+  const deadline = now() + PHOTO_BUDGET_MS;
+  if (!named) {
+    named = await vision.identify(bytes, mime, { deadline });
+    if (!named.ok) return namingFailure(vision, named);
+    remember(named);
+  }
+  const [web, shop] = await Promise.all([bing.webSearch(named.query, { deadline }), bing.shopping(named.query, { deadline })]);
+  if (!web.ok && !shop.ok) return searchFailure([web, shop], { blocked: REASONS.searchBlocked, unavailable: REASONS.searchUnavailable });
+  return { status: 'ok', engine: vision.engine ?? 'claude', query: named.query, shopping: shop.ok ? shop.listings : [], results: web.ok ? web.results : [] };
+}
+
 /**
  * The /api request handler.
- * @param {{ upstream: ReturnType<typeof import('./net.mjs').createUpstream>, allowedHosts: Set<string>, now?: () => number }} deps
- *   allowedHosts: lowercase Host header values this server answers to (filled once the port is known)
+ * @param {{ upstream: ReturnType<typeof import('./net.mjs').createUpstream>, allowedHosts: Set<string>, now?: () => number,
+ *   vision?: ReturnType<typeof import('./claude-vision.mjs').createClaudeVision> | ReturnType<typeof import('./local-vision.mjs').createLocalVision> | null }} deps
+ *   allowedHosts: lowercase Host header values this server answers to (filled once the port is known);
+ *   vision: photo identification by Claude or the local model (its `engine` says which), or null to use Bing visual search
  * @returns {(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse, pathname: string) => Promise<void>}
  */
-export function createApiHandler({ upstream, allowedHosts, now = Date.now }) {
+export function createApiHandler({ upstream, allowedHosts, now = Date.now, vision = null }) {
   const bing = createBing({ upstream, now });
+  const status = liveStatus({ photo: vision ? (vision.engine ?? 'claude') : 'bing' });
   const photoCache = createCache({ ttlMs: 15 * 60 * 1000, maxEntries: 200, now });
+  // The engine's name for a photo, kept apart from the listings so a retry after Bing failed
+  // doesn't ask it again (Claude bills each photo; a local model takes seconds).
+  const namedCache = createCache({ ttlMs: 15 * 60 * 1000, maxEntries: 200, now });
   const photoRuns = new Map();
 
   async function photoSearch(bytes, mime) {
@@ -174,10 +243,12 @@ export function createApiHandler({ upstream, allowedHosts, now = Date.now }) {
     if (hit) return hit;
     if (photoRuns.has(key)) return photoRuns.get(key);
     const run = (async () => {
+      if (vision) return searchPhotoByName(vision, bing, bytes, mime, { now, named: namedCache.get(key), remember: (named) => namedCache.set(key, named) });
       const found = await bing.visualSearch(bytes, mime, { deadline: now() + PHOTO_BUDGET_MS });
       if (found.ok) return { status: 'ok', engine: 'bing', query: found.query, shopping: found.shopping, results: found.results };
       if (found.status === 'no_match') return { status: 'no_match', reason: REASONS.photoNoMatch };
       if (found.status === 'blocked') return { status: 'blocked', reason: REASONS.photoBlocked };
+      if (found.code === 'browser_verification') return { status: 'unavailable', reason: REASONS.photoVerification };
       return { status: 'unavailable', reason: found.code === 'session' ? REASONS.photoSession : REASONS.photoUnavailable(found.code) };
     })();
     photoRuns.set(key, run);
@@ -211,7 +282,7 @@ export function createApiHandler({ upstream, allowedHosts, now = Date.now }) {
   return async function handleApi(req, res, pathname) {
     try {
       if (pathname === '/api/status.json') {
-        if (req.method === 'GET' || req.method === 'HEAD') return sendJson(res, 200, LIVE_STATUS, { head: req.method === 'HEAD' });
+        if (req.method === 'GET' || req.method === 'HEAD') return sendJson(res, 200, status, { head: req.method === 'HEAD' });
         return sendJson(res, 405, { status: 'method_not_allowed', reason: REFUSALS.getOnly }, { headers: { Allow: 'GET, HEAD' } });
       }
       // No CORS anywhere: a preflight from another site's page gets nothing it could use.
@@ -229,6 +300,10 @@ export function createApiHandler({ upstream, allowedHosts, now = Date.now }) {
         // The declared type is not trusted: the bytes must be a JPEG, PNG or WebP too.
         const sniffed = sniffImageType(bytes.subarray(0, 64));
         if (!PHOTO_TYPES.includes(sniffed)) return sendJson(res, 415, { status: 'invalid', reason: REASONS.photoType });
+        // The page told the person where the photo goes; a page from before a restart that changed
+        // it (no header: a page that only knew Bing) must not send it somewhere else.
+        const shown = String(req.headers['x-rotation-photo-engine'] ?? 'bing').toLowerCase();
+        if (shown !== status.engines.photo) return sendJson(res, 409, { status: 'unavailable', reason: REASONS.photoEngineChanged });
         return sendJson(res, 200, await route.run(bytes, sniffed));
       }
       if (type !== 'application/json') return sendJson(res, 415, { status: 'invalid', reason: REASONS.json });

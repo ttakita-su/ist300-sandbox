@@ -204,7 +204,7 @@ try {
   assert.ok(found.photos.webId, "and the store's image is kept as an option");
   assert.deepEqual(found.image.options, ['original', 'web']);
   assert.equal(found.web.via, 'photo');
-  assert.match(found.identity.evidence[0].detail, /^Found with Bing visual search from your photo/);
+  assert.match(found.identity.evidence[0].detail, /^Found by searching online stores from your photo/);
   assert.match(await page.locator('.media .media-tag').first().innerText(), /Your photo/);
   assert.deepEqual(await page.locator('.segmented label').allInnerTexts(), ['Your photo', 'Store image'], 'the store image is a display option');
   await page.locator('.segmented label', { hasText: 'Store image' }).click();

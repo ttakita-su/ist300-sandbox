@@ -31,8 +31,9 @@ The Twisted Takes team blog moved to the separate `ist444` repository. `ist400-b
 Run these from the repository root:
 
 ```sh
-# Serve every site; Rotation runs in demo mode here.
-python3 -m http.server 8000
+# Serve every site; Rotation runs in demo mode here. --bind keeps it off the network: this
+# server serves every file, including dotfiles such as closet-advisor/.env.
+python3 -m http.server 8000 --bind 127.0.0.1
 # Open http://localhost:8000/
 
 # Free Bet strategy, engine, trainer/side-panel parity, and extension tests.
@@ -53,7 +54,7 @@ npm run test:e2e   # Playwright browser checks
 npm run eval       # Synthetic matching evaluation; rewrites docs/evaluation.md
 ```
 
-Rotation needs no install step to run the app or unit tests. Browser tests require its dev dependencies (`npm ci`) and a Playwright Chromium installation (`npx playwright install chromium` if missing). `npm start` binds to `127.0.0.1`, tries ports 8130–8139, and prints the URL. `npm start -- --port 8140` selects another port.
+Rotation needs no install step to run the app or unit tests. Photo search with Claude needs the Anthropic SDK (`npm install`) and an `ANTHROPIC_API_KEY` in `closet-advisor/.env`; the free local alternative needs Ollama running with a pulled vision model and `OLLAMA_PHOTO_MODEL` in `.env` (see `closet-advisor/README.md`). Browser tests require its dev dependencies (`npm ci`) and a Playwright Chromium installation (`npx playwright install chromium` if missing). `npm start` binds to `127.0.0.1`, tries ports 8130–8139, and prints the URL. `npm start -- --port 8140` selects another port.
 
 ## General editing conventions
 
@@ -89,8 +90,8 @@ Read [closet-advisor/README.md](closet-advisor/README.md) for operation and [clo
 - The prototype keeps items and photos in IndexedDB, with an in-memory fallback. Its browser "server" and demo accounts are not a production security boundary.
 - `js/engine/` holds matching, recommendation, image, and related logic. Preserve Node-compatible pure logic and use provider adapters for browser-only work.
 - `backend/` is a separate Node-only HTTP server for live store lookups. Browser code reaches it through same-origin `./api/*` requests in `js/server/providers/web.browser.js`; never import backend modules into browser code.
-- GitHub Pages and static servers serve `api/status.json` with `live: false`. Only the Node server enables real product-link lookup, Bing search, and user-initiated photo search.
-- `supabase/migrations/` and `.env.example` support the production plan. The prototype does not use Supabase or load `.env` files. Read `supabase/README.md` for migration gaps and validation limits before database work.
+- GitHub Pages and static servers serve `api/status.json` with `live: false`. Only the Node server enables real product-link lookup, Bing search, and user-initiated photo search. Photo search names the item with Claude (`backend/claude-vision.mjs`, the `@anthropic-ai/sdk` dependency, imported on first use) when `ANTHROPIC_API_KEY` is set, otherwise with a vision model in Ollama on `127.0.0.1:11434` (`backend/local-vision.mjs`) when `OLLAMA_PHOTO_MODEL` is set, then searches Bing for that name; with neither it falls back to Bing visual search, which currently requires browser verification. Never route around that verification. Unit tests use a fake SDK and a fake fetch; they never need a key, Ollama or the network.
+- `supabase/migrations/` and `.env.example` support the production plan. The prototype does not use Supabase. `npm start` loads every variable in `closet-advisor/.env` (the environment wins) and uses `PORT`, `HOST`, `ANTHROPIC_API_KEY`, the optional `ANTHROPIC_PHOTO_MODEL` and `OLLAMA_PHOTO_MODEL` (photo search); `npm run weather` reads `OPEN_METEO_KEY`. Plain static servers such as `python3 -m http.server` serve `.env` too, so bind them to `127.0.0.1`. Read `supabase/README.md` for migration gaps and validation limits before database work.
 
 ### Implementation conventions
 

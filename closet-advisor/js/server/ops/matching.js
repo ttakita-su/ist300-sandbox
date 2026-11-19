@@ -624,14 +624,15 @@ export const ops = {
   },
 
   /**
-   * Searches online stores for what the photo shows: Bing visual search through the local server
-   * (providers.web.searchImage). Runs only when the person asks; this is the one place a photo
+   * Searches online stores for what the photo shows through the local server
+   * (providers.web.searchImage): Claude or a vision model on the server's computer names the item
+   * and Bing is searched for the name, or Bing visual search when neither is set up. Runs only when the person asks; this is the one place a photo
    * leaves the device, and only its 768 px processing copy (the original when there is none),
    * already re-encoded without EXIF, cropped to the part the person framed and rotated as they
    * rotated it (job.crop is passed as `crop`, its rotation also as `rotate`).
    * args: { jobId, idempotencyKey } -> MatchJobView, with job.web =
-   *   { status: 'ok'|'no_match'|'not_connected'|'blocked'|'unavailable', engine, query (what Bing
-   *     recognized), shopping: [Listing & { draft }], results: [WebResult], reason, searchedAt }
+   *   { status: 'ok'|'no_match'|'not_connected'|'blocked'|'unavailable', engine ('claude'|'local'|'bing'),
+   *     query (what it recognized), shopping: [Listing & { draft }], results: [WebResult], reason, searchedAt }
    * Rate limit 'web', charged only once the photo is about to be sent. Idempotent, but a result
    * whose job.web.status is not 'ok' or 'no_match' isn't kept under the key, so a retry after a
    * timeout or an outage searches again. Own jobs only (others -> not_found). Refused (conflict) while
@@ -691,7 +692,7 @@ export const ops = {
    * - Custom with `web` (a WebSnapshot from job.web's results): the item keeps the person's photo
    *   as photos.originalId and still shows it, gets photos.webId (a store image the person saved
    *   with importWebImage; others -> not_found), `web` and sourceUrl = web.url, and its evidence
-   *   says it was found with Bing visual search and chosen by the person. Still 'manual'.
+   *   says it was found by a photo search and chosen by the person. Still 'manual'.
    * result: { item: OwnedView | WishlistView, job }
    */
   confirmMatch: {

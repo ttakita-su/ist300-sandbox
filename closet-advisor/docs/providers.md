@@ -8,10 +8,13 @@ committing to any of them.
 **Nothing below is confirmed for this project.** No accounts, applications, approvals, keys or
 contracts exist yet. Every "Access" line is something still to obtain.
 
-The one exception is the prototype's local server (`npm start`, `backend/`), which reads Bing's
-public pages and stores' product pages for an educational demo; see
-[Bing visual search, web search and Shopping](#bing-visual-search-web-search-and-shopping).
-It has no account, key or agreement with Microsoft or any store.
+The exceptions are the prototype's local server (`npm start`, `backend/`), which reads Bing's
+public pages and stores' product pages for an educational demo (see
+[Bing visual search, web search and Shopping](#bing-visual-search-web-search-and-shopping)), and
+its photo search, which uses the Anthropic API with the person's own key when one is in `.env`
+(see [Anthropic Claude](#anthropic-claude)), or a free vision model in Ollama on the same computer
+(see [Ollama, local vision model](#ollama-local-vision-model)). It has no account, key or
+agreement with Microsoft or any store.
 
 Related notes from the rest of the team: StockX and GOAT link handling in
 [marketplaces.md](marketplaces.md), affiliate links and conversion reporting in
@@ -28,7 +31,8 @@ Related notes from the rest of the team: StockX and GOAT link handling in
 | [Gemini Enterprise Agent Platform embeddings](#gemini-enterprise-agent-platform-multimodal-embeddings) (formerly Vertex AI) | Image embeddings for retrieval | Not started | $0.0001 per image (`multimodalembedding@001`) | Default for Milestone 1 |
 | [Amazon Bedrock embeddings](#amazon-bedrock-multimodal-embeddings) | Alternative image embeddings | Not started | $0.00006 per image | Alternative |
 | [Azure Vision multimodal embeddings](#azure-vision-multimodal-embeddings) | Alternative image embeddings | Not started | $0.10 per 1,000 images | Alternative |
-| [Anthropic Claude](#anthropic-claude) | Rerank and verify candidates, read labels, parse requests | Not started | $4 / $20 per million tokens (Opus 5.5) | Core |
+| [Anthropic Claude](#anthropic-claude) | Rerank and verify candidates, read labels, parse requests; in the prototype, name the item in a photo | Prototype photo search uses it with the person's own key (2026-11-05); production work not started | $4 / $20 per million tokens (Opus 5.5) | Core |
+| [Ollama, local vision model](#ollama-local-vision-model) | In the prototype, name the item in a photo on the person's own computer | Prototype photo search uses it when `OLLAMA_PHOTO_MODEL` is set (2026-11-12) | Free; runs on the person's computer | Prototype only; free fallback to Claude |
 | [Rakuten Advertising](#rakuten-advertising) | Product feeds, affiliate links | Not applied | No publisher fee found | Apply |
 | [CJ](#cj) | Product feeds, affiliate links | Not applied | No publisher fee found | Apply |
 | [Impact](#impact) | Product feeds, affiliate links (StockX, GOAT) | Not applied | No fee shown at sign-up | Apply |
@@ -107,6 +111,18 @@ Sources: [Google developer forum](https://discuss.google.dev/t/difference-google
 [SerpApi Google Lens API](https://serpapi.com/google-lens-api).
 
 ### Bing visual search, web search and Shopping
+
+**Live photo check, 2026-11-05.** The image session page returned HTTP 200 with
+`data-kblobpowmode` and browser proof-of-work handlers, without the signed upload header/token
+the prototype expects. `POST /api/lens` therefore returned `unavailable` before the generated
+test image was sent to Bing. The adapter recognizes this as `browser_verification` and the UI
+offers Bing's own image-search page and manual labeling. It does not compute or bypass that
+verification. Photo search now names the item with Claude when the server has an Anthropic key
+([Anthropic Claude](#anthropic-claude)), or with a local model in Ollama
+([Ollama, local vision model](#ollama-local-vision-model)), and only then uses Bing, for the text
+searches below; Bing visual search is the fallback with neither. A live check on 2026-11-12
+found the same `data-kblobpowmode` page. The 2026-10-15 results below are historical;
+fixture success does not establish current live photo-search availability.
 
 **What the prototype does with it.** The local server (`backend/bing.mjs`, through the guarded
 upstream in `backend/net.mjs`) reads three kinds of Bing pages. There is no API key and no
@@ -269,6 +285,18 @@ Claude's output is evidence, not an identity. The person still confirms the matc
 authenticity and condition are never taken from a photo; and an identifier the model reads
 becomes `identifier_supported` only after the server checks it against the catalog.
 
+**What the prototype does with it (since 2026-11-05).** Photo search in the local server
+(`backend/claude-vision.mjs`) sends the 768 px photo to the Messages API through the official
+`@anthropic-ai/sdk` (pinned 1.1.0), with the key from `ANTHROPIC_API_KEY` in `.env`. One request
+per photo: model `claude-opus-5-5` (or `ANTHROPIC_PHOTO_MODEL`), effort `low`, a JSON-schema
+answer (`found`, `brand`, `name`, `color`, `kind`, `search`) and `fallbacks: "default"`. The
+answer only becomes words for Bing's search box and a suggested name; the person still picks a
+listing and checks it, and the saved item stays a custom item with manual identity. Our own
+estimate is about one US cent or less per photo at Opus 5.5 list prices (roughly 1,000 input
+tokens for the image and instructions, a few hundred output tokens); this hasn't been measured on
+a live key yet. The server caps it at 60 photos an hour and caches each photo's answer for 15
+minutes. Tested with a fake SDK only: no live request was made while building it.
+
 **Models and cost as published** (Anthropic API, per million tokens; from Anthropic's current
 model reference, pricing cached 2026-09-25):
 
@@ -307,6 +335,38 @@ accuracy.
 
 Sources: [vision guide](https://platform.claude.com/docs/en/build-with-claude/vision),
 [pricing](https://platform.claude.com/docs/en/about-claude/pricing).
+
+### Ollama, local vision model
+
+[Ollama](https://ollama.com/) runs open vision models on the person's own computer and answers
+on `http://127.0.0.1:11434`. It is free, needs no account or key, and keeps the photo on that
+computer.
+
+**What the prototype does with it (since 2026-11-12).** With `OLLAMA_PHOTO_MODEL` set and no
+Anthropic key, the local server (`backend/local-vision.mjs`) sends the 768 px photo to Ollama's
+`POST /api/chat` with the same instructions and JSON schema as Claude (in Ollama's `format`),
+`stream: false` and temperature 0, then searches Bing for the name it gives, as with Claude. Only
+that name leaves the computer.
+
+**Model.** The default is `qwen3-vl:8b-instruct` (Qwen3-VL, 8.2B parameters, 4-bit, about 6 GB).
+On an Apple M3 Pro with 18 GB of memory, measured 2026-11-12 on four illustrated catalog images
+(a sneaker, a watch, a jacket, trousers):
+
+| Tag | Time per new photo | Notes |
+| --- | --- | --- |
+| `qwen3-vl:8b` | 53 to 70 s | Reasons first (about 570 output tokens), even with `think: false`; longer than Rotation's 40 s wait |
+| `qwen3-vl:8b-instruct` | about 9 s (2.5 s for a repeat) | Named all four plainly with no invented brand, once the field meanings were in the question; with a shorter question it called the fictional watch a Casio |
+
+Accuracy on real photos of real products has not been measured. A small local model is likelier
+than Claude to describe an item generically or to guess a wrong brand or model, so the person's
+check of the results matters more.
+
+**Access and terms.** Install Ollama (`brew install ollama` or the installer), run
+`ollama serve`, and `ollama pull qwen3-vl:8b-instruct`. Ollama is MIT-licensed. Each model has
+its own license, shown by `ollama show <model> --license`; `qwen3-vl:8b-instruct` shows Apache
+2.0.
+
+Sources: [Ollama chat API](https://docs.ollama.com/api/chat), [Ollama](https://ollama.com/).
 
 ## Product data, prices and affiliate links
 

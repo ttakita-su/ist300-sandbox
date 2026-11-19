@@ -13,7 +13,7 @@ const notConnected = () => ({ status: 'not_connected', reason: NOT_CONNECTED });
 
 /**
  * The provider when there is no local server.
- * @type {{ status(): Promise<{ live: boolean, reason: string|null }>, lookup(a: { url: string }): Promise<any>,
+ * @type {{ status(): Promise<{ live: boolean, reason: string|null, photoEngine?: 'claude'|'local'|'bing' }>, lookup(a: { url: string }): Promise<any>,
  *   search(a: { query: string }): Promise<any>, searchImage(a: { blob: Blob, rotate?: number, crop?: object|null }): Promise<any>,
  *   fetchImage(a: { url: string }): Promise<any> }}
  */

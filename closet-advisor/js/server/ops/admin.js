@@ -658,7 +658,7 @@ async function providersView(ctx) {
       {
         id: 'vision',
         name: 'On-device photo analysis',
-        detail: 'Colors and shapes are measured in this browser. A photo is sent to Microsoft Bing only when the person asks to search online stores.',
+        detail: "Colors and shapes are measured in this browser. A photo leaves it only when the person asks to search online stores: to Anthropic's Claude when the local server has a Claude key, to a vision model on the server's computer when it has one set up (then only the name goes online, to Bing), otherwise to Microsoft Bing.",
         status: status('vision'),
         simulation: simulation.vision,
         options: SIMULATION_OPTIONS.vision,
@@ -692,7 +692,7 @@ async function providersView(ctx) {
         id: 'web',
         name: 'Real store lookup',
         detail: web.live
-          ? 'The local server reads store pages and searches Bing when someone asks. Results are guesses the person confirms.'
+          ? 'The local server reads store pages, searches Bing, and names photos with Claude or a vision model on its own computer when one is set up, all only when someone asks. Results are guesses the person confirms.'
           : 'Needs the local server (npm start). Without it, only the demo stores can be looked up.',
         status: web.live ? 'connected' : 'not_connected',
         simulation: null,

@@ -236,6 +236,11 @@ export function createBing({ upstream, now = Date.now }) {
     const token = decodeEntities(page.text.match(/data-kblobsttoken="([^"]+)"/)?.[1] ?? '');
     if (!header || !/^[A-Za-z][A-Za-z0-9-]{0,63}$/.test(header) || !/^[\x21-\x7e]{1,2048}$/.test(token)) {
       if (challenged(page.text, 0)) return blockedResult();
+      // Bing can replace signed upload tokens with a browser proof-of-work flow. Do not try to
+      // solve that verification, upload without it, or disable unrelated text searches.
+      if (/<(?:div|form)\b[^<>]{0,4096}\bdata-kblobpowmode(?:\s|=|>)/i.test(page.text)) {
+        return { ok: false, status: 'unavailable', code: 'browser_verification', host: 'bing.com' };
+      }
       return { ok: false, status: 'unavailable', code: 'session', host: 'bing.com' };
     }
     session = { jar, header, token, at: now() };

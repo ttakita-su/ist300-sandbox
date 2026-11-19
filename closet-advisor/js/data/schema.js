@@ -56,7 +56,7 @@ export const ALPHA_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 export const US_SHOE_SIZES = ['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '13', '14'];
 
 export const ROLES = ['user', 'stylist', 'admin'];
-export const HOME_FOR_ROLE = { user: '/discover', stylist: '/stylist', admin: '/admin' };
+export const HOME_FOR_ROLE = { user: '/collection', stylist: '/stylist', admin: '/admin' };
 
 export const STYLE_TAGS = ['minimal', 'classic', 'street', 'sporty', 'outdoor', 'workwear', 'preppy', 'tech', 'vintage', 'dressy', 'bold'];
 export const STYLE_LABEL = {

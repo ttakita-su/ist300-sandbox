@@ -30,7 +30,7 @@ export default [
         await withBusy(form.querySelector('[type="submit"]'), async () => {
           try {
             await ctx.api.completeOnboarding(readPreferences(form));
-            ctx.navigate('/discover', { replace: true });
+            ctx.navigate('/collection', { replace: true });
           } catch (error) {
             if (!showFieldErrors(form, error)) toastError(error);
           }
@@ -40,7 +40,7 @@ export default [
         await withBusy(button, async () => {
           try {
             await ctx.api.completeOnboarding({ categories: CATEGORIES });
-            ctx.navigate('/discover', { replace: true });
+            ctx.navigate('/collection', { replace: true });
           } catch (error) {
             toastError(error);
           }

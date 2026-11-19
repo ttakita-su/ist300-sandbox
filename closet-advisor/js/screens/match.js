@@ -1,6 +1,6 @@
 // Match results: progress while the photo is analyzed on the device, then candidates to confirm,
 // ways to settle an unsure version (a code, a label photo, a link), searching online stores for
-// the photo (only when the person asks: that sends it to Microsoft Bing through Rotation's local
+// the photo (only when the person asks: that sends it to Claude, a vision model on the server's computer, or Microsoft Bing through Rotation's local
 // server), and saving it as the person's own item.
 import { html, render } from '../lib/html.js';
 import { icon } from '../lib/icons.js';
@@ -11,7 +11,7 @@ import { renderLabel } from '../engine/samples.js';
 import { backHead, media, label, evidenceList, notice, thumb, field, selectField, demoNote } from '../ui/components.js';
 import { createWithDuplicateCheck, readOwnedDetails, readWish, customItemFields, readCustomItem } from '../ui/item-forms.js';
 import { openCatalogPicker } from '../ui/catalog-picker.js';
-import { IMAGE_NOT_KEPT, bindRemoteImages, keepStoreImage, loadStorePage, openWebSheet, webResultLists } from '../ui/web-product.js';
+import { IMAGE_NOT_KEPT, bindRemoteImages, keepStoreImage, loadStorePage, openWebSheet, photoEngineCopy, webResultLists } from '../ui/web-product.js';
 import { openSheet, toast, toastError, withBusy, showFieldErrors } from '../lib/ui.js';
 
 const RUNNING = ['queued', 'processing'];
@@ -140,35 +140,41 @@ function outcomeNotice(job) {
 }
 
 const WEB_PROBLEM = {
-  no_match: "Bing couldn't name it",
-  not_connected: 'Real store search is off',
-  blocked: "Bing didn't allow the search",
-  unavailable: "The search didn't finish",
+  no_match: (name) => `${name} couldn't name it`,
+  not_connected: () => 'Real store search is off',
+  blocked: () => "Bing didn't allow the search",
+  unavailable: () => "The search didn't finish",
 };
 
 /**
  * Online store results for this photo (job.web). Nothing is sent until the person presses the
  * button, which says where the photo goes; reloading shows the last results without searching.
+ * `engine`: who the next search sends the photo to (webStatus); results name who answered them.
  */
-function webPanel(job) {
+function webPanel(job, engine) {
   const web = job.web;
+  const next = photoEngineCopy(engine);
+  const answered = photoEngineCopy(web?.engine ?? engine);
   const action = html`<div class="stack stack-xs">
-    <div class="button-row"><button type="button" class="btn ${web ? 'btn-secondary btn-sm' : 'btn-primary'}" data-web-search>${icon('globe')}${web ? 'Search again' : 'Search online stores'}</button></div>
-    <p class="xsmall muted">Sends this photo to Microsoft Bing to recognize it. Rotation's server doesn't keep it.</p>
+    <div class="button-row"><button type="button" class="btn ${web ? 'btn-secondary btn-sm' : 'btn-primary'}" data-web-search>${icon('globe')}${web ? 'Search again' : 'Search online stores'}</button>
+      ${web && web.status !== 'ok' ? html`<a class="btn btn-secondary btn-sm" href="https://www.bing.com/images" target="_blank" rel="noopener noreferrer">Open Bing Visual Search${icon('external')}</a>` : ''}
+    </div>
+    ${web && web.status !== 'ok' ? html`<p class="small muted">Choose your photo on Bing's page to search there yourself. You can label this item here if no result fits.</p>` : ''}
+    <p class="xsmall muted">${next.sends}</p>
     <p class="small" data-web-progress role="status"></p>
   </div>`;
   let body;
   if (!web) {
-    body = html`<p class="small">Bing visual search can name what's in the photo and find real store listings for it, with prices.</p>${action}`;
+    body = html`<p class="small">${next.intro}</p>${action}`;
   } else if (web.status === 'ok') {
     body = html`<div class="stack stack-xs">
-        <p>${job.mode === 'online' ? 'Possible products for:' : 'Bing recognized this as:'} <strong>${web.query ?? 'something it could search for'}</strong></p>
+        <p>${job.mode === 'online' ? 'Possible products for:' : `${answered.name} recognized this as:`} <strong>${web.query ?? 'something it could search for'}</strong></p>
         <p class="small muted">Searched ${fmt.relative(web.searchedAt)}. Choose a result to save it as your own item; your photo stays its photo.</p>
       </div>
       ${action}
-      ${webResultLists(web, { headingLevel: 3, empty: 'Bing named it, but no store listings or pages came back. Search again, or search the catalog.' })}`;
+      ${webResultLists(web, { headingLevel: 3, empty: `${answered.name} named it, but no store listings or pages came back. Search again, or search the catalog.` })}`;
   } else {
-    body = html`${notice({ tone: web.status === 'not_connected' ? 'info' : 'warn', title: job.mode === 'online' && web.status === 'no_match' ? 'No product match found' : WEB_PROBLEM[web.status] ?? WEB_PROBLEM.unavailable, body: web.reason })}${action}`;
+    body = html`${notice({ tone: web.status === 'not_connected' ? 'info' : 'warn', title: job.mode === 'online' && web.status === 'no_match' ? 'No product match found' : (WEB_PROBLEM[web.status] ?? WEB_PROBLEM.unavailable)(answered.name), body: web.reason })}${action}`;
   }
   return html`<section class="panel stack" aria-labelledby="web-h" data-web-panel>
     <h2 id="web-h">Online stores</h2>
@@ -176,7 +182,7 @@ function webPanel(job) {
   </section>`;
 }
 
-function doneView(job) {
+function doneView(job, engine) {
   if (job.mode === 'online') {
     const empty = job.web?.status === 'ok' && !job.web.shopping.length && !job.web.results.length;
     return html`<section class="stack stack-sm">
@@ -184,7 +190,7 @@ function doneView(job) {
         <div class="button-row"><button type="button" class="btn ${!job.web || job.web.status !== 'ok' || empty ? 'btn-primary' : 'btn-secondary'}" data-custom>${icon('edit')}Label it myself</button>
           <span class="small muted">${job.web ? 'No suitable result? Add your own details and edit them later.' : 'Add a name, type and colors. You can edit them later.'}</span></div>
       </section>
-      ${webPanel(job)}`;
+      ${webPanel(job, engine)}`;
   }
   const r = job.result;
   const reads = (job.labelReads ?? []).filter((l) => l.status !== 'read');
@@ -196,7 +202,7 @@ function doneView(job) {
     ${job.link?.reason ? notice({ tone: job.link.status === 'resolved' ? 'ok' : 'warn', body: job.link.reason }) : ''}
     ${candidates.length ? html`<section class="stack"><h2>${candidates[0].kind === 'match' ? 'Is it one of these?' : 'Similar products'}</h2>${candidates.map((c, i) => candidateCard(c, job, i))}</section>` : ''}
     ${askSection(job)}
-    ${webPanel(job)}
+    ${webPanel(job, engine)}
     <section class="stack stack-sm">
       <h2>Something else</h2>
       <div class="button-row">
@@ -217,7 +223,11 @@ export default [
       const job = await ctx.api.getMatchJob({ jobId: ctx.params.jobId });
       ctx.job = job;
       // The usual size, for the save form of an online store result.
-      ctx.profile = RUNNING.includes(job.status) || job.status === 'confirmed' ? null : await ctx.api.getProfile({});
+      const settled = !RUNNING.includes(job.status) && job.status !== 'confirmed';
+      ctx.profile = settled ? await ctx.api.getProfile({}) : null;
+      // Who a photo search sends the photo to (status.json is read once per page load).
+      const engine = settled ? (await ctx.api.webStatus({})).photoEngine : null;
+      ctx.photoEngine = engine;
       let photo = '';
       if (job.photoId) photo = html`<div style="max-width: 240px">${media({ kind: 'original', photoId: job.photoId, label: 'Your photo' }, { alt: 'Your photo' })}</div>`;
       let body;
@@ -232,17 +242,17 @@ export default [
             <button type="button" class="btn btn-secondary" data-search>${icon('search')}Search the catalog</button>
             <button type="button" class="btn btn-secondary" data-custom>Save as my own item</button>
           </div>
-          ${webPanel(job)}`;
+          ${webPanel(job, engine)}`;
       } else if (job.status === 'rejected') {
         body = html`${notice({ tone: 'info', title: 'Marked as not a match', body: 'Search online stores, add a code or label photo to match again, search the catalog, or save it as your own item.' })}
           ${askSection(job)}
-          ${webPanel(job)}
+          ${webPanel(job, engine)}
           <div class="button-row">
             <button type="button" class="btn btn-secondary" data-search>${icon('search')}Search the catalog</button>
             <button type="button" class="btn btn-secondary" data-custom>Save as my own item</button>
           </div>`;
       } else {
-        body = doneView(job);
+        body = doneView(job, engine);
       }
       return html`<div class="stack stack-lg">
         ${backHead({ title: job.mode === 'online' ? 'Photo results' : 'Match', back: `#/add/photo?dest=${job.dest}` })}
@@ -389,7 +399,7 @@ export default [
       ctx.on('click', '[data-web-search]', (event, button) =>
         guard(button, async () => {
           const status = root.querySelector('[data-web-progress]');
-          if (status) status.textContent = 'Asking Bing about your photo. This can take up to half a minute.';
+          if (status) status.textContent = photoEngineCopy(ctx.photoEngine).asking;
           try {
             await ctx.api.searchWebForPhoto({ jobId: job.id, idempotencyKey: idempotencyKey() });
           } finally {

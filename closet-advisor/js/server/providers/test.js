@@ -69,7 +69,7 @@ export function createTestProviders(overrides = {}) {
  * the call's arguments (it may return a promise); a call with no response configured answers
  * 'unavailable'. With live: false it behaves like no local server. `calls` records every call,
  * so a test can check that nothing reached the provider.
- * @param {{ live?: boolean, lookup?: any, search?: any, searchImage?: any, fetchImage?: any }} [responses]
+ * @param {{ live?: boolean, photoEngine?: 'claude'|'local'|'bing', lookup?: any, search?: any, searchImage?: any, fetchImage?: any }} [responses]
  */
 export function fakeWebProvider(responses = {}) {
   const live = responses.live ?? true;
@@ -86,7 +86,7 @@ export function fakeWebProvider(responses = {}) {
     calls,
     async status() {
       calls.status += 1;
-      return live ? { live: true, reason: null } : { live: false, reason: NOT_CONNECTED };
+      return live ? { live: true, reason: null, photoEngine: responses.photoEngine ?? 'bing' } : { live: false, reason: NOT_CONNECTED };
     },
     lookup: (args) => reply('lookup', args),
     search: (args) => reply('search', args),

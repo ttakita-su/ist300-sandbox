@@ -5,6 +5,7 @@ import { idempotencyKey } from '../lib/ids.js';
 import { CATEGORIES, CATEGORY_SINGULAR } from '../data/schema.js';
 import { listSamples, renderSample } from '../engine/samples.js';
 import { backHead, notice, demoNote } from '../ui/components.js';
+import { photoEngineCopy } from '../ui/web-product.js';
 import { pill } from '../ui/screen-kit.js';
 import { withBusy } from '../lib/ui.js';
 
@@ -29,7 +30,7 @@ function preview(state) {
       <button type="button" class="btn btn-secondary" data-rotate>${icon('rotate')}Rotate</button>
       <button type="button" class="btn btn-ghost" data-clear>Choose another</button>
     </div>
-    <p class="xsmall muted">Search online sends this photo to Microsoft Bing to find possible products. Check the results before saving. Labeling it yourself keeps it on this device.</p>
+    <p class="xsmall muted">${photoEngineCopy(state.photoEngine).capture}</p>
     <p class="small" data-photo-progress role="status"></p>
     <div data-capture-error aria-live="assertive"></div>
   </section>`;
@@ -41,10 +42,12 @@ export default [
     title: 'Photograph an item',
     tab: null,
     roles: ['user'],
-    render(ctx) {
+    async render(ctx) {
       const dest = ctx.query.dest === 'wishlist' ? 'wishlist' : 'owned';
       const category = CATEGORIES.includes(ctx.query.category) ? ctx.query.category : '';
       const samples = listSamples();
+      // Who a photo search sends the photo to (status.json is read once per page load).
+      ctx.photoEngine = (await ctx.api.webStatus({})).photoEngine;
       return html`<div class="stack stack-lg">
         ${backHead({ title: 'Photograph an item', back: `#/add?dest=${dest}` })}
         <p class="muted">${dest === 'wishlist' ? 'Saving to your wishlist.' : 'Adding to your collection.'} Photograph your item, search for it online, then choose the right product. If nothing matches, label it yourself. You can edit the details later.</p>
@@ -77,7 +80,7 @@ export default [
     mount(root, ctx) {
       const dest = ctx.query.dest === 'wishlist' ? 'wishlist' : 'owned';
       const samples = listSamples();
-      const state = { blob: null, url: null, sample: null, rotate: 0, uploadKey: null, jobKey: null, searchKey: null, busy: false, disposed: false };
+      const state = { blob: null, url: null, sample: null, rotate: 0, uploadKey: null, jobKey: null, searchKey: null, busy: false, disposed: false, photoEngine: ctx.photoEngine };
       const host = root.querySelector('[data-preview]');
       const pickers = root.querySelector('[data-pickers]');
 

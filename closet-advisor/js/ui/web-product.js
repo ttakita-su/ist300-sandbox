@@ -24,6 +24,44 @@ import {
 import { hydratePhotos } from './hydrate.js';
 import { openSheet, toast, toastError, withBusy, showFieldErrors } from '../lib/ui.js';
 
+/**
+ * The words for whoever names the item in a photo: 'claude' (Claude names it, then Bing is
+ * searched for the name), 'local' (a vision model in Ollama on the computer running Rotation's
+ * server names it, then Bing is searched for the name) or 'bing' (Bing visual search). The local
+ * server's status.json says which; null (no local server) gets the Bing words, since the search
+ * can't run anyway.
+ * @param {string|null|undefined} engine
+ */
+export function photoEngineCopy(engine) {
+  if (engine === 'local') {
+    // "the computer running Rotation" rather than "this device": from a phone on the same Wi-Fi,
+    // the photo does travel to that computer.
+    return {
+      name: 'The local model',
+      intro: "A vision model on the computer running Rotation can name what's in the photo, and Rotation then finds real store listings for that name, with prices.",
+      sends: "Sends this photo to a vision model on the computer running Rotation to name the item, then searches Bing for that name. The photo itself goes to no online service.",
+      capture: 'Search online names the item with a vision model on the computer running Rotation, then searches Bing for that name; the photo itself goes to no online service. Check the results before saving. Labeling it yourself keeps it on this device.',
+      asking: 'The vision model on the computer running Rotation is looking at your photo. This can take up to half a minute.',
+    };
+  }
+  if (engine === 'claude') {
+    return {
+      name: 'Claude',
+      intro: 'Claude can name what\'s in the photo, and Rotation then finds real store listings for that name, with prices.',
+      sends: "Sends this photo to Anthropic's Claude to name the item, then searches Bing for that name. Rotation's server doesn't keep the photo.",
+      capture: "Search online sends this photo to Anthropic's Claude to name the item, then searches Bing for that name. Check the results before saving. Labeling it yourself keeps it on this device.",
+      asking: 'Asking Claude about your photo. This can take up to half a minute.',
+    };
+  }
+  return {
+    name: 'Bing',
+    intro: "Bing visual search can name what's in the photo and find real store listings for it, with prices.",
+    sends: "Sends this photo to Microsoft Bing to recognize it. Rotation's server doesn't keep it.",
+    capture: 'Search online sends this photo to Microsoft Bing to find possible products. Check the results before saving. Labeling it yourself keeps it on this device.',
+    asking: 'Asking Bing about your photo. This can take up to half a minute.',
+  };
+}
+
 /** Shown after saving when the store's image was asked for but couldn't be kept. */
 export const IMAGE_NOT_KEPT = "The store's image couldn't be kept, so the item was saved without it.";
 

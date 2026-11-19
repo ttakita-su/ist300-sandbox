@@ -5,15 +5,205 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
-import { startAppServer, staticFile, allowedHostsFor, portBusyMessage, DEFAULT_PORT, PORT_FALLBACKS } from '../../backend/server.mjs';
+import { startAppServer, staticFile, allowedHostsFor, portBusyMessage, photoVisionFrom, DEFAULT_PORT, PORT_FALLBACKS } from '../../backend/server.mjs';
 import { lookupProduct } from '../../backend/routes.mjs';
 import { createUpstream } from '../../backend/net.mjs';
+import { createClaudeVision } from '../../backend/claude-vision.mjs';
 import { fixtureUpstream, fixtureTransport, fixtureImage, FIXTURE } from '../fixtures/web/upstream.mjs';
 
 const SENTENCE = /^[A-Z][\s\S]*\.$/;
 let app;
 let upstream;
 const reasons = [];
+
+test('photo search explains a browser-verification requirement instead of suggesting a transient outage', async () => {
+  const transport = fixtureTransport();
+  const originalSend = transport.send;
+  transport.send = async (req) => req.url.pathname === '/images'
+    ? { status: 200, headers: { 'content-type': 'text/html' }, body: Buffer.from('<html><title>Bing Images</title><form action="/images/kblob" data-kblobpowmode></form></html>') }
+    : originalSend(req);
+  const checked = await startAppServer({ port: 0, upstream: createUpstream({ transport, minIntervalMs: 0 }) });
+  try {
+    const response = await send({ port: checked.port, method: 'POST', path: '/api/lens', headers: { 'Content-Type': 'image/jpeg', 'X-Rotation': '1' }, body: fixtureImage('/court-classic-white.jpg') });
+    assert.equal(response.status, 200);
+    assert.equal(response.json.status, 'unavailable');
+    assert.match(response.json.reason, /browser verification/);
+    assert.match(response.json.reason, /Open Bing Visual Search/);
+    assert.match(response.json.reason, /ANTHROPIC_API_KEY/, 'the reason says how to turn photo search back on');
+    assert.match(response.json.reason, /OLLAMA_PHOTO_MODEL/, 'including the free way');
+    assert.doesNotMatch(response.json.reason, /Try again in a minute|Check the internet/);
+  } finally {
+    await checked.close();
+  }
+});
+
+test('POST /api/lens with Claude: it names the item, then Bing is searched for that name; status says claude', async () => {
+  const KEY = 'sk-ant-test-not-a-real-key';
+  const asked = [];
+  class APIError extends Error {}
+  class Anthropic {
+    constructor({ apiKey }) {
+      assert.equal(apiKey, KEY);
+      this.beta = {
+        messages: {
+          create: async (body) => {
+            asked.push(body);
+            const search = asked.length === 1 ? 'Court Classic White' : '';
+            return { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ found: asked.length === 1, brand: 'Court', name: 'Classic', color: 'White', kind: 'sneaker', search }) }] };
+          },
+        },
+      };
+    }
+  }
+  Object.assign(Anthropic, { APIError, APIConnectionError: class extends APIError {}, APIConnectionTimeoutError: class extends APIError {}, AuthenticationError: class extends APIError {}, PermissionDeniedError: class extends APIError {}, RateLimitError: class extends APIError {}, BadRequestError: class extends APIError {} });
+  const vision = createClaudeVision({ apiKey: KEY, loadSdk: async () => ({ default: Anthropic }) });
+  const bingUpstream = fixtureUpstream();
+  const claude = await startAppServer({ port: 0, upstream: bingUpstream, vision });
+  const lens = (body, engine = 'claude') => send({ method: 'POST', path: '/api/lens', port: claude.port, headers: { 'Content-Type': 'image/jpeg', 'X-Rotation': '1', 'X-Rotation-Photo-Engine': engine }, body });
+  try {
+    const status = await send({ path: '/api/status.json', port: claude.port });
+    assert.deepEqual(status.json, { live: true, version: 1, engines: { lookup: 'page', search: 'bing', photo: 'claude' } });
+
+    const photo = fixtureImage('/court-classic-white.jpg');
+    const found = await lens(photo);
+    assert.equal(found.status, 200);
+    assert.equal(found.json.status, 'ok');
+    assert.equal(found.json.engine, 'claude');
+    assert.equal(found.json.query, 'Court Classic White');
+    assert.equal(found.json.shopping.length, 2, 'Bing Shopping listings for the name Claude gave');
+    assert.equal(found.json.results[0].url, FIXTURE.productUrl);
+    assert.equal(bingUpstream.requests.some((r) => r.url.includes('/images')), false, "Bing's photo upload is never used");
+    assert.equal(found.body.toString('utf8').includes(KEY), false, 'the key never reaches the browser');
+
+    assert.deepEqual((await lens(photo)).json, found.json);
+    assert.equal(asked.length, 1, 'the same photo is answered from the cache, without asking Claude again');
+
+    const other = Buffer.concat([photo, Buffer.from([0])]);
+    const none = await lens(other);
+    assert.equal(none.json.status, 'no_match');
+    assert.match(none.json.reason, /^Claude couldn't name/);
+    assert.match(none.json.reason, SENTENCE);
+
+    // A page opened while photos went to Bing said so: the server won't send its photo to Claude.
+    const before = asked.length;
+    for (const shown of [null /* no header */, 'bing']) {
+      const stale = await lens(Buffer.concat([photo, Buffer.from([1])]), shown);
+      assert.equal(stale.status, 409);
+      assert.equal(stale.json.status, 'unavailable');
+      assert.match(stale.json.reason, /Reload Rotation/);
+    }
+    assert.equal(asked.length, before, 'nothing was sent to Claude');
+  } finally {
+    await claude.close();
+  }
+});
+
+test('POST /api/lens with Claude: when Bing fails after Claude named it, the answer says so and a retry asks only Bing', async () => {
+  let identified = 0;
+  const vision = { model: 'claude-opus-5-5', identify: async () => ((identified += 1), { ok: true, query: 'Court Classic White', brand: 'Court', name: 'Classic', color: 'White', kind: 'sneaker' }) };
+  const transport = fixtureTransport();
+  const originalSend = transport.send;
+  let bingDown = true;
+  transport.send = async (req) => {
+    if (bingDown && /bing\.com$/.test(req.url.hostname)) throw Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' });
+    return originalSend(req);
+  };
+  const server = await startAppServer({ port: 0, upstream: createUpstream({ transport, minIntervalMs: 0 }), vision });
+  const lens = () => send({ method: 'POST', path: '/api/lens', port: server.port, headers: { 'Content-Type': 'image/jpeg', 'X-Rotation': '1', 'X-Rotation-Photo-Engine': 'claude' }, body: fixtureImage('/court-classic-white.jpg') });
+  try {
+    const failed = await lens();
+    assert.equal(failed.json.status, 'unavailable', 'not an empty "ok"');
+    assert.match(failed.json.reason, SENTENCE);
+    bingDown = false;
+    const retried = await lens();
+    assert.equal(retried.json.status, 'ok', 'the failure was not cached');
+    assert.equal(retried.json.shopping.length, 2);
+    assert.equal(identified, 1, "Claude's name was kept, so the photo wasn't sent to Claude again");
+  } finally {
+    await server.close();
+  }
+});
+
+test('POST /api/lens with Claude: a refused key or a missing SDK says what to fix, as a sentence', async () => {
+  const failing = (code) => ({ model: 'claude-opus-5-5', identify: async () => ({ ok: false, status: 'unavailable', code }) });
+  for (const [code, words] of [['key', /ANTHROPIC_API_KEY/], ['sdk_missing', /npm install/], ['local_limit', /60 photos/], ['rejected', /billing/], ['model', /ANTHROPIC_PHOTO_MODEL/], ['bad_response', /couldn't be read/]]) {
+    const server = await startAppServer({ port: 0, upstream: fixtureUpstream(), vision: failing(code) });
+    try {
+      const res = await send({ method: 'POST', path: '/api/lens', port: server.port, headers: { 'Content-Type': 'image/jpeg', 'X-Rotation': '1', 'X-Rotation-Photo-Engine': 'claude' }, body: fixtureImage('/court-classic-white.jpg') });
+      assert.equal(res.json.status, 'unavailable', code);
+      assert.match(res.json.reason, words, code);
+      assert.match(res.json.reason, SENTENCE, code);
+    } finally {
+      await server.close();
+    }
+  }
+});
+
+test('POST /api/lens with the local model: it names the item, then Bing is searched for that name; status says local', async () => {
+  const asked = [];
+  const vision = {
+    engine: 'local',
+    model: 'qwen3-vl:8b-instruct',
+    identify: async () => (asked.push(1), asked.length === 1 ? { ok: true, query: 'Court Classic White', brand: 'Court', name: 'Classic', color: 'White', kind: 'sneaker' } : { ok: false, status: 'no_match', code: 'not_found' }),
+  };
+  const bingUpstream = fixtureUpstream();
+  const local = await startAppServer({ port: 0, upstream: bingUpstream, vision });
+  const lens = (body, engine = 'local') => send({ method: 'POST', path: '/api/lens', port: local.port, headers: { 'Content-Type': 'image/jpeg', 'X-Rotation': '1', 'X-Rotation-Photo-Engine': engine }, body });
+  try {
+    const status = await send({ path: '/api/status.json', port: local.port });
+    assert.deepEqual(status.json, { live: true, version: 1, engines: { lookup: 'page', search: 'bing', photo: 'local' } });
+
+    const photo = fixtureImage('/court-classic-white.jpg');
+    const found = await lens(photo);
+    assert.equal(found.json.status, 'ok');
+    assert.equal(found.json.engine, 'local');
+    assert.equal(found.json.query, 'Court Classic White');
+    assert.equal(found.json.shopping.length, 2, 'Bing Shopping listings for the name the model gave');
+    assert.equal(bingUpstream.requests.some((r) => r.url.includes('/images')), false, "Bing's photo upload is never used");
+
+    const none = await lens(Buffer.concat([photo, Buffer.from([0])]));
+    assert.equal(none.json.status, 'no_match');
+    assert.match(none.json.reason, /^The local model couldn't name/);
+    assert.match(none.json.reason, SENTENCE);
+
+    // A page that said the photo goes to Claude or Bing must not have it named here instead.
+    const before = asked.length;
+    for (const shown of [null /* no header */, 'bing', 'claude']) {
+      const stale = await lens(Buffer.concat([photo, Buffer.from([1])]), shown);
+      assert.equal(stale.status, 409, String(shown));
+      assert.match(stale.json.reason, /Reload Rotation/);
+    }
+    assert.equal(asked.length, before, 'nothing was sent to the model');
+  } finally {
+    await local.close();
+  }
+});
+
+test('POST /api/lens with the local model: Ollama not running, a missing model or a slow answer says what to do, as a sentence', async () => {
+  const failing = (code) => ({ engine: 'local', model: 'qwen3-vl:8b-instruct', identify: async () => ({ ok: false, status: 'unavailable', code }) });
+  for (const [code, words] of [['not_running', /ollama serve/], ['model', /ollama pull qwen3-vl:8b-instruct/], ['timeout', /took too long/], ['network', /Ollama/], ['http_error', /Ollama/], ['bad_response', /couldn't be read/]]) {
+    const server = await startAppServer({ port: 0, upstream: fixtureUpstream(), vision: failing(code) });
+    try {
+      const res = await send({ method: 'POST', path: '/api/lens', port: server.port, headers: { 'Content-Type': 'image/jpeg', 'X-Rotation': '1', 'X-Rotation-Photo-Engine': 'local' }, body: fixtureImage('/court-classic-white.jpg') });
+      assert.equal(res.json.status, 'unavailable', code);
+      assert.match(res.json.reason, words, code);
+      assert.match(res.json.reason, SENTENCE, code);
+      assert.doesNotMatch(res.json.reason, /Claude|ANTHROPIC/, code);
+    } finally {
+      await server.close();
+    }
+  }
+});
+
+test('the photo engine: Claude with ANTHROPIC_API_KEY, else the local model with OLLAMA_PHOTO_MODEL, else Bing', () => {
+  assert.equal(photoVisionFrom({}), null);
+  assert.equal(photoVisionFrom({ OLLAMA_PHOTO_MODEL: ' ' }), null);
+  const local = photoVisionFrom({ OLLAMA_PHOTO_MODEL: 'qwen3-vl:8b-instruct' });
+  assert.equal(local.engine, 'local');
+  assert.equal(local.model, 'qwen3-vl:8b-instruct');
+  const claude = photoVisionFrom({ ANTHROPIC_API_KEY: 'sk-ant-test-not-a-real-key', OLLAMA_PHOTO_MODEL: 'qwen3-vl:8b-instruct' });
+  assert.equal(claude.engine, 'claude', 'a Claude key wins');
+});
 
 before(async () => {
   upstream = fixtureUpstream();
